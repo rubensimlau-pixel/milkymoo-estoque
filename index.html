@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.4.6</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.5.7</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -265,6 +265,46 @@
       <button class="btn btn-pink" id="btn-sv-perdas" onclick="salvarPerdas()" style="background:#ef476f;box-shadow:0 4px 14px rgba(239,71,111,.35)">💔 Registrar Perda</button>
     </div>
 
+    <!-- IMPORTAR RELATÓRIO -->
+    <div id="sec-importar" class="section">
+      <div class="info-box" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534;">
+        <strong>📥 Importar Relatório de Fechamento</strong>
+        Cole aqui o texto do relatório de fechamento do Degust. O sistema vai identificar os itens vendidos e descontar os copos do estoque automaticamente.
+      </div>
+
+      <div class="loja-sel">
+        <button class="loja-btn active" id="blimp1" onclick="selLoja(1,'imp')"><div class="li">🏪</div><div class="ln" id="lnimp1">Cajamar</div></button>
+        <button class="loja-btn" id="blimp2" onclick="selLoja(2,'imp')"><div class="li">🏬</div><div class="ln" id="lnimp2">Iguatemi</div></button>
+        <button class="loja-btn" id="blimp3" onclick="selLoja(3,'imp')"><div class="li">🏗️</div><div class="ln" id="lnimp3">Carapicuíba</div></button>
+      </div>
+
+      <div class="date-bar"><label>📅 Data do relatório:</label><input type="date" id="data-importar"></div>
+
+      <div class="card">
+        <div class="card-title"><span>📋</span>Texto do Relatório</div>
+        <textarea id="txt-relatorio" placeholder="Cole aqui o conteúdo do arquivo TXT de fechamento de caixa do Degust..."
+          style="width:100%;height:200px;border:2px solid var(--border);border-radius:10px;padding:10px;font-family:monospace;font-size:.78rem;resize:vertical;background:var(--gray-light)"></textarea>
+      </div>
+
+      <button class="btn btn-pink" onclick="processarRelatorio()" style="margin-bottom:10px">🔍 Processar Relatório</button>
+
+      <!-- Preview do resultado -->
+      <div id="importar-preview"></div>
+
+      <div id="confronto-resultado"></div>
+
+      <!-- Confronto histórico por data -->
+      <div class="card" style="margin-top:14px">
+        <div class="card-title"><span>🔍</span>Confrontar data anterior</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="date" id="data-confronto" style="border:2px solid var(--border);border-radius:8px;padding:8px;font-family:Nunito,sans-serif;font-size:.88rem">
+          <button onclick="mostrarConfronto(document.getElementById('data-confronto').value)" class="btn btn-outline" style="margin:0;padding:8px 16px;width:auto">🔍 Confrontar</button>
+        </div>
+      </div>
+
+      <button class="btn btn-pink" id="btn-confirmar-importar" onclick="confirmarImportacao()" style="display:none;background:#16a34a;box-shadow:0 4px 14px rgba(22,163,74,.35)">✅ Salvar Relatório para Confronto</button>
+    </div>
+
     <div id="sec-divergencia" class="section">
       <div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;"><strong>⚠️ Divergência</strong>Inventário anterior − consumo vs inventário real. <strong>Negativo = possível perda.</strong></div>
       <div class="loja-sel">
@@ -280,6 +320,25 @@
       <div class="info-box" style="background:#f0f9ff;border-color:#bae6fd;color:#0c4a6e;">
         <strong>📜 Histórico de Preenchimentos</strong>
         Quem preencheu, quando, em qual loja e quais itens foram lançados.
+      </div>
+      <!-- Filtros -->
+      <div class="card" style="margin-bottom:14px;padding:12px 16px">
+        <div style="font-size:.75rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Filtrar por loja</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="filt-hist-0" onclick="filtrarHistorico(0)" style="padding:6px 14px;border-radius:50px;border:2px solid var(--pink);background:var(--pink);color:white;font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">🏪🏬🏗️ Todas</button>
+          <button id="filt-hist-1" onclick="filtrarHistorico(1)" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">🏪 <span id="filt-nome1">Cajamar</span></button>
+          <button id="filt-hist-2" onclick="filtrarHistorico(2)" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">🏬 <span id="filt-nome2">Iguatemi</span></button>
+          <button id="filt-hist-3" onclick="filtrarHistorico(3)" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">🏗️ <span id="filt-nome3">Carapicuíba</span></button>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+          <div style="font-size:.75rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;width:100%">Filtrar por tipo</div>
+          <button id="filt-tipo-todos" onclick="filtrarHistoricoTipo('')" style="padding:6px 14px;border-radius:50px;border:2px solid var(--pink);background:var(--pink);color:white;font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">Todos</button>
+          <button id="filt-tipo-consumo" onclick="filtrarHistoricoTipo('consumo')" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">📦 Consumo</button>
+          <button id="filt-tipo-inventario" onclick="filtrarHistoricoTipo('inventario')" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">📋 Inventário</button>
+          <button id="filt-tipo-entrada" onclick="filtrarHistoricoTipo('entrada')" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">🛍️ Entradas</button>
+          <button id="filt-tipo-perda" onclick="filtrarHistoricoTipo('perda')" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">💔 Perdas</button>
+          <button id="filt-tipo-importacao" onclick="filtrarHistoricoTipo('importacao')" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">📥 Importações</button>
+        </div>
       </div>
       <div id="hist-lista"></div>
       <button class="btn" onclick="abrirModalReset()" style="background:#ef476f;color:white;margin-top:8px;box-shadow:0 4px 14px rgba(239,71,111,.35)">🗑️ Apagar Lançamentos</button>
@@ -322,6 +381,9 @@
             </label>
             <label style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600" onclick="toggleReset(this)">
               <input type="checkbox" id="rst-hist" style="width:18px;height:18px;accent-color:var(--pink);cursor:pointer"> 📜 Histórico
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600" onclick="toggleReset(this)">
+              <input type="checkbox" id="rst-relatorios" style="width:18px;height:18px;accent-color:var(--pink);cursor:pointer"> 📥 Relatórios importados
             </label>
             <label style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #fee2e2;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:700;color:#991b1b;background:#fff5f5" onclick="toggleResetTudo(this)">
               <input type="checkbox" id="rst-tudo" style="width:18px;height:18px;accent-color:#ef476f;cursor:pointer"> 🔴 Apagar tudo acima
@@ -585,8 +647,8 @@ const DEFAULT_ITEMS=[
   {id:'bob-maq',nome:'Bobina Maquininha',cat:'mimos',unidade:'unidades'},
 ];
 
-let db={items:[...DEFAULT_ITEMS],inventarios:[],consumos:[],entradas:[],perdas:[],historico:[],minimos:{},usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7}};
-let lojaC=1,lojaI=1,lojaP=1,lojaD=1,lojaE=1,lojaPr=1;
+let db={items:[...DEFAULT_ITEMS],inventarios:[],consumos:[],entradas:[],perdas:[],relatorios:[],historico:[],minimos:{},usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7}};
+let lojaC=1,lojaI=1,lojaP=1,lojaD=1,lojaE=1,lojaPr=1,lojaImp=1;
 let autoRefreshInterval=null;
 
 async function cloudGet(){try{return window.firebaseGet?await window.firebaseGet():null;}catch(e){return null;}}
@@ -655,6 +717,7 @@ function renderTabs(){
     {id:'perdas',     label:'💔 Perdas',        adminOnly:false},
     {id:'inventario', label:'📋 Inventário',    adminOnly:false},
     {id:'projetado',  label:'📊 Estoque',       adminOnly:false},
+    {id:'importar',   label:'📥 Importar',      adminOnly:true},
     {id:'divergencia',label:'⚠️ Divergência',  adminOnly:true},
     {id:'compras',    label:'🛒 Compras',       adminOnly:true},
     {id:'entradas',   label:'🛍️ Entradas',      adminOnly:true},
@@ -675,7 +738,7 @@ function ajustarBotoesLoja(){
   const isAdmin = currentUser.role==='admin';
   [1,2,3].forEach(n=>{
     // Prefixos de todos os seletores de loja
-    ['blc','bli','blp','bld','ble','blpr'].forEach(p=>{
+    ['blc','bli','blp','bld','ble','blpr','blimp'].forEach(p=>{
       const el=document.getElementById(p+n);
       if(!el) return;
       if(isAdmin){
@@ -738,13 +801,14 @@ async function atualizarDados(forcado=false){
   // Nas abas de preenchimento (consumo/inventário), o auto-refresh NÃO re-renderiza
   // para não apagar o que a funcionária está digitando.
   // Só re-renderiza se foi clique manual no botão 🔄
-  const abaDigitacao = (name==='consumo'||name==='inventario'||name==='entradas'||name==='perdas');
+  const abaDigitacao = (name==='consumo'||name==='inventario'||name==='entradas'||name==='perdas'||name==='importar');
   if(!abaDigitacao || forcado){
     if(name==='consumo')renderConsumo();
     if(name==='inventario')renderInv();
     if(name==='projetado')renderProjetado();
     if(name==='compras')gerarCompras();
     if(name==='perdas')renderPerdas();
+  if(name==='importar')renderImportar();
   if(name==='divergencia')renderDivergencia();
     if(name==='historico')renderHistorico();
   }
@@ -771,6 +835,7 @@ function showTab(name,btn){
   if(name==='projetado')renderProjetado();
   if(name==='compras')gerarCompras();
   if(name==='perdas')renderPerdas();
+  if(name==='importar')renderImportar();
   if(name==='divergencia')renderDivergencia();
   if(name==='historico')renderHistorico();
   if(name==='entradas')renderEntradas();
@@ -791,11 +856,12 @@ function selLoja(n,ctx){
   if(ctx==='d'){lojaD=n;[1,2,3].forEach(i=>document.getElementById('bld'+i).classList.toggle('active',i===n));renderDivergencia();}
   if(ctx==='e'){lojaE=n;[1,2,3].forEach(i=>document.getElementById('ble'+i).classList.toggle('active',i===n));renderEntradas();}
   if(ctx==='pr'){lojaPr=n;[1,2,3].forEach(i=>document.getElementById('blpr'+i).classList.toggle('active',i===n));renderPerdas();}
+  if(ctx==='imp'){lojaImp=n;[1,2,3].forEach(i=>document.getElementById('blimp'+i).classList.toggle('active',i===n));}
 }
 
 function nomeLoja(n){return n===1?(db.config.nomeLoja1||'Cajamar'):n===2?(db.config.nomeLoja2||'Iguatemi'):(db.config.nomeLoja3||'Carapicuíba');}
 function lojaIcon(n){return n===1?'🏪':n===2?'🏬':'🏗️';}
-function aplicarNomes(){[1,2,3].forEach(n=>{const nm=nomeLoja(n);['lnc','lni','lnp','lnd','lne','lnpr'].forEach(p=>{const el=document.getElementById(p+n);if(el)el.textContent=nm;});});}
+function aplicarNomes(){[1,2,3].forEach(n=>{const nm=nomeLoja(n);['lnc','lni','lnp','lnd','lne','lnpr','lnimp'].forEach(p=>{const el=document.getElementById(p+n);if(el)el.textContent=nm;});});}
 
 function ultimoInventario(loja,ateData){
   const refs=db.inventarios.filter(r=>r.loja==loja&&r.data<=ateData);if(!refs.length)return null;
@@ -882,6 +948,7 @@ document.getElementById('data-inv').addEventListener('change', function(){
 });
 document.getElementById('data-entrada').value=hoje();
 document.getElementById('data-perdas').value=hoje();
+document.getElementById('data-importar').value=hoje();
 document.getElementById('data-perdas').addEventListener('change', function(){
   if(currentUser && currentUser.role!=='admin' && this.value<hoje()){
     this.value=hoje();
@@ -958,6 +1025,32 @@ function renderProjetado(){
 }
 
 // Definição dos copos de perda
+// Receitas dos sabores (geradas da planilha de insumos)
+const RECEITAS = {"MALHADA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 186.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 40.0, "unidade": "gramas"}, {"itemId": "bol-oreo", "nome": "OREO", "qty": 45.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 350.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 60.0, "unidade": "gramas"}, {"itemId": "bol-oreo", "nome": "OREO", "qty": 55.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 514.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 80.0, "unidade": "gramas"}, {"itemId": "bol-oreo", "nome": "OREO", "qty": 65.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "gramas"}]}, "PRECIOSA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "ml"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 226.0, "unidade": "gramas"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 40.0, "unidade": "gramas"}, {"itemId": "ferrero", "nome": "FERRERO ROCHER", "qty": 1.0, "unidade": "unidade"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "ml"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 370.0, "unidade": "gramas"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 60.0, "unidade": "gramas"}, {"itemId": "ferrero", "nome": "FERRERO ROCHER", "qty": 2.0, "unidade": "unidade"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "ml"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 514.0, "unidade": "gramas"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 80.0, "unidade": "gramas"}, {"itemId": "ferrero", "nome": "FERRERO ROCHER", "qty": 3.0, "unidade": "unidade"}]}, "FLOCOS DE NEVE": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 208.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 40.0, "unidade": "gramas"}, {"itemId": "rafaello", "nome": "RAFAELO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "coco-ral", "nome": "COCO", "qty": 2.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 354.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 60.0, "unidade": "gramas"}, {"itemId": "rafaello", "nome": "RAFAELO", "qty": 2.0, "unidade": "unidade"}, {"itemId": "coco-ral", "nome": "COCO", "qty": 2.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 500.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 80.0, "unidade": "gramas"}, {"itemId": "rafaello", "nome": "RAFAELO", "qty": 3.0, "unidade": "unidade"}, {"itemId": "coco-ral", "nome": "COCO", "qty": 2.0, "unidade": "gramas"}]}, "BRANCA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 206.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 40.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 15.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 356.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 60.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 20.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 506.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 25.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 25.0, "unidade": "gramas"}]}, "DIVA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 267.0, "unidade": "ml"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 40.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 390.0, "unidade": "ml"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 60.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 513.0, "unidade": "ml"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 80.0, "unidade": "gramas"}]}, "DORI": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 209.0, "unidade": "ml"}, {"itemId": "bol-oreo", "nome": "OREO", "qty": 45.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 378.0, "unidade": "ml"}, {"itemId": "bol-oreo", "nome": "OREO", "qty": 55.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 547.0, "unidade": "ml"}, {"itemId": "bol-oreo", "nome": "OREO", "qty": 65.0, "unidade": "gramas"}]}, "CACAU": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 218.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 50.0, "unidade": "gramas"}, {"itemId": "granulado", "nome": "GRANULADO", "qty": 20.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 381.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 70.0, "unidade": "gramas"}, {"itemId": "granulado", "nome": "GRANULADO", "qty": 40.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 544.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 90.0, "unidade": "gramas"}, {"itemId": "granulado", "nome": "GRANULADO", "qty": 60.0, "unidade": "gramas"}]}, "PANDORA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 212.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 20.0, "unidade": "gramas"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 30.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 15.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 390.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 30.0, "unidade": "gramas"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 40.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 20.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 568.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 40.0, "unidade": "gramas"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 50.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 25.0, "unidade": "gramas"}]}, "MIMOSA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 235.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 40.0, "unidade": "gramas"}, {"itemId": "cal-mor", "nome": "CALDA DE MORANGO", "qty": 50.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 343.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 60.0, "unidade": "gramas"}, {"itemId": "cal-mor", "nome": "CALDA DE MORANGO", "qty": 75.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 451.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 80.0, "unidade": "gramas"}, {"itemId": "cal-mor", "nome": "CALDA DE MORANGO", "qty": 100.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "gramas"}]}, "PINTADINHA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 230.0, "unidade": "ml"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 3.0, "unidade": "gramas"}, {"itemId": "ovomal", "nome": "OVOMALTINE", "qty": 40.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 408.0, "unidade": "ml"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 4.0, "unidade": "gramas"}, {"itemId": "ovomal", "nome": "OVOMALTINE", "qty": 55.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 586.0, "unidade": "ml"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "gramas"}, {"itemId": "ovomal", "nome": "OVOMALTINE", "qty": 70.0, "unidade": "gramas"}]}, "LOLITA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 235.0, "unidade": "ml"}, {"itemId": "cal-mor", "nome": "CALDA DE MORANGO", "qty": 50.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 365.0, "unidade": "ml"}, {"itemId": "cal-mor", "nome": "CALDA DE MORANGO", "qty": 75.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 495.0, "unidade": "ml"}, {"itemId": "cal-mor", "nome": "CALDA DE MORANGO", "qty": 100.0, "unidade": "gramas"}]}, "BOLINHA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 200.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 50.0, "unidade": "gramas"}, {"itemId": "chocoball", "nome": "CHOCOBALL", "qty": 25.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 346.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 70.0, "unidade": "gramas"}, {"itemId": "chocoball", "nome": "CHOCOBALL", "qty": 40.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 492.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 90.0, "unidade": "gramas"}, {"itemId": "chocoball", "nome": "CHOCOBALL", "qty": 55.0, "unidade": "gramas"}]}, "CHICLETIN": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 222.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 40.0, "unidade": "gramas"}, {"itemId": "groselha", "nome": "GROSELHA", "qty": 25.0, "unidade": "ml"}, {"itemId": "chiclet", "nome": "CHICLETE", "qty": 10.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 377.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 60.0, "unidade": "gramas"}, {"itemId": "groselha", "nome": "GROSELHA", "qty": 35.0, "unidade": "ml"}, {"itemId": "chiclet", "nome": "CHICLETE", "qty": 12.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 532.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 80.0, "unidade": "gramas"}, {"itemId": "groselha", "nome": "GROSELHA", "qty": 45.0, "unidade": "ml"}, {"itemId": "chiclet", "nome": "CHICLETE", "qty": 14.0, "unidade": "gramas"}]}, "GRACIOSA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 177.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 40.0, "unidade": "gramas"}, {"itemId": "cal-mor", "nome": "CALDA DE MORANGO", "qty": 50.0, "unidade": "gramas"}, {"itemId": "suspiros", "nome": "SUSPIRO", "qty": 7.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 285.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 60.0, "unidade": "gramas"}, {"itemId": "cal-mor", "nome": "CALDA DE MORANGO", "qty": 75.0, "unidade": "gramas"}, {"itemId": "suspiros", "nome": "SUSPIRO", "qty": 14.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 393.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 80.0, "unidade": "gramas"}, {"itemId": "cal-mor", "nome": "CALDA DE MORANGO", "qty": 100.0, "unidade": "gramas"}, {"itemId": "suspiros", "nome": "SUSPIRO", "qty": 21.0, "unidade": "gramas"}]}, "TEMPESTADE": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 176.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 50.0, "unidade": "gramas"}, {"itemId": "brownie", "nome": "BROWNIE", "qty": 45.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 321.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 70.0, "unidade": "gramas"}, {"itemId": "brownie", "nome": "BROWNIE", "qty": 80.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 466.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 90.0, "unidade": "gramas"}, {"itemId": "brownie", "nome": "BROWNIE", "qty": 115.0, "unidade": "gramas"}]}, "FILO": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 205.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 30.0, "unidade": "gramas"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 20.0, "unidade": "gramas"}, {"itemId": "bisc-maria", "nome": "BOLACHA MARIA", "qty": 10.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 390.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 40.0, "unidade": "gramas"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 30.0, "unidade": "gramas"}, {"itemId": "bisc-maria", "nome": "BOLACHA MARIA", "qty": 20.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 575.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 50.0, "unidade": "gramas"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 40.0, "unidade": "gramas"}, {"itemId": "bisc-maria", "nome": "BOLACHA MARIA", "qty": 30.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "gramas"}]}, "DENGOSA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 220.0, "unidade": "ml"}, {"itemId": "doce-leite", "nome": "DOCE DE LEITE", "qty": 40.0, "unidade": "gramas"}, {"itemId": "cal-ban", "nome": "CALDA DE BANANA", "qty": 50.0, "unidade": "gramas"}, {"itemId": "bisc-maria", "nome": "BOLACHA MARIA", "qty": 10.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 287.0, "unidade": "ml"}, {"itemId": "doce-leite", "nome": "DOCE DE LEITE", "qty": 60.0, "unidade": "gramas"}, {"itemId": "cal-ban", "nome": "CALDA DE BANANA", "qty": 75.0, "unidade": "gramas"}, {"itemId": "bisc-maria", "nome": "BOLACHA MARIA", "qty": 20.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 354.0, "unidade": "ml"}, {"itemId": "doce-leite", "nome": "DOCE DE LEITE", "qty": 80.0, "unidade": "gramas"}, {"itemId": "cal-ban", "nome": "CALDA DE BANANA", "qty": 100.0, "unidade": "gramas"}, {"itemId": "bisc-maria", "nome": "BOLACHA MARIA", "qty": 30.0, "unidade": "gramas"}]}, "HOLANDESA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 190.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 50.0, "unidade": "gramas"}, {"itemId": "pacoq", "nome": "PAÇOQUITA", "qty": 1.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 354.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 70.0, "unidade": "gramas"}, {"itemId": "pacoq", "nome": "PAÇOQUITA", "qty": 2.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 518.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 90.0, "unidade": "gramas"}, {"itemId": "pacoq", "nome": "PAÇOQUITA", "qty": 3.0, "unidade": "gramas"}]}, "EMILIA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 212.0, "unidade": "ml"}, {"itemId": "cream-ch", "nome": "CREAM CHEESE", "qty": 10.0, "unidade": "gramas"}, {"itemId": "cal-fram", "nome": "CALDA FRAMBOESA", "qty": 50.0, "unidade": "gramas"}, {"itemId": "bisc-maria", "nome": "BOLACHA MARIA", "qty": 10.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 363.0, "unidade": "ml"}, {"itemId": "cream-ch", "nome": "CREAM CHEESE", "qty": 18.0, "unidade": "gramas"}, {"itemId": "cal-fram", "nome": "CALDA FRAMBOESA", "qty": 75.0, "unidade": "gramas"}, {"itemId": "bisc-maria", "nome": "BOLACHA MARIA", "qty": 20.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 514.0, "unidade": "ml"}, {"itemId": "cream-ch", "nome": "CREAM CHEESE", "qty": 26.0, "unidade": "gramas"}, {"itemId": "cal-fram", "nome": "CALDA FRAMBOESA", "qty": 100.0, "unidade": "gramas"}, {"itemId": "bisc-maria", "nome": "BOLACHA MARIA", "qty": 30.0, "unidade": "gramas"}]}, "MANHOSA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 190.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 40.0, "unidade": "gramas"}, {"itemId": "cal-mar", "nome": "CALDA DE MARACUJA", "qty": 50.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 323.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 60.0, "unidade": "gramas"}, {"itemId": "cal-mar", "nome": "CALDA DE MARACUJA", "qty": 75.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 456.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 80.0, "unidade": "gramas"}, {"itemId": "cal-mar", "nome": "CALDA DE MARACUJA", "qty": 100.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "gramas"}]}, "CHEIROSA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 165.0, "unidade": "ml"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 40.0, "unidade": "gramas"}, {"itemId": "cal-ban", "nome": "CALDA DE BANANA", "qty": 50.0, "unidade": "gramas"}, {"itemId": "bisc-maria", "nome": "BOLACHA MARIA", "qty": 10.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 315.0, "unidade": "ml"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 60.0, "unidade": "gramas"}, {"itemId": "cal-ban", "nome": "CALDA DE BANANA", "qty": 75.0, "unidade": "gramas"}, {"itemId": "bisc-maria", "nome": "BOLACHA MARIA", "qty": 20.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 465.0, "unidade": "ml"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 80.0, "unidade": "gramas"}, {"itemId": "cal-ban", "nome": "CALDA DE BANANA", "qty": 100.0, "unidade": "gramas"}, {"itemId": "bisc-maria", "nome": "BOLACHA MARIA", "qty": 30.0, "unidade": "gramas"}]}, "AMERICANA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 201.0, "unidade": "ml"}, {"itemId": "past-amend", "nome": "PASTA DE AMENDOIM", "qty": 40.0, "unidade": "gramas"}, {"itemId": "cal-fram", "nome": "CALDA FRAMBOESA", "qty": 50.0, "unidade": "gramas"}, {"itemId": "pacoq", "nome": "PAÇOQUITA", "qty": 0.2, "unidade": "unidade"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 369.0, "unidade": "ml"}, {"itemId": "past-amend", "nome": "PASTA DE AMENDOIM", "qty": 60.0, "unidade": "gramas"}, {"itemId": "cal-fram", "nome": "CALDA FRAMBOESA", "qty": 75.0, "unidade": "gramas"}, {"itemId": "pacoq", "nome": "PAÇOQUITA", "qty": 0.3, "unidade": "unidade"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 537.0, "unidade": "ml"}, {"itemId": "past-amend", "nome": "PASTA DE AMENDOIM", "qty": 80.0, "unidade": "gramas"}, {"itemId": "cal-fram", "nome": "CALDA FRAMBOESA", "qty": 100.0, "unidade": "gramas"}, {"itemId": "pacoq", "nome": "PAÇOQUITA", "qty": 0.5, "unidade": "unidade"}]}, "PRETA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 215.0, "unidade": "ml"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 40.0, "unidade": "gramas"}, {"itemId": "cafe", "nome": "CAFÉ", "qty": 1.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "unidade"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 379.0, "unidade": "ml"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 60.0, "unidade": "gramas"}, {"itemId": "cafe", "nome": "CAFÉ", "qty": 2.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "unidade"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 543.0, "unidade": "ml"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 80.0, "unidade": "gramas"}, {"itemId": "cafe", "nome": "CAFÉ", "qty": 3.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "unidade"}]}, "MOO": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 177.0, "unidade": "ml"}, {"itemId": "brownie", "nome": "BROWNIE", "qty": 40.0, "unidade": "gramas"}, {"itemId": "cal-mor", "nome": "CALDA DE MORANGO", "qty": 50.0, "unidade": "gramas"}, {"itemId": "granulado", "nome": "GRANULADO", "qty": 3.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 347.0, "unidade": "ml"}, {"itemId": "brownie", "nome": "BROWNIE", "qty": 60.0, "unidade": "gramas"}, {"itemId": "cal-mor", "nome": "CALDA DE MORANGO", "qty": 75.0, "unidade": "gramas"}, {"itemId": "granulado", "nome": "GRANULADO", "qty": 4.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 517.0, "unidade": "ml"}, {"itemId": "brownie", "nome": "BROWNIE", "qty": 80.0, "unidade": "gramas"}, {"itemId": "cal-mor", "nome": "CALDA DE MORANGO", "qty": 100.0, "unidade": "gramas"}, {"itemId": "granulado", "nome": "GRANULADO", "qty": 5.0, "unidade": "gramas"}]}, "JOIA RARA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 220.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 50.0, "unidade": "gramas"}, {"itemId": "jack", "nome": "JACK DANIELS", "qty": 25.0, "unidade": "ml"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 386.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 70.0, "unidade": "gramas"}, {"itemId": "jack", "nome": "JACK DANIELS", "qty": 50.0, "unidade": "ml"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 552.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 90.0, "unidade": "gramas"}, {"itemId": "jack", "nome": "JACK DANIELS", "qty": 75.0, "unidade": "ml"}]}, "MINEIRA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 225.0, "unidade": "ml"}, {"itemId": "cream-ch", "nome": "CREAM CHEESE", "qty": 10.0, "unidade": "gramas"}, {"itemId": "cafe", "nome": "CAFÉ", "qty": 1.0, "unidade": "gramas"}, {"itemId": "bisc-maria", "nome": "BOLACHA MARIA", "qty": 10.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 400.0, "unidade": "ml"}, {"itemId": "cream-ch", "nome": "CREAM CHEESE", "qty": 18.0, "unidade": "gramas"}, {"itemId": "cafe", "nome": "CAFÉ", "qty": 2.0, "unidade": "gramas"}, {"itemId": "bisc-maria", "nome": "BOLACHA MARIA", "qty": 20.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 575.0, "unidade": "ml"}, {"itemId": "cream-ch", "nome": "CREAM CHEESE", "qty": 26.0, "unidade": "gramas"}, {"itemId": "cafe", "nome": "CAFÉ", "qty": 3.0, "unidade": "gramas"}, {"itemId": "bisc-maria", "nome": "BOLACHA MARIA", "qty": 15.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "gramas"}]}, "XONADA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 200.0, "unidade": "ml"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 40.0, "unidade": "gramas"}, {"itemId": "cal-fram", "nome": "CALDA FRAMBOESA", "qty": 50.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 225.0, "unidade": "ml"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 60.0, "unidade": "gramas"}, {"itemId": "cal-fram", "nome": "CALDA FRAMBOESA", "qty": 75.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 250.0, "unidade": "ml"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 80.0, "unidade": "gramas"}, {"itemId": "cal-fram", "nome": "CALDA FRAMBOESA", "qty": 100.0, "unidade": "gramas"}]}, "MISSY": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 177.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 40.0, "unidade": "gramas"}, {"itemId": "limao", "nome": "CALDA DE LIMAO", "qty": 50.0, "unidade": "gramas"}, {"itemId": "suspiros", "nome": "SUSPIRO", "qty": 7.0, "unidade": "gramas"}, {"itemId": "limao", "nome": "SUCO DE LIMÃO", "qty": 1.5, "unidade": "unidade"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 285.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 60.0, "unidade": "gramas"}, {"itemId": "limao", "nome": "CALDA DE LIMAO", "qty": 75.0, "unidade": "gramas"}, {"itemId": "suspiros", "nome": "SUSPIRO", "qty": 14.0, "unidade": "gramas"}, {"itemId": "limao", "nome": "SUCO DE LIMÃO", "qty": 2.0, "unidade": "unidade"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 393.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 80.0, "unidade": "gramas"}, {"itemId": "limao", "nome": "CALDA DE LIMAO", "qty": 100.0, "unidade": "gramas"}, {"itemId": "suspiros", "nome": "SUSPIRO", "qty": 21.0, "unidade": "gramas"}, {"itemId": "limao", "nome": "SUCO DE LIMÃO", "qty": 2.5, "unidade": "unidade"}]}, "JUDITE": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 225.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 40.0, "unidade": "gramas"}, {"itemId": "cal-ban", "nome": "CALDA DE BANANA", "qty": 50.0, "unidade": "gramas"}, {"itemId": "pacoq", "nome": "PAÇOQUITA", "qty": 0.2, "unidade": "unidades"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 285.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 60.0, "unidade": "gramas"}, {"itemId": "cal-ban", "nome": "CALDA DE BANANA", "qty": 75.0, "unidade": "gramas"}, {"itemId": "pacoq", "nome": "PAÇOQUITA", "qty": 0.3, "unidade": "unidades"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 345.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 80.0, "unidade": "gramas"}, {"itemId": "cal-ban", "nome": "CALDA DE BANANA", "qty": 100.0, "unidade": "gramas"}, {"itemId": "pacoq", "nome": "PAÇOQUITA", "qty": 0.5, "unidade": "unidades"}]}, "ESMERALDA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 235.0, "unidade": "unidade"}, {"itemId": "limao", "nome": "CALDA DE LIMAO", "qty": 50.0, "unidade": "unidade"}, {"itemId": "cachaca", "nome": "CACHAÇA SELETA", "qty": 25.0, "unidade": "unidade"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 365.0, "unidade": "unidade"}, {"itemId": "limao", "nome": "CALDA DE LIMAO", "qty": 75.0, "unidade": "unidade"}, {"itemId": "cachaca", "nome": "CACHAÇA SELETA", "qty": 50.0, "unidade": "unidade"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 495.0, "unidade": "unidade"}, {"itemId": "limao", "nome": "CALDA DE LIMAO", "qty": 100.0, "unidade": "unidade"}, {"itemId": "cachaca", "nome": "CACHAÇA SELETA", "qty": 75.0, "unidade": "unidade"}]}, "RUBI": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 185.0, "unidade": "ml"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 40.0, "unidade": "gramas"}, {"itemId": "amarula", "nome": "AMARULA", "qty": 25.0, "unidade": "ml"}, {"itemId": "cal-mor", "nome": "CALDA DE MORANGO", "qty": 25.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 215.0, "unidade": "ml"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 60.0, "unidade": "gramas"}, {"itemId": "amarula", "nome": "AMARULA", "qty": 50.0, "unidade": "ml"}, {"itemId": "cal-mor", "nome": "CALDA DE MORANGO", "qty": 50.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 245.0, "unidade": "ml"}, {"itemId": "nutella", "nome": "NUTELLA", "qty": 80.0, "unidade": "gramas"}, {"itemId": "amarula", "nome": "AMARULA", "qty": 75.0, "unidade": "ml"}, {"itemId": "cal-mor", "nome": "CALDA DE MORANGO", "qty": 75.0, "unidade": "gramas"}]}, "BISA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 220.0, "unidade": "ml"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 0.5, "unidade": "gramas"}, {"itemId": "doce-leite", "nome": "DOCE DE LEITE", "qty": 40.0, "unidade": "gramas"}, {"itemId": "cafe", "nome": "CAFÉ", "qty": 1.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 287.0, "unidade": "ml"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 0.5, "unidade": "gramas"}, {"itemId": "doce-leite", "nome": "DOCE DE LEITE", "qty": 60.0, "unidade": "gramas"}, {"itemId": "cafe", "nome": "CAFÉ", "qty": 2.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 354.0, "unidade": "ml"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 0.5, "unidade": "gramas"}, {"itemId": "doce-leite", "nome": "DOCE DE LEITE", "qty": 80.0, "unidade": "gramas"}, {"itemId": "cafe", "nome": "CAFÉ", "qty": 3.0, "unidade": "gramas"}]}, "DOMINO": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 208.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 40.0, "unidade": "gramas"}, {"itemId": "rafaello", "nome": "RAFAELO", "qty": 1.0, "unidade": "UNIDADE"}, {"itemId": "coco-ral", "nome": "COCO", "qty": 5.0, "unidade": "GRAMAS"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 354.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 60.0, "unidade": "gramas"}, {"itemId": "rafaello", "nome": "RAFAELO", "qty": 2.0, "unidade": "UNIDADE"}, {"itemId": "coco-ral", "nome": "COCO", "qty": 5.0, "unidade": "GRAMAS"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 500.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 80.0, "unidade": "gramas"}, {"itemId": "rafaello", "nome": "RAFAELO", "qty": 3.0, "unidade": "UNIDADE"}, {"itemId": "coco-ral", "nome": "COCO", "qty": 5.0, "unidade": "GRAMAS"}]}, "PODEROSA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 190.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 50.0, "unidade": "gramas"}, {"itemId": "ovomal", "nome": "OVOMALTINE", "qty": 40.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "GRAMAS"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 354.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 70.0, "unidade": "gramas"}, {"itemId": "ovomal", "nome": "OVOMALTINE", "qty": 55.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "GRAMAS"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 518.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIGADEIRO", "qty": 90.0, "unidade": "gramas"}, {"itemId": "ovomal", "nome": "OVOMALTINE", "qty": 70.0, "unidade": "gramas"}, {"itemId": "leite-ninho", "nome": "NINHO EM PO", "qty": 5.0, "unidade": "GRAMAS"}]}, "GINA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 220.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 50.0, "unidade": "gramas"}, {"itemId": "cal-mar", "nome": "CALDA DE MARACUJA", "qty": 50.0, "unidade": "gramas"}, {"itemId": "gin", "nome": "GIN BEEFEATER", "qty": 25.0, "unidade": "ml"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 386.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 70.0, "unidade": "gramas"}, {"itemId": "cal-mar", "nome": "CALDA DE MARACUJA", "qty": 75.0, "unidade": "gramas"}, {"itemId": "gin", "nome": "GIN BEEFEATER", "qty": 50.0, "unidade": "ml"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 552.0, "unidade": "ml"}, {"itemId": "brig-ninho", "nome": "BRIG.NINHO", "qty": 90.0, "unidade": "gramas"}, {"itemId": "cal-mar", "nome": "CALDA DE MARACUJA", "qty": 100.0, "unidade": "gramas"}, {"itemId": "gin", "nome": "GIN BEEFEATER", "qty": 75.0, "unidade": "ml"}]}, "ESTRELA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 200.0, "unidade": "ml"}, {"itemId": "cal-pist", "nome": "CALDA PISTACHE", "qty": 65.0, "unidade": "gramas"}, {"itemId": "cast-pist", "nome": "CASTANHA PISTACHE", "qty": 5.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 225.0, "unidade": "ml"}, {"itemId": "cal-pist", "nome": "CALDA PISTACHE", "qty": 85.0, "unidade": "gramas"}, {"itemId": "cast-pist", "nome": "CASTANHA PISTACHE", "qty": 5.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 552.0, "unidade": "ml"}, {"itemId": "cal-pist", "nome": "CALDA PISTACHE", "qty": 105.0, "unidade": "gramas"}, {"itemId": "cast-pist", "nome": "CASTANHA PISTACHE", "qty": 5.0, "unidade": "gramas"}]}, "CARMELA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 200.0, "unidade": "ml"}, {"itemId": "caram-salg", "nome": "CARAMELO SALGADO", "qty": 30.0, "unidade": "gramas"}, {"itemId": "sucrilhos", "nome": "SNOW FLAKES", "qty": 10.0, "unidade": "gramas"}], "500": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 225.0, "unidade": "ml"}, {"itemId": "caram-salg", "nome": "CARAMELO SALGADO", "qty": 50.0, "unidade": "gramas"}, {"itemId": "sucrilhos", "nome": "SNOW FLAKES", "qty": 20.0, "unidade": "gramas"}], "700": [{"itemId": "canudo", "nome": "CANUDO", "qty": 1.0, "unidade": "unidade"}, {"itemId": "sorvete", "nome": "BASE DAUS", "qty": 518.0, "unidade": "ml"}, {"itemId": "caram-salg", "nome": "CARAMELO SALGADO", "qty": 70.0, "unidade": "gramas"}, {"itemId": "sucrilhos", "nome": "SNOW FLAKES", "qty": 30.0, "unidade": "gramas"}]}};
+
+// Busca receita de um sabor pelo nome do produto no Degust
+// Ex: "PANDORA 500ML" → receita do PANDORA no tamanho 500
+function buscarReceita(nomeProduto, tamanho) {
+  // Normaliza o nome: remove tamanho, acentos, espaços extras
+  let nome = nomeProduto.toUpperCase()
+    .replace(/\s*(300|500|700)\s*ML.*$/i, '')
+    .replace(/PASSATEMPO/i, '')
+    .trim();
+  // Remove acentos
+  nome = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  // Busca exata primeiro
+  if(RECEITAS[nome]) return RECEITAS[nome][tamanho] || [];
+  
+  // Busca parcial
+  for(const sabor of Object.keys(RECEITAS)) {
+    if(nome.includes(sabor) || sabor.includes(nome)) {
+      return RECEITAS[sabor][tamanho] || [];
+    }
+  }
+  return [];
+}
+
 const PERDAS_COPOS = [
   {id:'cop180',    nome:'Copo 180',          itemId:'cop180'},
   {id:'cop300',    nome:'Copo 300',           itemId:'cop300'},
@@ -1175,21 +1268,55 @@ function gerarCompras(){
 }
 
 function renderDivergencia(){ document.getElementById('div-lista').innerHTML='<div class="empty">Selecione um período.</div>'; }
+let histFiltroLoja=0, histFiltroTipo='';
+
+function filtrarHistorico(loja){
+  histFiltroLoja=loja;
+  [0,1,2,3].forEach(i=>{
+    const btn=document.getElementById('filt-hist-'+i);
+    if(!btn)return;
+    const ativo=i===loja;
+    btn.style.background=ativo?'var(--pink)':'white';
+    btn.style.color=ativo?'white':'var(--gray)';
+    btn.style.borderColor=ativo?'var(--pink)':'var(--border)';
+  });
+  renderHistorico();
+}
+
+function filtrarHistoricoTipo(tipo){
+  histFiltroTipo=tipo;
+  ['todos','consumo','inventario','entrada','perda','importacao'].forEach(t=>{
+    const btn=document.getElementById('filt-tipo-'+(t||'todos'));
+    if(!btn)return;
+    const ativo=t===tipo;
+    btn.style.background=ativo?'var(--pink)':'white';
+    btn.style.color=ativo?'white':'var(--gray)';
+    btn.style.borderColor=ativo?'var(--pink)':'var(--border)';
+  });
+  renderHistorico();
+}
+
 function renderHistorico(){
   // Mostra/esconde botão de reset conforme perfil
   const btnReset = document.querySelector('#sec-historico .btn');
   if(btnReset) btnReset.style.display = currentUser?.role==='admin' ? '' : 'none';
   const container=document.getElementById('hist-lista');
-  const hist=(db.historico||[]).slice().sort((a,b)=>b.timestamp.localeCompare(a.timestamp));
+  // Atualiza nomes nos filtros
+  const fn1=document.getElementById('filt-nome1');const fn2=document.getElementById('filt-nome2');const fn3=document.getElementById('filt-nome3');
+  if(fn1)fn1.textContent=nomeLoja(1);if(fn2)fn2.textContent=nomeLoja(2);if(fn3)fn3.textContent=nomeLoja(3);
+
+  let hist=(db.historico||[]).slice().sort((a,b)=>b.timestamp.localeCompare(a.timestamp));
+  if(histFiltroLoja>0) hist=hist.filter(h=>h.loja==histFiltroLoja);
+  if(histFiltroTipo) hist=hist.filter(h=>h.tipo===histFiltroTipo);
   if(!hist.length){
     container.innerHTML=`<div class="empty"><span class="ej">📜</span><p>Nenhum preenchimento registrado ainda.</p></div>`;
     return;
   }
-  const tipoIcon={consumo:'📦',inventario:'📋',entrada:'🛍️',perda:'💔'};
-  const tipoLabel={consumo:'Consumo Diário',inventario:'Inventário Físico',entrada:'Entrada de Compra',perda:'Perda / Erro'};
-  const tipoColor={consumo:'#1e40af',inventario:'#6b21a8',entrada:'#9a3412',perda:'#991b1b'};
-  const tipoBg={consumo:'#eff6ff',inventario:'#fdf4ff',entrada:'#fff7ed',perda:'#fff0f0'};
-  const tipoBorder={consumo:'#bfdbfe',inventario:'#e9d5ff',entrada:'#fed7aa',perda:'#fecaca'};
+  const tipoIcon={consumo:'📦',inventario:'📋',entrada:'🛍️',perda:'💔',importacao:'📥'};
+  const tipoLabel={consumo:'Consumo Diário',inventario:'Inventário Físico',entrada:'Entrada de Compra',perda:'Perda / Erro',importacao:'Importação de Relatório'};
+  const tipoColor={consumo:'#1e40af',inventario:'#6b21a8',entrada:'#9a3412',perda:'#991b1b',importacao:'#166534'};
+  const tipoBg={consumo:'#eff6ff',inventario:'#fdf4ff',entrada:'#fff7ed',perda:'#fff0f0',importacao:'#f0fdf4'};
+  const tipoBorder={consumo:'#bfdbfe',inventario:'#e9d5ff',entrada:'#fed7aa',perda:'#fecaca',importacao:'#bbf7d0'};
 
   container.innerHTML = hist.map(h => {
     const d = new Date(h.timestamp);
@@ -1254,12 +1381,21 @@ function renderConfig(){
     if(!its.length) return;
     cfgHtml += `<div style="font-size:.75rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;padding:10px 0 4px;border-bottom:2px solid var(--border);margin-bottom:4px">${CAT_ICONS[cat]} ${CAT_LABELS[cat]}</div>`;
     cfgHtml += its.map(item=>`
-    <div class="cfg-item">
-      <div style="flex:1">
+    <div class="cfg-item" style="flex-wrap:wrap;gap:6px;align-items:flex-start;padding:10px 0">
+      <div style="flex:1;min-width:160px">
         <div class="cfg-name">${item.nome}</div>
-        <div style="font-size:.7rem;color:var(--gray)">Mín: <input class="cfg-input" type="number" step="1" id="min-${item.id}" value="${db.minimos[item.id]||0}" style="width:50px;padding:2px"></div>
+        <div style="font-size:.7rem;color:var(--gray);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span>Mín: <input class="cfg-input" type="number" step="1" id="min-${item.id}" value="${db.minimos[item.id]||0}" style="width:45px;padding:2px"></span>
+          <span>Compra: <input class="cfg-input" type="text" id="unid-${item.id}" value="${item.unidade||''}" placeholder="unid" style="width:70px;padding:2px;text-align:left"></span>
+          <span>Qtd/unid: <input class="cfg-input" type="number" step="1" id="qtdunid-${item.id}" value="${item.qtdPorUnidade||''}" placeholder="-" style="width:50px;padding:2px"></span>
+          <span>Un.sec: <input class="cfg-input" type="text" id="unid2-${item.id}" value="${item.unidadeSecundaria||''}" placeholder="-" style="width:55px;padding:2px;text-align:left"></span>
+          <span>R$: <input class="cfg-input" type="number" step="0.01" id="valor-${item.id}" value="${item.valor||''}" placeholder="-" style="width:60px;padding:2px"></span>
+        </div>
       </div>
-      <button class="btn-del" onclick="deleteItem('${item.id}')" title="Excluir item">🗑️</button>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button onclick="salvarItem('${item.id}')" style="background:#16a34a;color:white;border:none;border-radius:8px;padding:4px 8px;font-size:.75rem;cursor:pointer;font-family:Nunito,sans-serif;font-weight:700">💾</button>
+        <button class="btn-del" onclick="deleteItem('${item.id}')" title="Excluir item">🗑️</button>
+      </div>
     </div>`).join('');
   });
   document.getElementById('cfg-min').innerHTML = cfgHtml;
@@ -1270,7 +1406,13 @@ async function salvarConfig(){
   db.config.nomeLoja2=document.getElementById('cn2').value;
   db.config.nomeLoja3=document.getElementById('cn3').value;
   db.config.diasSemana=parseInt(document.getElementById('cd').value);
-  db.items.forEach(item=>{const el=document.getElementById('min-'+item.id);if(el)db.minimos[item.id]=parseFloat(el.value)||0;});
+  db.items.forEach(item=>{
+    const elMin=document.getElementById('min-'+item.id);if(elMin)db.minimos[item.id]=parseFloat(elMin.value)||0;
+    const elUnid=document.getElementById('unid-'+item.id);if(elUnid&&elUnid.value.trim())item.unidade=elUnid.value.trim();
+    const elQtd=document.getElementById('qtdunid-'+item.id);if(elQtd){const v=parseFloat(elQtd.value)||0;if(v>0)item.qtdPorUnidade=v;else delete item.qtdPorUnidade;}
+    const elU2=document.getElementById('unid2-'+item.id);if(elU2){const v=elU2.value.trim();if(v)item.unidadeSecundaria=v;else delete item.unidadeSecundaria;}
+    const elVal=document.getElementById('valor-'+item.id);if(elVal){const v=parseFloat(elVal.value)||0;if(v>0)item.valor=v;else delete item.valor;}
+  });
   await saveCloud(); showToast('💾 Configurações salvas!');
 }
 
@@ -1281,6 +1423,21 @@ async function addItem(){
   const noConsumo=document.getElementById('ni-consumo').checked;
   db.items.push({id:'c_'+Date.now(),nome,cat,unidade,usoDiario:noConsumo});
   await saveCloud(); renderConfig(); showToast('✅ Adicionado!');
+}
+
+async function salvarItem(id){
+  const item = db.items.find(i=>i.id===id);
+  if(!item) return;
+  const unid = document.getElementById('unid-'+id)?.value.trim();
+  const qtdPorUnidade = parseFloat(document.getElementById('qtdunid-'+id)?.value)||0;
+  const unidadeSecundaria = document.getElementById('unid2-'+id)?.value.trim()||'';
+  const valor = parseFloat(document.getElementById('valor-'+id)?.value)||0;
+  if(unid) item.unidade = unid;
+  if(qtdPorUnidade>0) item.qtdPorUnidade=qtdPorUnidade; else delete item.qtdPorUnidade;
+  if(unidadeSecundaria) item.unidadeSecundaria=unidadeSecundaria; else delete item.unidadeSecundaria;
+  if(valor>0) item.valor=valor; else delete item.valor;
+  const ok=await saveCloud();
+  showToast(ok?`✅ ${item.nome} atualizado!`:'⚠️ Erro ao salvar!');
 }
 
 async function deleteItem(id){
@@ -1493,7 +1650,7 @@ function abrirModalReset(){
   document.getElementById('rst-nome-loja2').textContent=nomeLoja(2);
   document.getElementById('rst-nome-loja3').textContent=nomeLoja(3);
   // Reset checkboxes
-  ['rst-consumo','rst-inv','rst-entradas','rst-hist','rst-tudo'].forEach(id=>{
+  ['rst-consumo','rst-inv','rst-entradas','rst-hist','rst-relatorios','rst-tudo'].forEach(id=>{
     document.getElementById(id).checked=false;
   });
   // Reset loja para "Todas"
@@ -1545,7 +1702,7 @@ function toggleReset(label){
 function toggleResetTudo(label){
   setTimeout(()=>{
     const checked=document.getElementById('rst-tudo').checked;
-    ['rst-consumo','rst-inv','rst-entradas','rst-hist'].forEach(id=>{
+    ['rst-consumo','rst-inv','rst-entradas','rst-hist','rst-relatorios'].forEach(id=>{
       const el=document.getElementById(id);
       el.checked=checked;
       const lbl=el.closest('label');
@@ -1571,23 +1728,24 @@ async function confirmarReset(){
   if(apagaInv)itens.push('Inventários');
   if(apagaEntradas)itens.push('Entradas');
   if(apagaHist)itens.push('Histórico');
+  if(apagaRelatorios)itens.push('Relatórios importados');
 
   const lojaLabel = lojaVal===0 ? 'TODAS AS LOJAS' : nomeLoja(lojaVal);
 
   if(!confirm(`Confirma a exclusão de:\n\n• ${itens.join('\n• ')}\n\nLoja: ${lojaLabel}\n\nEsta ação é irreversível!`)){return;}
 
   if(lojaVal===0){
-    // Apaga de todas as lojas
     if(apagaConsumo) db.consumos=[];
     if(apagaInv) db.inventarios=[];
     if(apagaEntradas) db.entradas=[];
     if(apagaHist) db.historico=[];
+    if(apagaRelatorios) db.relatorios=[];
   } else {
-    // Apaga só da loja selecionada
     if(apagaConsumo) db.consumos=db.consumos.filter(c=>c.loja!=lojaVal);
     if(apagaInv) db.inventarios=db.inventarios.filter(r=>r.loja!=lojaVal);
     if(apagaEntradas) db.entradas=db.entradas.filter(e=>e.loja!=lojaVal);
     if(apagaHist) db.historico=db.historico.filter(h=>h.loja!=lojaVal);
+    if(apagaRelatorios) db.relatorios=db.relatorios.filter(r=>r.loja!=lojaVal);
   }
 
   const ok=await cloudSet(db);
@@ -1649,7 +1807,305 @@ async function confirmarResetSenha(){
   }
 }
 
-function fmtQ(n){return n===null?'–':Number.isInteger(n)?n:n.toFixed(1);}
+// Mapeamento: palavras-chave no relatório → itemId no estoque
+const IMPORT_RULES = [
+  // Copos 300ml
+  { pattern: /MILKSHAKES 300 ML[\s\S]*?TOTAL\s+([\d]+)/i, tipo:'secao', tamanho:300 },
+  // Copos 500ml
+  { pattern: /MILKSHAKES 500 ML[\s\S]*?TOTAL\s+([\d]+)/i, tipo:'secao', tamanho:500 },
+  // Copos 700ml
+  { pattern: /MILKSHAKES 700 ML[\s\S]*?TOTAL\s+([\d]+)/i, tipo:'secao', tamanho:700 },
+];
+
+// Mapa de tamanho → itemId do copo
+const COPO_MAP = {
+  300: 'cop300',
+  500: 'cop500',
+  700: 'cop700',
+};
+
+let importacaoPendente = null;
+
+function renderImportar(){
+  document.getElementById('importar-preview').innerHTML='';
+  document.getElementById('btn-confirmar-importar').style.display='none';
+}
+
+function processarRelatorio(){
+  const txt = document.getElementById('txt-relatorio').value;
+  if(!txt.trim()){ showToast('⚠️ Cole o texto do relatório primeiro!'); return; }
+
+  const resultado = [];
+
+  // Extrai data do relatório
+  const dataMatch = txt.match(/Data Abertura[\s.]*[:\s]*(\d{2})\/(\d{2})\/(\d{4})/);
+  const dataRelatorio = dataMatch
+    ? `${dataMatch[3]}-${dataMatch[2]}-${dataMatch[1]}`
+    : document.getElementById('data-importar').value;
+
+  // Processa cada seção de milkshakes
+  const secoes = [
+    { nome:'MILKSHAKES 300 ML', tamanho:300 },
+    { nome:'MILKSHAKES 500 ML', tamanho:500 },
+    { nome:'MILKSHAKES 700 ML', tamanho:700 },
+  ];
+
+  secoes.forEach(s=>{
+    const idx = txt.indexOf(s.nome);
+    if(idx===-1) return;
+    // Delimita o bloco: da seção atual até a próxima seção ou fim
+    const nextSecIdx = secoes
+      .map(o=>o.nome!==s.nome ? txt.indexOf(o.nome, idx+1) : -1)
+      .filter(i=>i>idx);
+    const endIdx = nextSecIdx.length>0 ? Math.min(...nextSecIdx) : idx+3000;
+    const bloco = txt.substring(idx, endIdx);
+    // Pega o TOTAL da própria seção (último TOTAL no bloco)
+    const totalMatches = [...bloco.matchAll(/^TOTAL\s+(\d+)/mg)];
+    if(!totalMatches.length) return;
+    const lastTotal = totalMatches[totalMatches.length-1];
+    const qtd = parseInt(lastTotal[1]);
+    if(qtd<=0) return;
+    const itemId = COPO_MAP[s.tamanho];
+    const item = db.items.find(i=>i.id===itemId);
+    if(!item) return;
+    // Calcula consumo de insumos com base nas receitas
+    const consumoInsumos = {};
+    const tamanhoStr = String(s.tamanho);
+    
+    // Extrai produtos individuais da seção
+    const linhasProd = bloco.split('\n').filter(l=>l.match(/^\s+\d+\s+.+\s+(\d+)\s+[\d,.]+/));
+    linhasProd.forEach(linha => {
+      const m = linha.match(/^\s+\d+\s+(.+?)\s{2,}(\d+)\s/);
+      if(!m) return;
+      const nomeProd = m[1].trim();
+      const qtdProd = parseInt(m[2]);
+      const receita = buscarReceita(nomeProd, tamanhoStr);
+      receita.forEach(ing => {
+        if(!ing.itemId) return;
+        if(!consumoInsumos[ing.itemId]) consumoInsumos[ing.itemId] = {nome:ing.nome, qty:0, unidade:ing.unidade, itemId:ing.itemId};
+        consumoInsumos[ing.itemId].qty += ing.qty * qtdProd;
+      });
+    });
+
+    resultado.push({itemId, nome:item.nome, qtd, descricao:`${qtd} milkshake(s) ${s.tamanho}ml vendido(s)`, insumos:Object.values(consumoInsumos)});
+  });
+
+  // Extrai loja do relatório automaticamente
+  const lojaMatch = txt.match(/MILKY MOO[^\n]*/i);
+  const lojaInfo = lojaMatch ? lojaMatch[0].trim() : '';
+
+  // Detecta qual loja baseado no nome encontrado no relatório
+  let lojaDetectada = lojaImp; // fallback para loja selecionada
+  if(lojaInfo){
+    const lojaInfoUpper = lojaInfo.toUpperCase();
+    const nomeLoja1 = (db.config.nomeLoja1||'Cajamar').toUpperCase();
+    const nomeLoja2 = (db.config.nomeLoja2||'Iguatemi').toUpperCase();
+    const nomeLoja3 = (db.config.nomeLoja3||'Carapicuíba').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const lojaInfoNorm = lojaInfoUpper.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    if(lojaInfoUpper.includes(nomeLoja1)||lojaInfoNorm.includes(nomeLoja1)) lojaDetectada=1;
+    else if(lojaInfoUpper.includes(nomeLoja2)||lojaInfoNorm.includes(nomeLoja2)) lojaDetectada=2;
+    else if(lojaInfoUpper.includes(nomeLoja3.normalize('NFD').replace(/[\u0300-\u036f]/g,''))||lojaInfoNorm.includes('CARAPICUIBA')) lojaDetectada=3;
+  }
+
+  // Atualiza seletor de loja automaticamente
+  lojaImp = lojaDetectada;
+  [1,2,3].forEach(i=>document.getElementById('blimp'+i).classList.toggle('active',i===lojaDetectada));
+
+  // Atualiza campo de data automaticamente
+  if(dataMatch) document.getElementById('data-importar').value = dataRelatorio;
+
+  if(!resultado.length){
+    document.getElementById('importar-preview').innerHTML=`
+      <div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;">
+        <strong>⚠️ Nenhum item encontrado</strong>
+        Verifique se o texto copiado está completo e contém a seção "MOVIMENTACAO DE PRODUTO".
+      </div>`;
+    return;
+  }
+
+  // Calcula estoque atual para mostrar preview
+  const proj = calcProjetado(lojaDetectada, hoje());
+
+  let previewHtml = `
+    <div class="card">
+      <div class="card-title"><span>🔍</span>Preview da Importação</div>
+      <div style="font-size:.78rem;margin-bottom:10px;background:#f0fdf4;border-radius:8px;padding:8px 12px;border:1px solid #bbf7d0">
+        📅 Data detectada: <strong style="color:#166534">${fmtDate(dataRelatorio)}</strong> &nbsp;|&nbsp;
+        ${lojaIcon(lojaDetectada)} Loja detectada: <strong style="color:#166534">${nomeLoja(lojaDetectada)}</strong>
+        ${lojaInfo ? `<br><span style="font-size:.72rem;color:var(--gray)">📋 ${lojaInfo}</span>` : ''}
+      </div>
+      <div class="row-hdr">
+        <div class="rh-name">Item</div>
+        <div class="rh-col">Vendas</div>
+        <div class="rh-col">Estoque atual</div>
+        <div class="rh-col">Após desconto</div>
+      </div>`;
+
+  resultado.forEach(r=>{
+    const estoqueAtual = proj ? (proj.proj[r.itemId]!==null&&proj.proj[r.itemId]!==undefined ? Number(proj.proj[r.itemId]) : '–') : '–';
+    const estoqueApos = proj && typeof estoqueAtual==='number' ? estoqueAtual - r.qtd : '–';
+    const cor = typeof estoqueApos==='number' && estoqueApos<0 ? 'var(--red)' : 'var(--teal-dark)';
+    // Insumos breakdown
+    const insumosHtml = (r.insumos && r.insumos.length > 0)
+      ? `<div style="margin-top:6px;padding:8px;background:var(--gray-light);border-radius:8px;font-size:.72rem">
+          <div style="font-weight:700;color:var(--gray);margin-bottom:4px">📦 Insumos consumidos:</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">
+            ${r.insumos.map(ing=>{
+              const itm=db.items.find(i=>i.id===ing.itemId);
+              return `<span style="background:white;border-radius:6px;padding:2px 8px;border:1px solid var(--border)">${itm?itm.nome:ing.nome}: <strong>${fmtQ(ing.qty)} ${ing.unidade}</strong></span>`;
+            }).join('')}
+          </div>
+        </div>`
+      : '';
+
+    previewHtml += `
+      <div class="proj-row" style="flex-wrap:wrap">
+        <div class="proj-name" style="width:100%">${r.nome}<br><span style="font-size:.68rem;color:var(--gray)">${r.descricao}</span></div>
+        <div style="display:flex;gap:8px;width:100%">
+          <div class="proj-col" style="color:var(--pink-dark);font-weight:800">${r.qtd}</div>
+          <div class="proj-col">${fmtQ(estoqueAtual)}</div>
+          <div class="proj-col" style="color:${cor};font-weight:800">${fmtQ(estoqueApos)}</div>
+        </div>
+        ${insumosHtml}
+      </div>`;
+  });
+
+  previewHtml += `</div>`;
+
+  document.getElementById('importar-preview').innerHTML = previewHtml;
+  document.getElementById('btn-confirmar-importar').style.display = '';
+
+  // Salva para confirmar depois
+  importacaoPendente = { resultado, dataRelatorio };
+}
+
+async function confirmarImportacao(){
+  if(!importacaoPendente){ showToast('⚠️ Processe o relatório primeiro!'); return; }
+  const {resultado, dataRelatorio} = importacaoPendente;
+
+  if(!confirm(`Confirma o lançamento de ${resultado.length} item(ns) no consumo de ${nomeLoja(lojaImp)} em ${fmtDate(dataRelatorio)}?`)) return;
+
+  const btn = document.getElementById('btn-confirmar-importar');
+  btn.disabled = true;
+
+  // Salva dados do relatório em db.relatorios (NÃO altera consumos)
+  if(!db.relatorios) db.relatorios=[];
+
+  // Soma múltiplos PDVs do mesmo dia/loja
+  resultado.forEach(r=>{
+    const existing = db.relatorios.find(x=>x.data===dataRelatorio&&x.loja==lojaImp&&x.itemId===r.itemId);
+    if(existing){ existing.qty += r.qtd; }
+    else { db.relatorios.push({data:dataRelatorio, loja:lojaImp, itemId:r.itemId, qty:r.qtd}); }
+  });
+
+  // Registra no histórico
+  if(!db.historico) db.historico=[];
+  const pdvNum = db.historico.filter(h=>h.data===dataRelatorio&&h.loja==lojaImp&&h.tipo==='importacao').length+1;
+  db.historico.push({
+    tipo:'importacao',
+    data:dataRelatorio,
+    loja:lojaImp,
+    responsavel:`Rubens (PDV ${pdvNum})`,
+    timestamp:new Date().toISOString(),
+    itens: resultado.map(r=>({nome:r.nome, qty:r.qtd, unidade:'unidades'}))
+  });
+
+  const ok = await saveCloud('consumo');
+  if(ok){
+    document.getElementById('txt-relatorio').value='';
+    importacaoPendente=null;
+    mostrarConfronto(dataRelatorio);
+    showToast('✅ Relatório salvo! Veja o confronto abaixo.');
+  } else {
+    showToast('⚠️ Erro ao salvar!');
+  }
+  btn.disabled=false;
+}
+
+function mostrarConfronto(data){
+  if(!data){ showToast('⚠️ Selecione uma data!'); return; }
+  const container = document.getElementById('confronto-resultado');
+  if(!container){ return; }
+
+  // Itens do relatório importado para essa data/loja
+  const relItems = (db.relatorios||[]).filter(r=>r.data===data&&r.loja==lojaImp);
+  if(!relItems.length){
+    container.innerHTML=`<div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;">
+      <strong>⚠️ Nenhum relatório importado</strong> para ${fmtDate(data)} em ${nomeLoja(lojaImp)}.
+    </div>`;
+    return;
+  }
+
+  // Consumo manual das funcionárias para essa data/loja
+  const consumoManual = db.consumos.filter(c=>c.data===data&&c.loja==lojaImp);
+
+  let temDivergencia = false;
+  let html = `
+    <div class="card">
+      <div class="card-title"><span>🔍</span>Confronto – ${fmtDate(data)} – ${nomeLoja(lojaImp)}</div>
+      <div style="font-size:.75rem;color:var(--gray);margin-bottom:12px">
+        Comparando lançamento manual das funcionárias vs relatório do Degust.
+        <strong>O estoque usa sempre o valor manual.</strong>
+      </div>
+      <div class="row-hdr">
+        <div class="rh-name">Item</div>
+        <div class="rh-col">Manual</div>
+        <div class="rh-col">Relatório</div>
+        <div class="rh-col">Diferença</div>
+      </div>`;
+
+  relItems.forEach(r=>{
+    const item = db.items.find(i=>i.id===r.itemId);
+    if(!item) return;
+    const manual = consumoManual.filter(c=>c.itemId===r.itemId).reduce((s,c)=>s+c.qty,0);
+    const relQty = r.qty;
+    const diff = manual - relQty;
+    const diffColor = diff===0 ? 'var(--teal-dark)' : diff>0 ? '#d97706' : 'var(--red)';
+    const diffSign = diff>0?'+':'';
+    const diffLabel = diff===0 ? '✅ OK' : `${diffSign}${fmtQ(diff)}`;
+    if(diff!==0) temDivergencia=true;
+
+    html+=`<div class="proj-row">
+      <div class="proj-name">${item.nome}<br><span style="font-size:.66rem;color:var(--gray)">${item.unidade}</span></div>
+      <div class="proj-col" style="font-weight:800">${fmtQ(manual)}</div>
+      <div class="proj-col" style="color:var(--gray)">${fmtQ(relQty)}</div>
+      <div class="proj-col" style="color:${diffColor};font-weight:800">${diffLabel}</div>
+    </div>`;
+  });
+
+  // Itens no manual que não estão no relatório
+  const relIds = relItems.map(r=>r.itemId);
+  const coposNoManual = consumoManual.filter(c=>['cop300','cop500','cop700'].includes(c.itemId)&&!relIds.includes(c.itemId));
+  coposNoManual.forEach(c=>{
+    const item = db.items.find(i=>i.id===c.itemId);
+    if(!item) return;
+    temDivergencia=true;
+    html+=`<div class="proj-row">
+      <div class="proj-name">${item.nome}<br><span style="font-size:.66rem;color:var(--gray)">${item.unidade}</span></div>
+      <div class="proj-col" style="font-weight:800;color:#d97706">${fmtQ(c.qty)}</div>
+      <div class="proj-col" style="color:var(--gray)">0</div>
+      <div class="proj-col" style="color:#d97706;font-weight:800">+${fmtQ(c.qty)}</div>
+    </div>`;
+  });
+
+  html += `</div>`;
+
+  if(!temDivergencia){
+    html += `<div class="card" style="text-align:center;padding:20px">
+      <div style="font-size:2rem">🎉</div>
+      <div style="font-family:'Baloo 2',cursive;font-size:1rem;color:var(--teal-dark);margin-top:6px">Tudo confere! Manual = Relatório.</div>
+    </div>`;
+  } else {
+    html += `<div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;">
+      <strong>⚠️ Há divergências!</strong> Positivo (+) = manual maior que relatório. Negativo (−) = relatório maior que manual.
+    </div>`;
+  }
+
+  container.innerHTML = html;
+  document.getElementById('data-confronto').value = data;
+}
+
+function fmtQ(n){const v=parseFloat(n);if(n===undefined||n===null||n===''||isNaN(v))return'–';return Number.isInteger(v)?v:parseFloat(v.toFixed(1));}
 function fmtDate(d){if(!d)return''; const[y,m,dd]=d.split('-'); return`${dd}/${m}`;}
 function setLoad(v){document.getElementById('loading').classList.toggle('show',v);}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
