@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.9.7</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.9.8-debug</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1998,6 +1998,14 @@ function processarRelatorio(){
   // Atualiza campo de data automaticamente
   if(dataMatch) document.getElementById('data-importar').value = dataRelatorio;
 
+  // DEBUG: mostra as primeiras 20 linhas e totais no console
+  console.log('=== DEBUG RELATORIO ===');
+  console.log('totalVendas bruto:', totaisPorTamanho);
+  txt.split('\n').slice(0,30).forEach((l,i)=>{
+    const chars = [...l].map(c=>c.charCodeAt(0));
+    if(chars.some(c=>c>127)) console.log('L'+i+' chars especiais:', JSON.stringify(l), chars.filter(c=>c>127));
+    else console.log('L'+i+':', JSON.stringify(l.substring(0,50)));
+  });
   const totalVendas = Object.values(totaisPorTamanho).reduce((s,v)=>s+v,0);
   if(!totalVendas){
     document.getElementById('importar-preview').innerHTML=`
