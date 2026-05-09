@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.9.2</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.9.3</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1881,55 +1881,59 @@ function processarRelatorio(){
 
   const totaisPorTamanho  = { 180:0, 300:0, 500:0, 700:0 };
   const insumosPorTamanho = { 180:{}, 300:{}, 500:{}, 700:{} };
+  // Vendas por sabor: { 'PANDORA 300': {nomeProd, tamanho, qtd, subtotal, custoInsumos} }
+  const vendasPorSabor = {};
 
   const SECOES_MILK   = ['MILKSHAKES 180 ML','MILKSHAKES 300 ML','MILKSHAKES 500 ML','MILKSHAKES 700 ML','SAZONAL'];
-  const TAMANHO_REGEX = /\b(180|300|500|700)\s*ML\b/i;
+  const TAMANHO_REGEX = /(180|300|500|700)\s*ML/i;
 
   let dentroSecaoMilk = false;
   let tamanhoSecao    = null;
 
-  txt.split('\n').forEach(linha => {
+  txt.split('
+').forEach(linha => {
     const trim = linha.trim();
-
-    // Linha TOTAL → fecha seção
     if(/^TOTAL\s/.test(trim)){ dentroSecaoMilk = false; return; }
-
-    // Separadores --- não fecham seção (existem dentro das seções também)
     if(/^-{10,}$/.test(trim)) return;
 
-    // Cabeçalho de seção: sem código numérico no início, só maiúsculas/números/espaços
     if(!/^\s{2,}\d+\s/.test(linha) && trim.length > 2 && /^[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ0-9\s\/]+$/.test(trim)){
       const isMilk = SECOES_MILK.some(s => trim === s || trim.startsWith(s));
       if(isMilk){
         dentroSecaoMilk = true;
         const tm = trim.match(TAMANHO_REGEX);
-        tamanhoSecao = tm ? parseInt(tm[1]) : null; // null para SAZONAL
-      } else {
-        dentroSecaoMilk = false;
-        tamanhoSecao    = null;
-      }
+        tamanhoSecao = tm ? parseInt(tm[1]) : null;
+      } else { dentroSecaoMilk = false; tamanhoSecao = null; }
       return;
     }
 
     if(!dentroSecaoMilk) return;
 
-    // Linha de produto: "   [cod] NOME PRODUTO   [qtd]  [valor]  [%]"
-    const m = linha.match(/^\s{2,}\d+\s+(.+?)\s{2,}(\d+)\s+[\d.,]+\s+[\d.,]+/);
+    // Linha de produto: "   [cod] NOME   [qtd]  [subtotal]  [%]"
+    // subtotal em formato "1.234,56" ou "1234,56"
+    const m = linha.match(/^\s{2,}\d+\s+(.+?)\s{2,}(\d+)\s+([\d.]+,\d{2})\s+[\d.,]+/);
     if(!m) return;
 
-    const nomeProd = m[1].trim();
-    const qtdProd  = parseInt(m[2]);
+    const nomeProd  = m[1].trim();
+    const qtdProd   = parseInt(m[2]);
+    const subtotal  = parseFloat(m[3].replace(/\./g,'').replace(',','.'));
     if(!qtdProd || qtdProd <= 0) return;
 
-    // Tamanho: pelo nome do produto primeiro (cobre sazonais), depois pelo cabeçalho
     let tamanho = null;
     const tmNome = nomeProd.match(TAMANHO_REGEX);
-    if(tmNome)        tamanho = parseInt(tmNome[1]);
-    else if(tamanhoSecao) tamanho = tamanhoSecao;
-
+    if(tmNome)             tamanho = parseInt(tmNome[1]);
+    else if(tamanhoSecao)  tamanho = tamanhoSecao;
     if(!tamanho || !totaisPorTamanho.hasOwnProperty(tamanho)) return;
 
     totaisPorTamanho[tamanho] += qtdProd;
+
+    // Guarda venda por sabor (nome sem o tamanho, ex: "PANDORA")
+    const nomeSemTam = nomeProd.replace(TAMANHO_REGEX,'').trim();
+    const chave = nomeSemTam + '|' + tamanho;
+    if(!vendasPorSabor[chave]){
+      vendasPorSabor[chave] = { nomeProd:nomeSemTam, tamanho, qtd:0, subtotal:0, custoInsumos:0 };
+    }
+    vendasPorSabor[chave].qtd      += qtdProd;
+    vendasPorSabor[chave].subtotal += subtotal;
 
     // Acumula insumos pela receita do sabor
     const receita = buscarReceita(nomeProd, String(tamanho));
@@ -1939,6 +1943,14 @@ function processarRelatorio(){
         insumosPorTamanho[tamanho][ing.itemId] = {nome:ing.nome, qty:0, unidade:ing.unidade, itemId:ing.itemId};
       }
       insumosPorTamanho[tamanho][ing.itemId].qty += ing.qty * qtdProd;
+
+      // Acumula custo do insumo nesse sabor
+      const itm = db.items.find(i=>i.id===ing.itemId);
+      if(itm && itm.valor > 0){
+        const qtdPorUnid = itm.qtdPorUnidade || 0;
+        const custUnit = (qtdPorUnid > 0 && itm.unidadeSecundaria) ? itm.valor / qtdPorUnid : itm.valor;
+        vendasPorSabor[chave].custoInsumos += custUnit * ing.qty * qtdProd;
+      }
     });
   });
 
@@ -1993,10 +2005,9 @@ function processarRelatorio(){
   }
 
   // ── Consolida insumos de todos os tamanhos numa tabela única ──────────────
-  // Função de formatação monetária brasileira
   const fmtBRL = v => v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 
-  const insumosMap = {}; // itemId → { nome, unidade, qty, custoPorUnit, ... }
+  const insumosMap = {};
   resultado.forEach(r => {
     (r.insumos||[]).forEach(ing => {
       if(!ing.itemId) return;
@@ -2006,15 +2017,13 @@ function processarRelatorio(){
         const qtdPorUnidade  = itm ? (itm.qtdPorUnidade||0) : 0;
         const temFracao = valorEmbalagem > 0 && qtdPorUnidade > 0 && itm && itm.unidadeSecundaria;
         insumosMap[ing.itemId] = {
+          itemId:        ing.itemId,
           nome:          itm ? itm.nome : (ing.nome||ing.itemId),
           unidade:       ing.unidade || (itm && (itm.unidadeSecundaria||itm.unidade)) || '',
           unidadePrim:   itm ? (itm.unidade||'') : '',
           valorEmbalagem,
           qtdPorUnidade,
           temFracao,
-          // custo por unidade secundária (ex: por ml, por grama)
-          // com fracao: R$ embalagem / qtd total da embalagem
-          // sem fracao: valor direto do item
           custoPorUnit:  temFracao ? valorEmbalagem / qtdPorUnidade : valorEmbalagem,
           qty: 0,
         };
@@ -2025,17 +2034,54 @@ function processarRelatorio(){
   const insumosList = Object.values(insumosMap).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   const totalGastoGeral = insumosList.reduce((acc,i)=> acc + i.qty * i.custoPorUnit, 0);
 
-  // ── Cabeçalho resumo de vendas por tamanho ───────────────────────────────
-  const resumoVendas = resultado.map(r=>{
-    const tam = r.itemId==='cop180'?'180':r.itemId==='cop300'?'300':r.itemId==='cop500'?'500':r.itemId==='cop700'?'700':'?';
-    return `<span style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:8px;padding:4px 10px;font-size:.8rem;font-weight:700;color:#6b21a8">${tam}ml: <strong>${r.qtd}</strong></span>`;
-  }).join('');
+  // ── Tabela de sabores vendidos ────────────────────────────────────────────
+  const saboresList = Object.values(vendasPorSabor)
+    .sort((a,b)=> a.tamanho - b.tamanho || a.nomeProd.localeCompare(b.nomeProd,'pt-BR'));
+  const totalFaturado = saboresList.reduce((s,x)=>s+x.subtotal,0);
+  const totalCustoSabores = saboresList.reduce((s,x)=>s+x.custoInsumos,0);
+
+  let saboresTableHtml = '';
+  if(saboresList.length){
+    saboresTableHtml = `
+      <div style="margin-bottom:14px">
+        <div style="font-size:.78rem;font-weight:800;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🥤 Vendas por sabor</div>
+        <div style="background:white;border-radius:10px;border:1px solid var(--border);overflow:hidden">
+          <div style="display:grid;grid-template-columns:1fr 50px 90px 90px 90px;background:#f9fafb;padding:7px 12px;font-size:.68rem;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border)">
+            <span>Sabor</span><span style="text-align:center">Qtd</span><span style="text-align:right">Faturado</span><span style="text-align:right">Custo</span><span style="text-align:right">Margem</span>
+          </div>
+          ${saboresList.map((s,idx)=>{
+            const bg = idx%2===0 ? 'white' : '#fafafa';
+            const margem = s.subtotal > 0 ? ((s.subtotal - s.custoInsumos) / s.subtotal * 100) : null;
+            const margemCell = margem !== null
+              ? `<span style="color:${margem>=50?'var(--teal-dark)':margem>=30?'#d97706':'var(--red)'}">${fmtBRL(margem)}%</span>`
+              : '<span style="color:#d1d5db">—</span>';
+            const custoCell = s.custoInsumos > 0
+              ? `R$\u00a0${fmtBRL(s.custoInsumos)}`
+              : '<span style="color:#d1d5db">—</span>';
+            return `<div style="display:grid;grid-template-columns:1fr 50px 90px 90px 90px;padding:6px 12px;font-size:.75rem;background:${bg};border-bottom:1px solid #f3f4f6;align-items:center">
+              <span style="font-weight:700">${s.nomeProd}<br><span style="font-size:.65rem;color:var(--gray);font-weight:400">${s.tamanho}ml</span></span>
+              <span style="text-align:center;font-weight:800;color:#0369a1">${s.qtd}</span>
+              <span style="text-align:right;font-size:.74rem">R$\u00a0${fmtBRL(s.subtotal)}</span>
+              <span style="text-align:right;font-size:.74rem">${custoCell}</span>
+              <span style="text-align:right;font-size:.74rem">${margemCell}</span>
+            </div>`;
+          }).join('')}
+          <div style="display:grid;grid-template-columns:1fr 50px 90px 90px 90px;padding:8px 12px;background:#f0fdf4;border-top:2px solid #bbf7d0;font-size:.78rem;font-weight:800">
+            <span style="color:#166534">Total</span>
+            <span style="text-align:center;color:#0369a1">${saboresList.reduce((s,x)=>s+x.qtd,0)}</span>
+            <span style="text-align:right;color:#166534">R$\u00a0${fmtBRL(totalFaturado)}</span>
+            <span style="text-align:right;color:#c9345a">${totalCustoSabores>0?'R$\u00a0'+fmtBRL(totalCustoSabores):'—'}</span>
+            <span></span>
+          </div>
+        </div>
+      </div>`;
+  }
 
   // ── Tabela de insumos consolidados ───────────────────────────────────────
   let insumosTableHtml = '';
   if(insumosList.length){
     insumosTableHtml = `
-      <div style="margin-top:14px">
+      <div style="margin-top:0">
         <div style="font-size:.78rem;font-weight:800;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📦 Insumos consumidos no dia</div>
         <div style="background:white;border-radius:10px;border:1px solid var(--border);overflow:hidden">
           <div style="display:grid;grid-template-columns:1fr 80px 110px 100px;background:#f9fafb;padding:7px 12px;font-size:.7rem;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border)">
@@ -2070,25 +2116,31 @@ function processarRelatorio(){
       </div>`;
   }
 
-  // ── Monta o preview (sem tabela de copos separada — copos estão em insumos) ──
+  // ── Cabeçalho resumo de vendas por tamanho ───────────────────────────────
+  const resumoVendas = resultado.map(r=>{
+    const tam = r.itemId==='cop180'?'180':r.itemId==='cop300'?'300':r.itemId==='cop500'?'500':r.itemId==='cop700'?'700':'?';
+    return `<span style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:8px;padding:4px 10px;font-size:.8rem;font-weight:700;color:#6b21a8">${tam}ml: <strong>${r.qtd}</strong></span>`;
+  }).join('');
+
+  // ── Preview final ─────────────────────────────────────────────────────────
   let previewHtml = `
     <div class="card">
       <div class="card-title"><span>🔍</span>Preview da Importação</div>
-      <div style="font-size:.78rem;margin-bottom:10px;background:#f0fdf4;border-radius:8px;padding:8px 12px;border:1px solid #bbf7d0">
+      <div style="font-size:.78rem;margin-bottom:12px;background:#f0fdf4;border-radius:8px;padding:8px 12px;border:1px solid #bbf7d0">
         📅 Data detectada: <strong style="color:#166534">${fmtDate(dataRelatorio)}</strong> &nbsp;|&nbsp;
         ${lojaIcon(lojaDetectada)} Loja detectada: <strong style="color:#166534">${nomeLoja(lojaDetectada)}</strong>
         ${lojaInfo ? `<br><span style="font-size:.72rem;color:var(--gray)">📋 ${lojaInfo}</span>` : ''}
       </div>
-      <div style="font-size:.76rem;color:var(--gray);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">🥤 Milky Shakes vendidos</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px">${resumoVendas}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">${resumoVendas}</div>
+      ${saboresTableHtml}
       ${insumosTableHtml}
     </div>`;
 
   document.getElementById('importar-preview').innerHTML = previewHtml;
   document.getElementById('btn-confirmar-importar').style.display = '';
 
-  // Salva para confirmar depois — inclui insumosList consolidado para uso no confronto
   importacaoPendente = { resultado, dataRelatorio, insumosList };
+}
 }
 
 async function confirmarImportacao(){
@@ -2157,6 +2209,8 @@ function mostrarConfronto(data){
   const container = document.getElementById('confronto-resultado');
   if(!container){ return; }
 
+  const fmtBRL = v => v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
   // Insumos do relatório importado para essa data/loja
   const relItems = (db.relatorios||[]).filter(r=>r.data===data&&r.loja==lojaImp);
   if(!relItems.length){
@@ -2169,67 +2223,78 @@ function mostrarConfronto(data){
   // Consumo manual das funcionárias para essa data/loja
   const consumoManual = db.consumos.filter(c=>c.data===data&&c.loja==lojaImp);
 
-  // Une todos os itemIds: os do relatório + os do manual (para mostrar extras dos dois lados)
+  // Une todos os itemIds: relatório + manual
   const todosIds = [...new Set([
     ...relItems.map(r=>r.itemId),
     ...consumoManual.map(c=>c.itemId)
   ])];
 
   let temDivergencia = false;
-  let rowsOk = '', rowsDiff = '';
+  let rowsDiff = '', rowsOk = '';
 
   todosIds.forEach(itemId=>{
-    const item = db.items.find(i=>i.id===itemId);
-    const nomeItem = item ? item.nome : (relItems.find(r=>r.itemId===itemId)?.nome || itemId);
-    const unidItem = item ? (item.unidadeSecundaria||item.unidade) : (relItems.find(r=>r.itemId===itemId)?.unidade||'');
+    const item      = db.items.find(i=>i.id===itemId);
+    const relRec    = relItems.find(r=>r.itemId===itemId);
+    const nomeItem  = item ? item.nome : (relRec?.nome || itemId);
+    // Usa unidade secundária se existir (é a unidade dos insumos calculados)
+    const unidItem  = item ? (item.unidadeSecundaria||item.unidade) : (relRec?.unidade||'');
+    const relQty    = relRec ? relRec.qty : 0;
+    const manual    = consumoManual.filter(c=>c.itemId===itemId).reduce((s,c)=>s+c.qty,0);
 
-    const relRec = relItems.find(r=>r.itemId===itemId);
-    const relQty = relRec ? relRec.qty : 0;
-    const manual = consumoManual.filter(c=>c.itemId===itemId).reduce((s,c)=>s+c.qty,0);
+    // Custo calculado do relatório para esse item
+    let custoRel = 0;
+    if(item && relQty > 0){
+      const qtdPorUnid = item.qtdPorUnidade || 0;
+      const custUnit = (qtdPorUnid > 0 && item.unidadeSecundaria && item.valor > 0)
+        ? item.valor / qtdPorUnid
+        : (item.valor || 0);
+      custoRel = custUnit * relQty;
+    }
 
     const diff = manual - relQty;
     const diffColor = diff===0 ? 'var(--teal-dark)' : diff>0 ? '#d97706' : 'var(--red)';
-    const diffSign = diff>0?'+':'';
+    const diffSign  = diff>0 ? '+' : '';
     const diffLabel = diff===0 ? '✅' : `${diffSign}${fmtQ(diff)}`;
-    if(diff!==0) temDivergencia=true;
+    if(diff!==0) temDivergencia = true;
 
-    const row = `<div class="proj-row">
-      <div class="proj-name">${nomeItem}<br><span style="font-size:.66rem;color:var(--gray)">${unidItem}</span></div>
-      <div class="proj-col" style="font-weight:800;${manual===0?'color:var(--gray)':''}">${fmtQ(manual)||'—'}</div>
-      <div class="proj-col" style="color:var(--gray)">${fmtQ(relQty)||'—'}</div>
-      <div class="proj-col" style="color:${diffColor};font-weight:800">${diffLabel}</div>
+    const custoCell = custoRel > 0
+      ? `<span style="font-size:.7rem;color:#9ca3af">R$\u00a0${fmtBRL(custoRel)}</span>`
+      : '';
+
+    const row = `<div style="display:grid;grid-template-columns:1fr 70px 70px 70px;padding:7px 12px;font-size:.78rem;border-bottom:1px solid #f3f4f6;align-items:center">
+      <span style="font-weight:600">${nomeItem}<br><span style="font-size:.66rem;color:var(--gray)">${unidItem}</span>${custoCell}</span>
+      <span style="text-align:center;font-weight:800;${manual===0?'color:#d1d5db':''}">${manual>0?fmtQ(manual):'—'}</span>
+      <span style="text-align:center;color:var(--gray)">${relQty>0?fmtQ(relQty):'—'}</span>
+      <span style="text-align:center;color:${diffColor};font-weight:800">${diffLabel}</span>
     </div>`;
 
     if(diff===0) rowsOk += row;
     else rowsDiff += row;
   });
 
+  const hdrRow = `<div style="display:grid;grid-template-columns:1fr 70px 70px 70px;padding:6px 12px;font-size:.68rem;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;background:#f9fafb;border-bottom:1px solid var(--border)">
+    <span>Insumo</span><span style="text-align:center">Manual</span><span style="text-align:center">Relatório</span><span style="text-align:center">Diferença</span>
+  </div>`;
+
   let html = `
     <div class="card">
       <div class="card-title"><span>🔍</span>Confronto – ${fmtDate(data)} – ${nomeLoja(lojaImp)}</div>
       <div style="font-size:.75rem;color:var(--gray);margin-bottom:12px">
-        Lançamento manual das funcionárias vs insumos calculados pelo relatório Degust.
+        Lançamento manual vs insumos calculados pelo relatório Degust.
         <strong>O estoque usa sempre o valor manual.</strong>
       </div>`;
 
   if(rowsDiff){
     html += `<div style="font-size:.72rem;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">⚠️ Com divergência</div>
-      <div class="row-hdr">
-        <div class="rh-name">Insumo</div>
-        <div class="rh-col">Manual</div>
-        <div class="rh-col">Relatório</div>
-        <div class="rh-col">Diferença</div>
-      </div>${rowsDiff}`;
+      <div style="background:white;border-radius:10px;border:1px solid var(--border);overflow:hidden;margin-bottom:14px">
+        ${hdrRow}${rowsDiff}
+      </div>`;
   }
-
   if(rowsOk){
-    html += `<div style="font-size:.72rem;font-weight:800;color:var(--teal-dark);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px">✅ Conferindo</div>
-      <div class="row-hdr">
-        <div class="rh-name">Insumo</div>
-        <div class="rh-col">Manual</div>
-        <div class="rh-col">Relatório</div>
-        <div class="rh-col"></div>
-      </div>${rowsOk}`;
+    html += `<div style="font-size:.72rem;font-weight:800;color:var(--teal-dark);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">✅ Conferindo</div>
+      <div style="background:white;border-radius:10px;border:1px solid var(--border);overflow:hidden">
+        ${hdrRow}${rowsOk}
+      </div>`;
   }
 
   html += `</div>`;
@@ -2248,7 +2313,6 @@ function mostrarConfronto(data){
   container.innerHTML = html;
   document.getElementById('data-confronto').value = data;
 }
-
 function fmtQ(n){const v=parseFloat(n);if(n===undefined||n===null||n===''||isNaN(v))return'–';return Number.isInteger(v)?v:parseFloat(v.toFixed(1));}
 function fmtDate(d){if(!d)return''; const[y,m,dd]=d.split('-'); return`${dd}/${m}`;}
 function setLoad(v){document.getElementById('loading').classList.toggle('show',v);}
