@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.4.6</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.4.7</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -263,6 +263,35 @@
       </div>
 
       <button class="btn btn-pink" id="btn-sv-perdas" onclick="salvarPerdas()" style="background:#ef476f;box-shadow:0 4px 14px rgba(239,71,111,.35)">💔 Registrar Perda</button>
+    </div>
+
+    <!-- IMPORTAR RELATÓRIO -->
+    <div id="sec-importar" class="section">
+      <div class="info-box" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534;">
+        <strong>📥 Importar Relatório de Fechamento</strong>
+        Cole aqui o texto do relatório de fechamento do Degust. O sistema vai identificar os itens vendidos e descontar os copos do estoque automaticamente.
+      </div>
+
+      <div class="loja-sel">
+        <button class="loja-btn active" id="blimp1" onclick="selLoja(1,'imp')"><div class="li">🏪</div><div class="ln" id="lnimp1">Cajamar</div></button>
+        <button class="loja-btn" id="blimp2" onclick="selLoja(2,'imp')"><div class="li">🏬</div><div class="ln" id="lnimp2">Iguatemi</div></button>
+        <button class="loja-btn" id="blimp3" onclick="selLoja(3,'imp')"><div class="li">🏗️</div><div class="ln" id="lnimp3">Carapicuíba</div></button>
+      </div>
+
+      <div class="date-bar"><label>📅 Data do relatório:</label><input type="date" id="data-importar"></div>
+
+      <div class="card">
+        <div class="card-title"><span>📋</span>Texto do Relatório</div>
+        <textarea id="txt-relatorio" placeholder="Cole aqui o conteúdo do arquivo TXT de fechamento de caixa do Degust..."
+          style="width:100%;height:200px;border:2px solid var(--border);border-radius:10px;padding:10px;font-family:monospace;font-size:.78rem;resize:vertical;background:var(--gray-light)"></textarea>
+      </div>
+
+      <button class="btn btn-pink" onclick="processarRelatorio()" style="margin-bottom:10px">🔍 Processar Relatório</button>
+
+      <!-- Preview do resultado -->
+      <div id="importar-preview"></div>
+
+      <button class="btn btn-pink" id="btn-confirmar-importar" onclick="confirmarImportacao()" style="display:none;background:#16a34a;box-shadow:0 4px 14px rgba(22,163,74,.35)">✅ Confirmar e Lançar no Estoque</button>
     </div>
 
     <div id="sec-divergencia" class="section">
@@ -586,7 +615,7 @@ const DEFAULT_ITEMS=[
 ];
 
 let db={items:[...DEFAULT_ITEMS],inventarios:[],consumos:[],entradas:[],perdas:[],historico:[],minimos:{},usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7}};
-let lojaC=1,lojaI=1,lojaP=1,lojaD=1,lojaE=1,lojaPr=1;
+let lojaC=1,lojaI=1,lojaP=1,lojaD=1,lojaE=1,lojaPr=1,lojaImp=1;
 let autoRefreshInterval=null;
 
 async function cloudGet(){try{return window.firebaseGet?await window.firebaseGet():null;}catch(e){return null;}}
@@ -655,6 +684,7 @@ function renderTabs(){
     {id:'perdas',     label:'💔 Perdas',        adminOnly:false},
     {id:'inventario', label:'📋 Inventário',    adminOnly:false},
     {id:'projetado',  label:'📊 Estoque',       adminOnly:false},
+    {id:'importar',   label:'📥 Importar',      adminOnly:true},
     {id:'divergencia',label:'⚠️ Divergência',  adminOnly:true},
     {id:'compras',    label:'🛒 Compras',       adminOnly:true},
     {id:'entradas',   label:'🛍️ Entradas',      adminOnly:true},
@@ -675,7 +705,7 @@ function ajustarBotoesLoja(){
   const isAdmin = currentUser.role==='admin';
   [1,2,3].forEach(n=>{
     // Prefixos de todos os seletores de loja
-    ['blc','bli','blp','bld','ble','blpr'].forEach(p=>{
+    ['blc','bli','blp','bld','ble','blpr','blimp'].forEach(p=>{
       const el=document.getElementById(p+n);
       if(!el) return;
       if(isAdmin){
@@ -745,6 +775,7 @@ async function atualizarDados(forcado=false){
     if(name==='projetado')renderProjetado();
     if(name==='compras')gerarCompras();
     if(name==='perdas')renderPerdas();
+  if(name==='importar')renderImportar();
   if(name==='divergencia')renderDivergencia();
     if(name==='historico')renderHistorico();
   }
@@ -771,6 +802,7 @@ function showTab(name,btn){
   if(name==='projetado')renderProjetado();
   if(name==='compras')gerarCompras();
   if(name==='perdas')renderPerdas();
+  if(name==='importar')renderImportar();
   if(name==='divergencia')renderDivergencia();
   if(name==='historico')renderHistorico();
   if(name==='entradas')renderEntradas();
@@ -791,11 +823,12 @@ function selLoja(n,ctx){
   if(ctx==='d'){lojaD=n;[1,2,3].forEach(i=>document.getElementById('bld'+i).classList.toggle('active',i===n));renderDivergencia();}
   if(ctx==='e'){lojaE=n;[1,2,3].forEach(i=>document.getElementById('ble'+i).classList.toggle('active',i===n));renderEntradas();}
   if(ctx==='pr'){lojaPr=n;[1,2,3].forEach(i=>document.getElementById('blpr'+i).classList.toggle('active',i===n));renderPerdas();}
+  if(ctx==='imp'){lojaImp=n;[1,2,3].forEach(i=>document.getElementById('blimp'+i).classList.toggle('active',i===n));}
 }
 
 function nomeLoja(n){return n===1?(db.config.nomeLoja1||'Cajamar'):n===2?(db.config.nomeLoja2||'Iguatemi'):(db.config.nomeLoja3||'Carapicuíba');}
 function lojaIcon(n){return n===1?'🏪':n===2?'🏬':'🏗️';}
-function aplicarNomes(){[1,2,3].forEach(n=>{const nm=nomeLoja(n);['lnc','lni','lnp','lnd','lne','lnpr'].forEach(p=>{const el=document.getElementById(p+n);if(el)el.textContent=nm;});});}
+function aplicarNomes(){[1,2,3].forEach(n=>{const nm=nomeLoja(n);['lnc','lni','lnp','lnd','lne','lnpr','lnimp'].forEach(p=>{const el=document.getElementById(p+n);if(el)el.textContent=nm;});});}
 
 function ultimoInventario(loja,ateData){
   const refs=db.inventarios.filter(r=>r.loja==loja&&r.data<=ateData);if(!refs.length)return null;
@@ -882,6 +915,7 @@ document.getElementById('data-inv').addEventListener('change', function(){
 });
 document.getElementById('data-entrada').value=hoje();
 document.getElementById('data-perdas').value=hoje();
+document.getElementById('data-importar').value=hoje();
 document.getElementById('data-perdas').addEventListener('change', function(){
   if(currentUser && currentUser.role!=='admin' && this.value<hoje()){
     this.value=hoje();
@@ -1185,11 +1219,11 @@ function renderHistorico(){
     container.innerHTML=`<div class="empty"><span class="ej">📜</span><p>Nenhum preenchimento registrado ainda.</p></div>`;
     return;
   }
-  const tipoIcon={consumo:'📦',inventario:'📋',entrada:'🛍️',perda:'💔'};
-  const tipoLabel={consumo:'Consumo Diário',inventario:'Inventário Físico',entrada:'Entrada de Compra',perda:'Perda / Erro'};
-  const tipoColor={consumo:'#1e40af',inventario:'#6b21a8',entrada:'#9a3412',perda:'#991b1b'};
-  const tipoBg={consumo:'#eff6ff',inventario:'#fdf4ff',entrada:'#fff7ed',perda:'#fff0f0'};
-  const tipoBorder={consumo:'#bfdbfe',inventario:'#e9d5ff',entrada:'#fed7aa',perda:'#fecaca'};
+  const tipoIcon={consumo:'📦',inventario:'📋',entrada:'🛍️',perda:'💔',importacao:'📥'};
+  const tipoLabel={consumo:'Consumo Diário',inventario:'Inventário Físico',entrada:'Entrada de Compra',perda:'Perda / Erro',importacao:'Importação de Relatório'};
+  const tipoColor={consumo:'#1e40af',inventario:'#6b21a8',entrada:'#9a3412',perda:'#991b1b',importacao:'#166534'};
+  const tipoBg={consumo:'#eff6ff',inventario:'#fdf4ff',entrada:'#fff7ed',perda:'#fff0f0',importacao:'#f0fdf4'};
+  const tipoBorder={consumo:'#bfdbfe',inventario:'#e9d5ff',entrada:'#fed7aa',perda:'#fecaca',importacao:'#bbf7d0'};
 
   container.innerHTML = hist.map(h => {
     const d = new Date(h.timestamp);
@@ -1647,6 +1681,161 @@ async function confirmarResetSenha(){
   } else {
     msg.textContent='⚠️ Erro ao salvar. Tente novamente.';msg.style.display='block';
   }
+}
+
+// Mapeamento: palavras-chave no relatório → itemId no estoque
+const IMPORT_RULES = [
+  // Copos 300ml
+  { pattern: /MILKSHAKES 300 ML[\s\S]*?TOTAL\s+([\d]+)/i, tipo:'secao', tamanho:300 },
+  // Copos 500ml
+  { pattern: /MILKSHAKES 500 ML[\s\S]*?TOTAL\s+([\d]+)/i, tipo:'secao', tamanho:500 },
+  // Copos 700ml
+  { pattern: /MILKSHAKES 700 ML[\s\S]*?TOTAL\s+([\d]+)/i, tipo:'secao', tamanho:700 },
+];
+
+// Mapa de tamanho → itemId do copo
+const COPO_MAP = {
+  300: 'cop300',
+  500: 'cop500',
+  700: 'cop700',
+};
+
+let importacaoPendente = null;
+
+function renderImportar(){
+  document.getElementById('importar-preview').innerHTML='';
+  document.getElementById('btn-confirmar-importar').style.display='none';
+}
+
+function processarRelatorio(){
+  const txt = document.getElementById('txt-relatorio').value;
+  if(!txt.trim()){ showToast('⚠️ Cole o texto do relatório primeiro!'); return; }
+
+  const resultado = [];
+
+  // Extrai data do relatório
+  const dataMatch = txt.match(/Data Abertura[.\s]*:\s*(\d{2})\/(\d{2})\/(\d{4})/);
+  const dataRelatorio = dataMatch
+    ? `${dataMatch[3]}-${dataMatch[2]}-${dataMatch[1]}`
+    : document.getElementById('data-importar').value;
+
+  // Processa cada seção de milkshakes
+  const secoes = [
+    { nome:'MILKSHAKES 300 ML', tamanho:300 },
+    { nome:'MILKSHAKES 500 ML', tamanho:500 },
+    { nome:'MILKSHAKES 700 ML', tamanho:700 },
+  ];
+
+  secoes.forEach(s=>{
+    const idx = txt.indexOf(s.nome);
+    if(idx===-1) return;
+    // Pega o bloco até o próximo TOTAL
+    const bloco = txt.substring(idx, idx+2000);
+    const totalMatch = bloco.match(/TOTAL\s+([\d]+)/);
+    if(!totalMatch) return;
+    const qtd = parseInt(totalMatch[1]);
+    if(qtd<=0) return;
+    const itemId = COPO_MAP[s.tamanho];
+    const item = db.items.find(i=>i.id===itemId);
+    if(!item) return;
+    resultado.push({itemId, nome:item.nome, qtd, descricao:`${qtd} milkshake(s) ${s.tamanho}ml vendido(s)`});
+  });
+
+  // Extrai loja do relatório
+  const lojaMatch = txt.match(/MILKY MOO[^\n]*/i);
+  const lojaInfo = lojaMatch ? lojaMatch[0].trim() : '';
+
+  if(!resultado.length){
+    document.getElementById('importar-preview').innerHTML=`
+      <div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;">
+        <strong>⚠️ Nenhum item encontrado</strong>
+        Verifique se o texto copiado está completo e contém a seção "MOVIMENTACAO DE PRODUTO".
+      </div>`;
+    return;
+  }
+
+  // Calcula estoque atual para mostrar preview
+  const proj = calcProjetado(lojaImp, hoje());
+
+  let previewHtml = `
+    <div class="card">
+      <div class="card-title"><span>🔍</span>Preview da Importação</div>
+      <div style="font-size:.78rem;color:var(--gray);margin-bottom:10px">
+        📅 Data: <strong>${fmtDate(dataRelatorio)}</strong> &nbsp;|&nbsp;
+        🏪 Loja: <strong>${nomeLoja(lojaImp)}</strong>
+        ${lojaInfo ? `&nbsp;|&nbsp; 📋 <em>${lojaInfo}</em>` : ''}
+      </div>
+      <div class="row-hdr">
+        <div class="rh-name">Item</div>
+        <div class="rh-col">Vendas</div>
+        <div class="rh-col">Estoque atual</div>
+        <div class="rh-col">Após desconto</div>
+      </div>`;
+
+  resultado.forEach(r=>{
+    const estoqueAtual = proj ? (proj.proj[r.itemId]??'–') : '–';
+    const estoqueApos = proj && proj.proj[r.itemId]!==null ? (proj.proj[r.itemId]||0) - r.qtd : '–';
+    const cor = typeof estoqueApos==='number' && estoqueApos<0 ? 'var(--red)' : 'var(--teal-dark)';
+    previewHtml += `
+      <div class="proj-row">
+        <div class="proj-name">${r.nome}<br><span style="font-size:.68rem;color:var(--gray)">${r.descricao}</span></div>
+        <div class="proj-col" style="color:var(--pink-dark);font-weight:800">${r.qtd}</div>
+        <div class="proj-col">${fmtQ(estoqueAtual)}</div>
+        <div class="proj-col" style="color:${cor};font-weight:800">${fmtQ(estoqueApos)}</div>
+      </div>`;
+  });
+
+  previewHtml += `</div>`;
+
+  document.getElementById('importar-preview').innerHTML = previewHtml;
+  document.getElementById('btn-confirmar-importar').style.display = '';
+
+  // Salva para confirmar depois
+  importacaoPendente = { resultado, dataRelatorio };
+}
+
+async function confirmarImportacao(){
+  if(!importacaoPendente){ showToast('⚠️ Processe o relatório primeiro!'); return; }
+  const {resultado, dataRelatorio} = importacaoPendente;
+
+  if(!confirm(`Confirma o lançamento de ${resultado.length} item(ns) no consumo de ${nomeLoja(lojaImp)} em ${fmtDate(dataRelatorio)}?`)) return;
+
+  const btn = document.getElementById('btn-confirmar-importar');
+  btn.disabled = true;
+
+  resultado.forEach(r=>{
+    // Remove lançamento anterior do mesmo item/data/loja
+    db.consumos = db.consumos.filter(c=>!(c.data===dataRelatorio&&c.loja==lojaImp&&c.itemId===r.itemId));
+    db.consumos.push({data:dataRelatorio, loja:lojaImp, itemId:r.itemId, qty:r.qtd});
+  });
+
+  // Registra no histórico
+  if(!db.historico) db.historico=[];
+  db.historico = db.historico.filter(h=>!(h.data===dataRelatorio&&h.loja==lojaImp&&h.tipo==='importacao'));
+  db.historico.push({
+    tipo:'importacao',
+    data:dataRelatorio,
+    loja:lojaImp,
+    responsavel:'Rubens',
+    timestamp:new Date().toISOString(),
+    itens: resultado.map(r=>({nome:r.nome, qty:r.qtd, unidade:'unidades'}))
+  });
+
+  const ok = await saveCloud('consumo');
+  if(ok){
+    document.getElementById('txt-relatorio').value='';
+    document.getElementById('importar-preview').innerHTML=`
+      <div class="info-box" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534;">
+        <strong>✅ Importação realizada com sucesso!</strong>
+        ${resultado.map(r=>`${r.nome}: ${r.qtd} unidades descontadas`).join(' | ')}
+      </div>`;
+    btn.style.display='none';
+    importacaoPendente=null;
+    showToast('✅ Relatório importado e estoque atualizado!');
+  } else {
+    showToast('⚠️ Erro ao salvar!');
+  }
+  btn.disabled=false;
 }
 
 function fmtQ(n){return n===null?'–':Number.isInteger(n)?n:n.toFixed(1);}
