@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.9.8-debug</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.9.8</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1885,7 +1885,7 @@ function processarRelatorio(){
   const vendasPorSabor = {};
 
   const SECOES_MILK   = ['MILKSHAKES 180 ML','MILKSHAKES 300 ML','MILKSHAKES 500 ML','MILKSHAKES 700 ML','SAZONAL'];
-  const TAMANHO_REGEX = /(180|300|500|700)\s*ML/i;
+  const TAMANHO_REGEX = /(180|300|500|700)\s*ML/i;
 
   let dentroSecaoMilk = false;
   let tamanhoSecao    = null;
@@ -1998,19 +1998,6 @@ function processarRelatorio(){
   // Atualiza campo de data automaticamente
   if(dataMatch) document.getElementById('data-importar').value = dataRelatorio;
 
-  // DEBUG
-  console.log('=== DEBUG RELATORIO ===');
-  console.log('totaisPorTamanho:', JSON.stringify(totaisPorTamanho));
-  const linhasDebug = txt.split('\n');
-  console.log('Total linhas:', linhasDebug.length);
-  linhasDebug.forEach((l,i)=>{
-    const t = l.trim();
-    if(t.includes('MILKSHAKE')||t.includes('SAZONAL')||t.startsWith('MILKSHAKE')){
-      console.log('SECAO L'+i+':', JSON.stringify(l));
-      // mostra chars
-      console.log('  bytes:', [...l].map(c=>c.charCodeAt(0)).join(','));
-    }
-  });
   const totalVendas = Object.values(totaisPorTamanho).reduce((s,v)=>s+v,0);
   if(!totalVendas){
     document.getElementById('importar-preview').innerHTML=`
