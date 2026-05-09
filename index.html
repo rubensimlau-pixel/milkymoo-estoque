@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.5.1</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.5.2</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -291,7 +291,18 @@
       <!-- Preview do resultado -->
       <div id="importar-preview"></div>
 
-      <button class="btn btn-pink" id="btn-confirmar-importar" onclick="confirmarImportacao()" style="display:none;background:#16a34a;box-shadow:0 4px 14px rgba(22,163,74,.35)">✅ Confirmar e Lançar no Estoque</button>
+      <div id="confronto-resultado"></div>
+
+      <!-- Confronto histórico por data -->
+      <div class="card" style="margin-top:14px">
+        <div class="card-title"><span>🔍</span>Confrontar data anterior</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="date" id="data-confronto" style="border:2px solid var(--border);border-radius:8px;padding:8px;font-family:Nunito,sans-serif;font-size:.88rem">
+          <button onclick="mostrarConfronto(document.getElementById('data-confronto').value)" class="btn btn-outline" style="margin:0;padding:8px 16px;width:auto">🔍 Confrontar</button>
+        </div>
+      </div>
+
+      <button class="btn btn-pink" id="btn-confirmar-importar" onclick="confirmarImportacao()" style="display:none;background:#16a34a;box-shadow:0 4px 14px rgba(22,163,74,.35)">✅ Salvar Relatório para Confronto</button>
     </div>
 
     <div id="sec-divergencia" class="section">
@@ -614,7 +625,7 @@ const DEFAULT_ITEMS=[
   {id:'bob-maq',nome:'Bobina Maquininha',cat:'mimos',unidade:'unidades'},
 ];
 
-let db={items:[...DEFAULT_ITEMS],inventarios:[],consumos:[],entradas:[],perdas:[],historico:[],minimos:{},usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7}};
+let db={items:[...DEFAULT_ITEMS],inventarios:[],consumos:[],entradas:[],perdas:[],relatorios:[],historico:[],minimos:{},usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7}};
 let lojaC=1,lojaI=1,lojaP=1,lojaD=1,lojaE=1,lojaPr=1,lojaImp=1;
 let autoRefreshInterval=null;
 
@@ -1803,17 +1814,17 @@ async function confirmarImportacao(){
   const btn = document.getElementById('btn-confirmar-importar');
   btn.disabled = true;
 
+  // Salva dados do relatório em db.relatorios (NÃO altera consumos)
+  if(!db.relatorios) db.relatorios=[];
+
+  // Soma múltiplos PDVs do mesmo dia/loja
   resultado.forEach(r=>{
-    // SOMA ao lançamento existente (permite múltiplos PDVs no mesmo dia)
-    const existente = db.consumos.find(c=>c.data===dataRelatorio&&c.loja==lojaImp&&c.itemId===r.itemId&&c.isImport);
-    if(existente){
-      existente.qty += r.qtd; // soma
-    } else {
-      db.consumos.push({data:dataRelatorio, loja:lojaImp, itemId:r.itemId, qty:r.qtd, isImport:true});
-    }
+    const existing = db.relatorios.find(x=>x.data===dataRelatorio&&x.loja==lojaImp&&x.itemId===r.itemId);
+    if(existing){ existing.qty += r.qtd; }
+    else { db.relatorios.push({data:dataRelatorio, loja:lojaImp, itemId:r.itemId, qty:r.qtd}); }
   });
 
-  // Registra no histórico (adiciona, não substitui)
+  // Registra no histórico
   if(!db.historico) db.historico=[];
   const pdvNum = db.historico.filter(h=>h.data===dataRelatorio&&h.loja==lojaImp&&h.tipo==='importacao').length+1;
   db.historico.push({
@@ -1828,18 +1839,96 @@ async function confirmarImportacao(){
   const ok = await saveCloud('consumo');
   if(ok){
     document.getElementById('txt-relatorio').value='';
-    document.getElementById('importar-preview').innerHTML=`
-      <div class="info-box" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534;">
-        <strong>✅ Importação realizada com sucesso!</strong>
-        ${resultado.map(r=>`${r.nome}: ${r.qtd} unidades descontadas`).join(' | ')}
-      </div>`;
-    btn.style.display='none';
     importacaoPendente=null;
-    showToast('✅ Relatório importado e estoque atualizado!');
+    mostrarConfronto(dataRelatorio);
+    showToast('✅ Relatório salvo! Veja o confronto abaixo.');
   } else {
     showToast('⚠️ Erro ao salvar!');
   }
   btn.disabled=false;
+}
+
+function mostrarConfronto(data){
+  if(!data){ showToast('⚠️ Selecione uma data!'); return; }
+  const container = document.getElementById('confronto-resultado');
+  if(!container){ return; }
+
+  // Itens do relatório importado para essa data/loja
+  const relItems = (db.relatorios||[]).filter(r=>r.data===data&&r.loja==lojaImp);
+  if(!relItems.length){
+    container.innerHTML=`<div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;">
+      <strong>⚠️ Nenhum relatório importado</strong> para ${fmtDate(data)} em ${nomeLoja(lojaImp)}.
+    </div>`;
+    return;
+  }
+
+  // Consumo manual das funcionárias para essa data/loja
+  const consumoManual = db.consumos.filter(c=>c.data===data&&c.loja==lojaImp);
+
+  let temDivergencia = false;
+  let html = `
+    <div class="card">
+      <div class="card-title"><span>🔍</span>Confronto – ${fmtDate(data)} – ${nomeLoja(lojaImp)}</div>
+      <div style="font-size:.75rem;color:var(--gray);margin-bottom:12px">
+        Comparando lançamento manual das funcionárias vs relatório do Degust.
+        <strong>O estoque usa sempre o valor manual.</strong>
+      </div>
+      <div class="row-hdr">
+        <div class="rh-name">Item</div>
+        <div class="rh-col">Manual</div>
+        <div class="rh-col">Relatório</div>
+        <div class="rh-col">Diferença</div>
+      </div>`;
+
+  relItems.forEach(r=>{
+    const item = db.items.find(i=>i.id===r.itemId);
+    if(!item) return;
+    const manual = consumoManual.filter(c=>c.itemId===r.itemId).reduce((s,c)=>s+c.qty,0);
+    const relQty = r.qty;
+    const diff = manual - relQty;
+    const diffColor = diff===0 ? 'var(--teal-dark)' : diff>0 ? '#d97706' : 'var(--red)';
+    const diffSign = diff>0?'+':'';
+    const diffLabel = diff===0 ? '✅ OK' : `${diffSign}${fmtQ(diff)}`;
+    if(diff!==0) temDivergencia=true;
+
+    html+=`<div class="proj-row">
+      <div class="proj-name">${item.nome}<br><span style="font-size:.66rem;color:var(--gray)">${item.unidade}</span></div>
+      <div class="proj-col" style="font-weight:800">${fmtQ(manual)}</div>
+      <div class="proj-col" style="color:var(--gray)">${fmtQ(relQty)}</div>
+      <div class="proj-col" style="color:${diffColor};font-weight:800">${diffLabel}</div>
+    </div>`;
+  });
+
+  // Itens no manual que não estão no relatório
+  const relIds = relItems.map(r=>r.itemId);
+  const coposNoManual = consumoManual.filter(c=>['cop300','cop500','cop700'].includes(c.itemId)&&!relIds.includes(c.itemId));
+  coposNoManual.forEach(c=>{
+    const item = db.items.find(i=>i.id===c.itemId);
+    if(!item) return;
+    temDivergencia=true;
+    html+=`<div class="proj-row">
+      <div class="proj-name">${item.nome}<br><span style="font-size:.66rem;color:var(--gray)">${item.unidade}</span></div>
+      <div class="proj-col" style="font-weight:800;color:#d97706">${fmtQ(c.qty)}</div>
+      <div class="proj-col" style="color:var(--gray)">0</div>
+      <div class="proj-col" style="color:#d97706;font-weight:800">+${fmtQ(c.qty)}</div>
+    </div>`;
+  });
+
+  html += `</div>`;
+
+  if(!temDivergencia){
+    html += `<div class="card" style="text-align:center;padding:20px">
+      <div style="font-size:2rem">🎉</div>
+      <div style="font-family:'Baloo 2',cursive;font-size:1rem;color:var(--teal-dark);margin-top:6px">Tudo confere! Manual = Relatório.</div>
+    </div>`;
+  } else {
+    html += `<div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;">
+      <strong>⚠️ Há divergências!</strong> Positivo (+) = manual maior que relatório. Negativo (−) = relatório maior que manual.
+    </div>`;
+  }
+
+  container.innerHTML = html;
+  document.getElementById('data-confronto').value = data;
 }
 
 function fmtQ(n){const v=parseFloat(n);if(n===undefined||n===null||n===''||isNaN(v))return'–';return Number.isInteger(v)?v:parseFloat(v.toFixed(1));}
