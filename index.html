@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.9.8</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.9.9</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -2051,13 +2051,13 @@ function processarRelatorio(){
         <div style="font-size:.78rem;font-weight:800;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🥤 Vendas por sabor</div>
         <div style="background:white;border-radius:10px;border:1px solid var(--border);overflow:hidden">
           <div style="display:grid;grid-template-columns:1fr 50px 90px 90px 90px;background:#f9fafb;padding:7px 12px;font-size:.68rem;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border)">
-            <span>Sabor</span><span style="text-align:center">Qtd</span><span style="text-align:right">Faturado</span><span style="text-align:right">Custo</span><span style="text-align:right">Margem</span>
+            <span>Sabor</span><span style="text-align:center">Qtd</span><span style="text-align:right">Faturado</span><span style="text-align:right">Custo</span><span style="text-align:right">Diferença</span>
           </div>
           ${saboresList.map((s,idx)=>{
             const bg = idx%2===0 ? 'white' : '#fafafa';
-            const margem = s.subtotal > 0 ? ((s.subtotal - s.custoInsumos) / s.subtotal * 100) : null;
-            const margemCell = margem !== null
-              ? `<span style="color:${margem>=50?'var(--teal-dark)':margem>=30?'#d97706':'var(--red)'}">${fmtBRL(margem)}%</span>`
+            const diferenca = s.subtotal > 0 && s.custoInsumos > 0 ? (s.subtotal - s.custoInsumos) : null;
+            const margemCell = diferenca !== null
+              ? `<span style="color:${diferenca>=0?'var(--teal-dark)':'var(--red)'}">R$\u00a0${fmtBRL(diferenca)}</span>`
               : '<span style="color:#d1d5db">—</span>';
             const custoCell = s.custoInsumos > 0
               ? `R$\u00a0${fmtBRL(s.custoInsumos)}`
@@ -2226,11 +2226,12 @@ function mostrarConfronto(data){
   // Consumo manual das funcionárias para essa data/loja
   const consumoManual = db.consumos.filter(c=>c.data===data&&c.loja==lojaImp);
 
-  // Une todos os itemIds: relatório + manual
-  const todosIds = [...new Set([
-    ...relItems.map(r=>r.itemId),
-    ...consumoManual.map(c=>c.itemId)
-  ])];
+  // Une todos os itemIds: relatório + manual + todos que permiteConsumo (para ver itens zerados)
+  const idsRelatorio = relItems.map(r=>r.itemId);
+  const idsManual    = consumoManual.map(c=>c.itemId);
+  // Itens que aparecem na aba consumo (permiteConsumo = true)
+  const idsConsumo   = db.items.filter(permiteConsumo).map(i=>i.id);
+  const todosIds = [...new Set([...idsRelatorio, ...idsManual, ...idsConsumo])];
 
   let temDivergencia = false;
   let rowsDiff = '', rowsOk = '';
@@ -2271,6 +2272,9 @@ function mostrarConfronto(data){
       <span style="text-align:center;color:${diffColor};font-weight:800">${diffLabel}</span>
     </div>`;
 
+    // Só mostra se aparece no relatório, no manual, ou se houve diferença
+    const aparece = relQty > 0 || manual > 0;
+    if(!aparece) return; // sem dados dos dois lados → ignora
     if(diff===0) rowsOk += row;
     else rowsDiff += row;
   });
