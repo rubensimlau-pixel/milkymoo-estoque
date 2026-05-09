@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.4.1</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.4.3</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -472,6 +472,15 @@ const DEFAULT_USERS = {
 };
 let currentUser=null;
 function getUsers(){ return db.usuarios||DEFAULT_USERS; }
+
+// Retorna itens de uma categoria em ordem alfabética
+function itensDaCat(cat){
+  return db.items.filter(i=>i.cat===cat).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+}
+// Retorna categorias únicas na ordem padrão
+function cats(){
+  return ['alimentos','bebidas','caldas','insumos','limpeza','mimos'].filter(c=>db.items.some(i=>i.cat===c));
+}
 
 const CAT_ICONS={alimentos:'🍓',bebidas:'🥤',caldas:'🫙',insumos:'📦',limpeza:'🧹',mimos:'🎀'};
 const CAT_LABELS={alimentos:'Alimentos',bebidas:'Bebidas',caldas:'Caldas',insumos:'Insumos',limpeza:'Prod. de Limpeza',mimos:'Mimos'};
@@ -888,9 +897,8 @@ document.getElementById('data-entrada').addEventListener('change', function(){
 function renderInv(){
   const dt=document.getElementById('data-inv').value;
   const saved={};db.inventarios.filter(r=>r.data===dt&&r.loja==lojaI).forEach(r=>saved[r.itemId]=r.qty);
-  const cats=[...new Set(db.items.map(i=>i.cat))];
-  document.getElementById('inv-lista').innerHTML=cats.map(cat=>{
-    const its=db.items.filter(i=>i.cat===cat);if(!its.length)return'';
+  document.getElementById('inv-lista').innerHTML=cats().map(cat=>{
+    const its=itensDaCat(cat);if(!its.length)return'';
     return`<div class="card"><div class="card-title"><span>${CAT_ICONS[cat]}</span>${CAT_LABELS[cat]}</div>
       ${its.map(item=>`<div class="item-row"><div class="item-info"><div class="item-name">${item.nome}</div><div class="item-unit">${item.unidade}</div></div>
         <div><input class="qty-input" type="number" min="0" step="0.01" id="inv-${item.id}" placeholder="0" value="${saved[item.id]??''}"></div></div>`).join('')}</div>`;
@@ -925,10 +933,9 @@ function renderProjetado(){
   const res=calcProjetado(lojaP,hoje());const container=document.getElementById('proj-lista');
   if(!res){container.innerHTML=`<div class="empty"><span class="ej">📋</span><p>Nenhum inventário registrado para <strong>${nomeLoja(lojaP)}</strong>.<br>Faça o primeiro inventário na aba 📋 Inventário.</p></div>`;return;}
   const{dataBase,proj}=res;
-  const cats=[...new Set(db.items.map(i=>i.cat))];
   let html=`<div class="info-box" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534;">Base: inventário de <strong>${fmtDate(dataBase)}</strong> com consumo descontado até hoje.</div>`;
-  cats.forEach(cat=>{
-    const its=db.items.filter(i=>i.cat===cat&&proj[i.id]!==null);if(!its.length)return;
+  cats().forEach(cat=>{
+    const its=itensDaCat(cat).filter(i=>proj[i.id]!==null);if(!its.length)return;
     html+=`<div class="card"><div class="card-title"><span>${CAT_ICONS[cat]}</span>${CAT_LABELS[cat]}</div>
       <div class="row-hdr"><div class="rh-name">Item</div><div class="rh-col">Qtd.</div><div class="rh-col">Status</div></div>`;
     its.forEach(item=>{
@@ -1240,7 +1247,7 @@ function renderConfig(){
   document.getElementById('cn3').value=db.config.nomeLoja3||'Carapicuíba';
   document.getElementById('cd').value=db.config.diasSemana||7;
   renderCfgUsers();
-  document.getElementById('cfg-min').innerHTML=db.items.map(item=>`
+  document.getElementById('cfg-min').innerHTML=db.items.slice().sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(item=>`
     <div class="cfg-item">
       <div style="flex:1">
         <div class="cfg-name">${CAT_ICONS[item.cat]} ${item.nome}</div>
@@ -1341,6 +1348,10 @@ async function salvarUsuario(login){
     pass = db.usuarios[login]?.pass;
     if(!pass){ showToast('⚠️ A senha não pode estar vazia!'); return; }
   } else {
+    // Confirmação antes de salvar nova senha
+    if(!confirm(`Confirma a alteração da senha de "${login}" para:\n\n"${passRaw}"\n\nDeseja continuar?`)){
+      return;
+    }
     pass = await hashSenha(passRaw);
   }
 
