@@ -1998,13 +1998,18 @@ function processarRelatorio(){
   // Atualiza campo de data automaticamente
   if(dataMatch) document.getElementById('data-importar').value = dataRelatorio;
 
-  // DEBUG: mostra as primeiras 20 linhas e totais no console
+  // DEBUG
   console.log('=== DEBUG RELATORIO ===');
-  console.log('totalVendas bruto:', totaisPorTamanho);
-  txt.split('\n').slice(0,30).forEach((l,i)=>{
-    const chars = [...l].map(c=>c.charCodeAt(0));
-    if(chars.some(c=>c>127)) console.log('L'+i+' chars especiais:', JSON.stringify(l), chars.filter(c=>c>127));
-    else console.log('L'+i+':', JSON.stringify(l.substring(0,50)));
+  console.log('totaisPorTamanho:', JSON.stringify(totaisPorTamanho));
+  const linhasDebug = txt.split('\n');
+  console.log('Total linhas:', linhasDebug.length);
+  linhasDebug.forEach((l,i)=>{
+    const t = l.trim();
+    if(t.includes('MILKSHAKE')||t.includes('SAZONAL')||t.startsWith('MILKSHAKE')){
+      console.log('SECAO L'+i+':', JSON.stringify(l));
+      // mostra chars
+      console.log('  bytes:', [...l].map(c=>c.charCodeAt(0)).join(','));
+    }
   });
   const totalVendas = Object.values(totaisPorTamanho).reduce((s,v)=>s+v,0);
   if(!totalVendas){
