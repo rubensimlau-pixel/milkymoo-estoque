@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.5.3</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.5.4</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -320,6 +320,25 @@
       <div class="info-box" style="background:#f0f9ff;border-color:#bae6fd;color:#0c4a6e;">
         <strong>📜 Histórico de Preenchimentos</strong>
         Quem preencheu, quando, em qual loja e quais itens foram lançados.
+      </div>
+      <!-- Filtros -->
+      <div class="card" style="margin-bottom:14px;padding:12px 16px">
+        <div style="font-size:.75rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Filtrar por loja</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="filt-hist-0" onclick="filtrarHistorico(0)" style="padding:6px 14px;border-radius:50px;border:2px solid var(--pink);background:var(--pink);color:white;font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">🏪🏬🏗️ Todas</button>
+          <button id="filt-hist-1" onclick="filtrarHistorico(1)" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">🏪 <span id="filt-nome1">Cajamar</span></button>
+          <button id="filt-hist-2" onclick="filtrarHistorico(2)" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">🏬 <span id="filt-nome2">Iguatemi</span></button>
+          <button id="filt-hist-3" onclick="filtrarHistorico(3)" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">🏗️ <span id="filt-nome3">Carapicuíba</span></button>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+          <div style="font-size:.75rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;width:100%">Filtrar por tipo</div>
+          <button id="filt-tipo-todos" onclick="filtrarHistoricoTipo('')" style="padding:6px 14px;border-radius:50px;border:2px solid var(--pink);background:var(--pink);color:white;font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">Todos</button>
+          <button id="filt-tipo-consumo" onclick="filtrarHistoricoTipo('consumo')" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">📦 Consumo</button>
+          <button id="filt-tipo-inventario" onclick="filtrarHistoricoTipo('inventario')" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">📋 Inventário</button>
+          <button id="filt-tipo-entrada" onclick="filtrarHistoricoTipo('entrada')" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">🛍️ Entradas</button>
+          <button id="filt-tipo-perda" onclick="filtrarHistoricoTipo('perda')" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">💔 Perdas</button>
+          <button id="filt-tipo-importacao" onclick="filtrarHistoricoTipo('importacao')" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">📥 Importações</button>
+        </div>
       </div>
       <div id="hist-lista"></div>
       <button class="btn" onclick="abrirModalReset()" style="background:#ef476f;color:white;margin-top:8px;box-shadow:0 4px 14px rgba(239,71,111,.35)">🗑️ Apagar Lançamentos</button>
@@ -1223,12 +1242,46 @@ function gerarCompras(){
 }
 
 function renderDivergencia(){ document.getElementById('div-lista').innerHTML='<div class="empty">Selecione um período.</div>'; }
+let histFiltroLoja=0, histFiltroTipo='';
+
+function filtrarHistorico(loja){
+  histFiltroLoja=loja;
+  [0,1,2,3].forEach(i=>{
+    const btn=document.getElementById('filt-hist-'+i);
+    if(!btn)return;
+    const ativo=i===loja;
+    btn.style.background=ativo?'var(--pink)':'white';
+    btn.style.color=ativo?'white':'var(--gray)';
+    btn.style.borderColor=ativo?'var(--pink)':'var(--border)';
+  });
+  renderHistorico();
+}
+
+function filtrarHistoricoTipo(tipo){
+  histFiltroTipo=tipo;
+  ['todos','consumo','inventario','entrada','perda','importacao'].forEach(t=>{
+    const btn=document.getElementById('filt-tipo-'+(t||'todos'));
+    if(!btn)return;
+    const ativo=t===tipo;
+    btn.style.background=ativo?'var(--pink)':'white';
+    btn.style.color=ativo?'white':'var(--gray)';
+    btn.style.borderColor=ativo?'var(--pink)':'var(--border)';
+  });
+  renderHistorico();
+}
+
 function renderHistorico(){
   // Mostra/esconde botão de reset conforme perfil
   const btnReset = document.querySelector('#sec-historico .btn');
   if(btnReset) btnReset.style.display = currentUser?.role==='admin' ? '' : 'none';
   const container=document.getElementById('hist-lista');
-  const hist=(db.historico||[]).slice().sort((a,b)=>b.timestamp.localeCompare(a.timestamp));
+  // Atualiza nomes nos filtros
+  const fn1=document.getElementById('filt-nome1');const fn2=document.getElementById('filt-nome2');const fn3=document.getElementById('filt-nome3');
+  if(fn1)fn1.textContent=nomeLoja(1);if(fn2)fn2.textContent=nomeLoja(2);if(fn3)fn3.textContent=nomeLoja(3);
+
+  let hist=(db.historico||[]).slice().sort((a,b)=>b.timestamp.localeCompare(a.timestamp));
+  if(histFiltroLoja>0) hist=hist.filter(h=>h.loja==histFiltroLoja);
+  if(histFiltroTipo) hist=hist.filter(h=>h.tipo===histFiltroTipo);
   if(!hist.length){
     container.innerHTML=`<div class="empty"><span class="ej">📜</span><p>Nenhum preenchimento registrado ainda.</p></div>`;
     return;
@@ -1756,9 +1809,29 @@ function processarRelatorio(){
     resultado.push({itemId, nome:item.nome, qtd, descricao:`${qtd} milkshake(s) ${s.tamanho}ml vendido(s)`});
   });
 
-  // Extrai loja do relatório
+  // Extrai loja do relatório automaticamente
   const lojaMatch = txt.match(/MILKY MOO[^\n]*/i);
   const lojaInfo = lojaMatch ? lojaMatch[0].trim() : '';
+
+  // Detecta qual loja baseado no nome encontrado no relatório
+  let lojaDetectada = lojaImp; // fallback para loja selecionada
+  if(lojaInfo){
+    const lojaInfoUpper = lojaInfo.toUpperCase();
+    const nomeLoja1 = (db.config.nomeLoja1||'Cajamar').toUpperCase();
+    const nomeLoja2 = (db.config.nomeLoja2||'Iguatemi').toUpperCase();
+    const nomeLoja3 = (db.config.nomeLoja3||'Carapicuíba').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const lojaInfoNorm = lojaInfoUpper.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    if(lojaInfoUpper.includes(nomeLoja1)||lojaInfoNorm.includes(nomeLoja1)) lojaDetectada=1;
+    else if(lojaInfoUpper.includes(nomeLoja2)||lojaInfoNorm.includes(nomeLoja2)) lojaDetectada=2;
+    else if(lojaInfoUpper.includes(nomeLoja3.normalize('NFD').replace(/[\u0300-\u036f]/g,''))||lojaInfoNorm.includes('CARAPICUIBA')) lojaDetectada=3;
+  }
+
+  // Atualiza seletor de loja automaticamente
+  lojaImp = lojaDetectada;
+  [1,2,3].forEach(i=>document.getElementById('blimp'+i).classList.toggle('active',i===lojaDetectada));
+
+  // Atualiza campo de data automaticamente
+  if(dataMatch) document.getElementById('data-importar').value = dataRelatorio;
 
   if(!resultado.length){
     document.getElementById('importar-preview').innerHTML=`
@@ -1770,15 +1843,15 @@ function processarRelatorio(){
   }
 
   // Calcula estoque atual para mostrar preview
-  const proj = calcProjetado(lojaImp, hoje());
+  const proj = calcProjetado(lojaDetectada, hoje());
 
   let previewHtml = `
     <div class="card">
       <div class="card-title"><span>🔍</span>Preview da Importação</div>
-      <div style="font-size:.78rem;color:var(--gray);margin-bottom:10px">
-        📅 Data: <strong>${fmtDate(dataRelatorio)}</strong> &nbsp;|&nbsp;
-        🏪 Loja: <strong>${nomeLoja(lojaImp)}</strong>
-        ${lojaInfo ? `&nbsp;|&nbsp; 📋 <em>${lojaInfo}</em>` : ''}
+      <div style="font-size:.78rem;margin-bottom:10px;background:#f0fdf4;border-radius:8px;padding:8px 12px;border:1px solid #bbf7d0">
+        📅 Data detectada: <strong style="color:#166534">${fmtDate(dataRelatorio)}</strong> &nbsp;|&nbsp;
+        ${lojaIcon(lojaDetectada)} Loja detectada: <strong style="color:#166534">${nomeLoja(lojaDetectada)}</strong>
+        ${lojaInfo ? `<br><span style="font-size:.72rem;color:var(--gray)">📋 ${lojaInfo}</span>` : ''}
       </div>
       <div class="row-hdr">
         <div class="rh-name">Item</div>
