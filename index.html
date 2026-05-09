@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.5.2</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.5.3</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -362,6 +362,9 @@
             </label>
             <label style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600" onclick="toggleReset(this)">
               <input type="checkbox" id="rst-hist" style="width:18px;height:18px;accent-color:var(--pink);cursor:pointer"> 📜 Histórico
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600" onclick="toggleReset(this)">
+              <input type="checkbox" id="rst-relatorios" style="width:18px;height:18px;accent-color:var(--pink);cursor:pointer"> 📥 Relatórios importados
             </label>
             <label style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #fee2e2;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:700;color:#991b1b;background:#fff5f5" onclick="toggleResetTudo(this)">
               <input type="checkbox" id="rst-tudo" style="width:18px;height:18px;accent-color:#ef476f;cursor:pointer"> 🔴 Apagar tudo acima
@@ -779,7 +782,7 @@ async function atualizarDados(forcado=false){
   // Nas abas de preenchimento (consumo/inventário), o auto-refresh NÃO re-renderiza
   // para não apagar o que a funcionária está digitando.
   // Só re-renderiza se foi clique manual no botão 🔄
-  const abaDigitacao = (name==='consumo'||name==='inventario'||name==='entradas'||name==='perdas');
+  const abaDigitacao = (name==='consumo'||name==='inventario'||name==='entradas'||name==='perdas'||name==='importar');
   if(!abaDigitacao || forcado){
     if(name==='consumo')renderConsumo();
     if(name==='inventario')renderInv();
@@ -1538,7 +1541,7 @@ function abrirModalReset(){
   document.getElementById('rst-nome-loja2').textContent=nomeLoja(2);
   document.getElementById('rst-nome-loja3').textContent=nomeLoja(3);
   // Reset checkboxes
-  ['rst-consumo','rst-inv','rst-entradas','rst-hist','rst-tudo'].forEach(id=>{
+  ['rst-consumo','rst-inv','rst-entradas','rst-hist','rst-relatorios','rst-tudo'].forEach(id=>{
     document.getElementById(id).checked=false;
   });
   // Reset loja para "Todas"
@@ -1590,7 +1593,7 @@ function toggleReset(label){
 function toggleResetTudo(label){
   setTimeout(()=>{
     const checked=document.getElementById('rst-tudo').checked;
-    ['rst-consumo','rst-inv','rst-entradas','rst-hist'].forEach(id=>{
+    ['rst-consumo','rst-inv','rst-entradas','rst-hist','rst-relatorios'].forEach(id=>{
       const el=document.getElementById(id);
       el.checked=checked;
       const lbl=el.closest('label');
@@ -1616,23 +1619,24 @@ async function confirmarReset(){
   if(apagaInv)itens.push('Inventários');
   if(apagaEntradas)itens.push('Entradas');
   if(apagaHist)itens.push('Histórico');
+  if(apagaRelatorios)itens.push('Relatórios importados');
 
   const lojaLabel = lojaVal===0 ? 'TODAS AS LOJAS' : nomeLoja(lojaVal);
 
   if(!confirm(`Confirma a exclusão de:\n\n• ${itens.join('\n• ')}\n\nLoja: ${lojaLabel}\n\nEsta ação é irreversível!`)){return;}
 
   if(lojaVal===0){
-    // Apaga de todas as lojas
     if(apagaConsumo) db.consumos=[];
     if(apagaInv) db.inventarios=[];
     if(apagaEntradas) db.entradas=[];
     if(apagaHist) db.historico=[];
+    if(apagaRelatorios) db.relatorios=[];
   } else {
-    // Apaga só da loja selecionada
     if(apagaConsumo) db.consumos=db.consumos.filter(c=>c.loja!=lojaVal);
     if(apagaInv) db.inventarios=db.inventarios.filter(r=>r.loja!=lojaVal);
     if(apagaEntradas) db.entradas=db.entradas.filter(e=>e.loja!=lojaVal);
     if(apagaHist) db.historico=db.historico.filter(h=>h.loja!=lojaVal);
+    if(apagaRelatorios) db.relatorios=db.relatorios.filter(r=>r.loja!=lojaVal);
   }
 
   const ok=await cloudSet(db);
