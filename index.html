@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.7.0</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.8.0</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -399,14 +399,9 @@
 
     <div id="sec-config" class="section">
       <div class="card">
-        <div class="card-title"><span>🏪</span>Nome das Lojas</div>
-        <div class="cfg-item"><span class="cfg-name">Loja 1</span><input class="cfg-input" id="cn1" type="text" value="Cajamar" style="width:130px"></div>
-        <div class="cfg-item"><span class="cfg-name">Loja 2</span><input class="cfg-input" id="cn2" type="text" value="Iguatemi" style="width:130px"></div>
-        <div class="cfg-item"><span class="cfg-name">Loja 3</span><input class="cfg-input" id="cn3" type="text" value="Carapicuíba" style="width:130px"></div>
-      </div>
-      <div class="card">
-        <div class="card-title"><span>📅</span>Dias a cobrir no relatório de compras</div>
-        <div class="cfg-item"><span class="cfg-name">Dias</span><input class="cfg-input" id="cd" type="number" min="1" max="14" value="7"></div>
+        <div class="card-title"><span>🏪</span>Unidades Cadastradas</div>
+        <p style="font-size:.78rem;color:var(--gray);margin-bottom:12px">Gerencie os nomes e dias de cobertura de cada unidade.</p>
+        <button class="btn btn-teal" onclick="abrirGerenciarUnidades()" style="margin-bottom:0">🏪 Gerenciar Unidades</button>
       </div>
       <div class="card">
         <div class="card-title"><span>📦</span>Itens e Estoque Mínimo</div>
@@ -421,12 +416,67 @@
       <div class="card">
         <div class="card-title"><span>🍦</span>Sabores de Milky Shake</div>
         <p style="font-size:.78rem;color:var(--gray);margin-bottom:12px">Gerencie os sabores cadastrados usados para calcular insumos a partir dos relatórios.</p>
-        <button class="btn btn-purple" onclick="abrirGerenciarSabores()" style="margin-bottom:0">🍦 Gerenciar Sabores</button>
+        <button onclick="abrirGerenciarSabores()" style="margin-bottom:0;width:100%;padding:11px;background:#1f2937;color:white;border:none;border-radius:12px;font-family:'Baloo 2',cursive;font-size:.9rem;font-weight:700;cursor:pointer">🍦 Gerenciar Sabores</button>
       </div>
-      <button class="btn btn-pink" onclick="salvarConfig()">💾 Salvar Configurações</button>
       <div style="display:flex;gap:8px;margin-top:4px">
         <button onclick="gerarPDFInsumos()" style="flex:1;padding:10px;border:1.5px solid #d1d5db;border-radius:12px;background:white;color:#6b7280;font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer">📄 PDF Insumos</button>
         <button onclick="gerarPDFSabores()" style="flex:1;padding:10px;border:1.5px solid #d1d5db;border-radius:12px;background:white;color:#6b7280;font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer">📄 PDF Sabores</button>
+      </div>
+    </div>
+
+    <!-- MODAL GERENCIAR UNIDADES -->
+    <div id="modal-unidades" style="display:none;position:fixed;inset:0;background:white;z-index:600;flex-direction:column;overflow:hidden">
+      <div style="background:linear-gradient(135deg,#0d9488,#0891b2);color:white;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <div>
+          <div style="font-family:'Baloo 2',cursive;font-size:1.15rem;font-weight:800">🏪 Unidades Cadastradas</div>
+          <div style="font-size:.75rem;opacity:.85">Nomes e dias de cobertura por unidade</div>
+        </div>
+        <button onclick="fecharGerenciarUnidades()" style="background:rgba(255,255,255,.2);border:none;border-radius:50px;padding:7px 14px;color:white;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">✕ Fechar</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px">
+        <!-- Loja 1 -->
+        <div class="card" style="border-left:4px solid #0d9488">
+          <div style="font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;color:#0d9488;margin-bottom:12px">🏪 Unidade 1</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div>
+              <label style="font-size:.72rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Nome</label>
+              <input id="mu-cn1" type="text" placeholder="Ex: Cajamar" class="field-input" style="margin-bottom:0">
+            </div>
+            <div>
+              <label style="font-size:.72rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Dias de cobertura do estoque</label>
+              <input id="mu-cd1" type="number" min="1" max="30" placeholder="7" class="field-input" style="margin-bottom:0;width:80px">
+            </div>
+          </div>
+        </div>
+        <!-- Loja 2 -->
+        <div class="card" style="border-left:4px solid #0891b2">
+          <div style="font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;color:#0891b2;margin-bottom:12px">🏪 Unidade 2</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div>
+              <label style="font-size:.72rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Nome</label>
+              <input id="mu-cn2" type="text" placeholder="Ex: Iguatemi" class="field-input" style="margin-bottom:0">
+            </div>
+            <div>
+              <label style="font-size:.72rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Dias de cobertura do estoque</label>
+              <input id="mu-cd2" type="number" min="1" max="30" placeholder="7" class="field-input" style="margin-bottom:0;width:80px">
+            </div>
+          </div>
+        </div>
+        <!-- Loja 3 -->
+        <div class="card" style="border-left:4px solid #7c3aed">
+          <div style="font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;color:#7c3aed;margin-bottom:12px">🏪 Unidade 3</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div>
+              <label style="font-size:.72rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Nome</label>
+              <input id="mu-cn3" type="text" placeholder="Ex: Carapicuíba" class="field-input" style="margin-bottom:0">
+            </div>
+            <div>
+              <label style="font-size:.72rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Dias de cobertura do estoque</label>
+              <input id="mu-cd3" type="number" min="1" max="30" placeholder="7" class="field-input" style="margin-bottom:0;width:80px">
+            </div>
+          </div>
+        </div>
+        <button onclick="salvarUnidades()" style="padding:14px;background:linear-gradient(135deg,#0d9488,#0891b2);color:white;border:none;border-radius:14px;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;cursor:pointer;letter-spacing:.3px">💾 Salvar Unidades</button>
       </div>
     </div>
 
@@ -770,7 +820,7 @@ const DEFAULT_ITEMS=[
   {id:'bob-maq',nome:'Bobina Maquininha',cat:'mimos',unidade:'unidades'},
 ];
 
-let db={items:[...DEFAULT_ITEMS],inventarios:[],consumos:[],entradas:[],perdas:[],relatorios:[],historico:[],minimos:{},receitas:null,usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7}};
+let db={items:[...DEFAULT_ITEMS],inventarios:[],consumos:[],entradas:[],perdas:[],relatorios:[],historico:[],minimos:{},receitas:null,usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7,diasLoja1:7,diasLoja2:7,diasLoja3:7}};
 let lojaC=1,lojaI=1,lojaP=1,lojaD=1,lojaE=1,lojaPr=1,lojaImp=1;
 let autoRefreshInterval=null;
 
@@ -1497,17 +1547,11 @@ function renderHistorico(){
 }
 
 function renderConfig(){
-  document.getElementById('cn1').value=db.config.nomeLoja1||'Cajamar';
-  document.getElementById('cn2').value=db.config.nomeLoja2||'Iguatemi';
-  document.getElementById('cn3').value=db.config.nomeLoja3||'Carapicuíba';
-  document.getElementById('cd').value=db.config.diasSemana||7;
+  // cn1/cn2/cn3/cd já não existem no HTML (movidos para modal-unidades)
 }
 
 async function salvarConfig(){
-  db.config.nomeLoja1=document.getElementById('cn1').value;
-  db.config.nomeLoja2=document.getElementById('cn2').value;
-  db.config.nomeLoja3=document.getElementById('cn3').value;
-  db.config.diasSemana=parseInt(document.getElementById('cd').value);
+  // Legado — salvarUnidades() agora cuida de nomes e dias
   await saveCloud(); showToast('💾 Configurações salvas!'); aplicarNomes();
 }
 
@@ -2815,6 +2859,55 @@ async function adicionarUsuarioModal(){
 
 function abrirNovoUsuarioModal(){
   document.getElementById('lista-usuarios-modal').scrollTop = 9999;
+}
+
+
+// ════════════════════════════════════════════════════════════
+//  GERENCIAR UNIDADES (modal)
+// ════════════════════════════════════════════════════════════
+
+function abrirGerenciarUnidades(){
+  // Preenche os campos com valores atuais
+  document.getElementById('mu-cn1').value = db.config.nomeLoja1 || 'Cajamar';
+  document.getElementById('mu-cn2').value = db.config.nomeLoja2 || 'Iguatemi';
+  document.getElementById('mu-cn3').value = db.config.nomeLoja3 || 'Carapicuíba';
+  document.getElementById('mu-cd1').value = db.config.diasLoja1 || db.config.diasSemana || 7;
+  document.getElementById('mu-cd2').value = db.config.diasLoja2 || db.config.diasSemana || 7;
+  document.getElementById('mu-cd3').value = db.config.diasLoja3 || db.config.diasSemana || 7;
+  document.getElementById('modal-unidades').style.display = 'flex';
+}
+
+function fecharGerenciarUnidades(){
+  document.getElementById('modal-unidades').style.display = 'none';
+}
+
+async function salvarUnidades(){
+  const cn1 = document.getElementById('mu-cn1').value.trim();
+  const cn2 = document.getElementById('mu-cn2').value.trim();
+  const cn3 = document.getElementById('mu-cn3').value.trim();
+  const cd1 = parseInt(document.getElementById('mu-cd1').value) || 7;
+  const cd2 = parseInt(document.getElementById('mu-cd2').value) || 7;
+  const cd3 = parseInt(document.getElementById('mu-cd3').value) || 7;
+
+  if(!cn1 || !cn2 || !cn3){ showToast('⚠️ Preencha todos os nomes!'); return; }
+
+  db.config.nomeLoja1 = cn1;
+  db.config.nomeLoja2 = cn2;
+  db.config.nomeLoja3 = cn3;
+  db.config.diasLoja1 = cd1;
+  db.config.diasLoja2 = cd2;
+  db.config.diasLoja3 = cd3;
+  // Mantém diasSemana como média para compatibilidade legada
+  db.config.diasSemana = Math.round((cd1 + cd2 + cd3) / 3);
+
+  const ok = await saveCloud();
+  if(ok){
+    aplicarNomes();
+    fecharGerenciarUnidades();
+    showToast('✅ Unidades salvas!');
+  } else {
+    showToast('⚠️ Erro ao salvar!');
+  }
 }
 
 window.addEventListener('firebaseReady',()=>{document.getElementById('btn-login').disabled=false;});
