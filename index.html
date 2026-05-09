@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.5.0</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.5.1</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1804,19 +1804,23 @@ async function confirmarImportacao(){
   btn.disabled = true;
 
   resultado.forEach(r=>{
-    // Remove lançamento anterior do mesmo item/data/loja
-    db.consumos = db.consumos.filter(c=>!(c.data===dataRelatorio&&c.loja==lojaImp&&c.itemId===r.itemId));
-    db.consumos.push({data:dataRelatorio, loja:lojaImp, itemId:r.itemId, qty:r.qtd});
+    // SOMA ao lançamento existente (permite múltiplos PDVs no mesmo dia)
+    const existente = db.consumos.find(c=>c.data===dataRelatorio&&c.loja==lojaImp&&c.itemId===r.itemId&&c.isImport);
+    if(existente){
+      existente.qty += r.qtd; // soma
+    } else {
+      db.consumos.push({data:dataRelatorio, loja:lojaImp, itemId:r.itemId, qty:r.qtd, isImport:true});
+    }
   });
 
-  // Registra no histórico
+  // Registra no histórico (adiciona, não substitui)
   if(!db.historico) db.historico=[];
-  db.historico = db.historico.filter(h=>!(h.data===dataRelatorio&&h.loja==lojaImp&&h.tipo==='importacao'));
+  const pdvNum = db.historico.filter(h=>h.data===dataRelatorio&&h.loja==lojaImp&&h.tipo==='importacao').length+1;
   db.historico.push({
     tipo:'importacao',
     data:dataRelatorio,
     loja:lojaImp,
-    responsavel:'Rubens',
+    responsavel:`Rubens (PDV ${pdvNum})`,
     timestamp:new Date().toISOString(),
     itens: resultado.map(r=>({nome:r.nome, qty:r.qtd, unidade:'unidades'}))
   });
