@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.4.3</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.4.4</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -840,7 +840,7 @@ function renderConsumo(){
   const dt=document.getElementById('data-consumo').value;
   const cats=['alimentos','caldas','insumos','bebidas','limpeza','mimos'];
   document.getElementById('consumo-lista').innerHTML=cats.map(cat=>{
-    const its=db.items.filter(i=>i.cat===cat && permiteConsumo(i));if(!its.length)return'';
+    const its=itensDaCat(cat).filter(i=>permiteConsumo(i));if(!its.length)return'';
     return`<div class="card"><div class="card-title"><span>${CAT_ICONS[cat]}</span>${CAT_LABELS[cat]}</div>
       <div class="row-hdr"><div class="rh-name">Item</div><div class="rh-col">Usado hoje</div></div>
       ${its.map(item=>{const r=db.consumos.find(c=>c.data===dt&&c.loja==lojaC&&c.itemId===item.id);
