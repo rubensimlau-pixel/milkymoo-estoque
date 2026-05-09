@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.4.5</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.4.6</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1247,14 +1247,22 @@ function renderConfig(){
   document.getElementById('cn3').value=db.config.nomeLoja3||'Carapicuíba';
   document.getElementById('cd').value=db.config.diasSemana||7;
   renderCfgUsers();
-  document.getElementById('cfg-min').innerHTML=db.items.slice().sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(item=>`
+  // Agrupa por categoria em ordem alfabética dentro de cada categoria
+  let cfgHtml = '';
+  cats().forEach(cat => {
+    const its = itensDaCat(cat);
+    if(!its.length) return;
+    cfgHtml += `<div style="font-size:.75rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;padding:10px 0 4px;border-bottom:2px solid var(--border);margin-bottom:4px">${CAT_ICONS[cat]} ${CAT_LABELS[cat]}</div>`;
+    cfgHtml += its.map(item=>`
     <div class="cfg-item">
       <div style="flex:1">
-        <div class="cfg-name">${CAT_ICONS[item.cat]} ${item.nome}</div>
+        <div class="cfg-name">${item.nome}</div>
         <div style="font-size:.7rem;color:var(--gray)">Mín: <input class="cfg-input" type="number" step="1" id="min-${item.id}" value="${db.minimos[item.id]||0}" style="width:50px;padding:2px"></div>
       </div>
       <button class="btn-del" onclick="deleteItem('${item.id}')" title="Excluir item">🗑️</button>
     </div>`).join('');
+  });
+  document.getElementById('cfg-min').innerHTML = cfgHtml;
 }
 
 async function salvarConfig(){
