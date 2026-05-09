@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.9.5</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.9.6</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1953,17 +1953,17 @@ function processarRelatorio(){
     });
   });
 
-  // Monta resultado apenas para tamanhos com vendas
+  // Monta resultado para tamanhos com vendas (não depende do copo existir em db.items)
   [180, 300, 500, 700].forEach(tamanho => {
     const qtd = totaisPorTamanho[tamanho];
     if(qtd <= 0) return;
     const itemId = COPO_MAP[tamanho];
     if(!itemId) return;
     const item = db.items.find(i=>i.id===itemId);
-    if(!item) return;
+    // Usa nome do db se existir, senão nome padrão
     resultado.push({
       itemId,
-      nome:     item.nome,
+      nome:     item ? item.nome : `Copo ${tamanho}ml`,
       qtd,
       descricao:`${qtd} milkshake(s) ${tamanho}ml vendido(s)`,
       insumos:  Object.values(insumosPorTamanho[tamanho])
@@ -1994,11 +1994,12 @@ function processarRelatorio(){
   // Atualiza campo de data automaticamente
   if(dataMatch) document.getElementById('data-importar').value = dataRelatorio;
 
-  if(!resultado.length){
+  const totalVendas = Object.values(totaisPorTamanho).reduce((s,v)=>s+v,0);
+  if(!totalVendas){
     document.getElementById('importar-preview').innerHTML=`
       <div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;">
-        <strong>⚠️ Nenhum item encontrado</strong>
-        Verifique se o texto copiado está completo e contém a seção "MOVIMENTACAO DE PRODUTO".
+        <strong>⚠️ Nenhum Milky Shake encontrado</strong>
+        Verifique se o texto copiado está completo e contém a seção "MILKSHAKES" ou "SAZONAL".
       </div>`;
     return;
   }
