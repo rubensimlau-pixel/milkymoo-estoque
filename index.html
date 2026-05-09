@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.4.8</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.4.9</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1773,8 +1773,8 @@ function processarRelatorio(){
       </div>`;
 
   resultado.forEach(r=>{
-    const estoqueAtual = proj ? (proj.proj[r.itemId]??'–') : '–';
-    const estoqueApos = proj && proj.proj[r.itemId]!==null ? (proj.proj[r.itemId]||0) - r.qtd : '–';
+    const estoqueAtual = proj ? (proj.proj[r.itemId]!==null&&proj.proj[r.itemId]!==undefined ? Number(proj.proj[r.itemId]) : '–') : '–';
+    const estoqueApos = proj && typeof estoqueAtual==='number' ? estoqueAtual - r.qtd : '–';
     const cor = typeof estoqueApos==='number' && estoqueApos<0 ? 'var(--red)' : 'var(--teal-dark)';
     previewHtml += `
       <div class="proj-row">
