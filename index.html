@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.8.0</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.9.0</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1992,8 +1992,89 @@ function processarRelatorio(){
     return;
   }
 
-  // Calcula estoque atual para mostrar preview
+  // ── Consolida insumos de todos os tamanhos numa tabela única ──────────────
+  const insumosMap = {}; // itemId → { nome, unidade, qty, valor }
+  resultado.forEach(r => {
+    (r.insumos||[]).forEach(ing => {
+      if(!ing.itemId) return;
+      if(!insumosMap[ing.itemId]){
+        const itm = db.items.find(i=>i.id===ing.itemId);
+        insumosMap[ing.itemId] = {
+          nome:    itm ? itm.nome    : (ing.nome||ing.itemId),
+          unidade: itm ? (itm.unidade||ing.unidade) : ing.unidade,
+          valorUnit: itm ? (itm.valor||0) : 0,
+          qty: 0,
+        };
+      }
+      insumosMap[ing.itemId].qty += ing.qty;
+    });
+  });
+  const insumosList = Object.values(insumosMap).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  const totalGastoGeral = insumosList.reduce((acc,i)=> acc + i.qty * i.valorUnit, 0);
+
+  // ── Cabeçalho resumo de vendas por tamanho ───────────────────────────────
+  const resumoVendas = resultado.map(r=>{
+    const tam = r.itemId==='cop180'?'180':r.itemId==='cop300'?'300':r.itemId==='cop500'?'500':r.itemId==='cop700'?'700':'?';
+    return `<span style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:8px;padding:4px 10px;font-size:.8rem;font-weight:700;color:#6b21a8">${tam}ml: <strong>${r.qtd}</strong></span>`;
+  }).join('');
+
+  // ── Tabela de insumos consolidados ───────────────────────────────────────
+  let insumosTableHtml = '';
+  if(insumosList.length){
+    insumosTableHtml = `
+      <div style="margin-top:14px">
+        <div style="font-size:.78rem;font-weight:800;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📦 Insumos consumidos no dia</div>
+        <div style="background:white;border-radius:10px;border:1px solid var(--border);overflow:hidden">
+          <div style="display:grid;grid-template-columns:1fr 80px 80px 90px;background:#f9fafb;padding:7px 12px;font-size:.7rem;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border)">
+            <span>Insumo</span><span style="text-align:center">Qtd</span><span style="text-align:center">Vlr unit.</span><span style="text-align:right">Total gasto</span>
+          </div>
+          ${insumosList.map((ing,idx)=>{
+            const total = ing.qty * ing.valorUnit;
+            const bg = idx%2===0 ? 'white' : '#fafafa';
+            const valorCell = ing.valorUnit > 0
+              ? `R$ ${ing.valorUnit.toFixed(2)}`
+              : '<span style="color:#d1d5db">—</span>';
+            const totalCell = ing.valorUnit > 0
+              ? `<strong style="color:#c9345a">R$ ${total.toFixed(2)}</strong>`
+              : '<span style="color:#d1d5db">—</span>';
+            return `<div style="display:grid;grid-template-columns:1fr 80px 80px 90px;padding:7px 12px;font-size:.78rem;background:${bg};border-bottom:1px solid #f3f4f6;align-items:center">
+              <span style="font-weight:600">${ing.nome}<br><span style="font-size:.66rem;color:var(--gray);font-weight:400">${ing.unidade}</span></span>
+              <span style="text-align:center;font-weight:700;color:#0369a1">${fmtQ(ing.qty)}</span>
+              <span style="text-align:center;font-size:.74rem;color:#6b7280">${valorCell}</span>
+              <span style="text-align:right">${totalCell}</span>
+            </div>`;
+          }).join('')}
+          ${totalGastoGeral > 0 ? `
+          <div style="display:grid;grid-template-columns:1fr 80px 80px 90px;padding:8px 12px;background:#fff7ed;border-top:2px solid #fed7aa;font-size:.8rem;font-weight:800">
+            <span style="color:#92400e">💰 Total do dia</span>
+            <span></span><span></span>
+            <span style="text-align:right;color:#c9345a;font-size:.9rem">R$ ${totalGastoGeral.toFixed(2)}</span>
+          </div>` : ''}
+        </div>
+      </div>`;
+  }
+
+  // ── Calcula estoque de copos para mostrar impacto ─────────────────────────
   const proj = calcProjetado(lojaDetectada, hoje());
+  let copesHtml = `
+    <div class="row-hdr" style="margin-top:10px">
+      <div class="rh-name">Copo</div>
+      <div class="rh-col">Vendas</div>
+      <div class="rh-col">Estoque atual</div>
+      <div class="rh-col">Após desconto</div>
+    </div>`;
+  resultado.forEach(r=>{
+    const estoqueAtual = proj ? (proj.proj[r.itemId]!==null&&proj.proj[r.itemId]!==undefined ? Number(proj.proj[r.itemId]) : '–') : '–';
+    const estoqueApos  = proj && typeof estoqueAtual==='number' ? estoqueAtual - r.qtd : '–';
+    const cor = typeof estoqueApos==='number' && estoqueApos<0 ? 'var(--red)' : 'var(--teal-dark)';
+    copesHtml += `
+      <div class="proj-row">
+        <div class="proj-name">${r.nome}</div>
+        <div class="proj-col" style="color:var(--pink-dark);font-weight:800">${r.qtd}</div>
+        <div class="proj-col">${fmtQ(estoqueAtual)}</div>
+        <div class="proj-col" style="color:${cor};font-weight:800">${fmtQ(estoqueApos)}</div>
+      </div>`;
+  });
 
   let previewHtml = `
     <div class="card">
@@ -2003,43 +2084,11 @@ function processarRelatorio(){
         ${lojaIcon(lojaDetectada)} Loja detectada: <strong style="color:#166534">${nomeLoja(lojaDetectada)}</strong>
         ${lojaInfo ? `<br><span style="font-size:.72rem;color:var(--gray)">📋 ${lojaInfo}</span>` : ''}
       </div>
-      <div class="row-hdr">
-        <div class="rh-name">Item</div>
-        <div class="rh-col">Vendas</div>
-        <div class="rh-col">Estoque atual</div>
-        <div class="rh-col">Após desconto</div>
-      </div>`;
-
-  resultado.forEach(r=>{
-    const estoqueAtual = proj ? (proj.proj[r.itemId]!==null&&proj.proj[r.itemId]!==undefined ? Number(proj.proj[r.itemId]) : '–') : '–';
-    const estoqueApos = proj && typeof estoqueAtual==='number' ? estoqueAtual - r.qtd : '–';
-    const cor = typeof estoqueApos==='number' && estoqueApos<0 ? 'var(--red)' : 'var(--teal-dark)';
-    // Insumos breakdown
-    const insumosHtml = (r.insumos && r.insumos.length > 0)
-      ? `<div style="margin-top:6px;padding:8px;background:var(--gray-light);border-radius:8px;font-size:.72rem">
-          <div style="font-weight:700;color:var(--gray);margin-bottom:4px">📦 Insumos consumidos:</div>
-          <div style="display:flex;flex-wrap:wrap;gap:4px">
-            ${r.insumos.map(ing=>{
-              const itm=db.items.find(i=>i.id===ing.itemId);
-              return `<span style="background:white;border-radius:6px;padding:2px 8px;border:1px solid var(--border)">${itm?itm.nome:ing.nome}: <strong>${fmtQ(ing.qty)} ${ing.unidade}</strong></span>`;
-            }).join('')}
-          </div>
-        </div>`
-      : '';
-
-    previewHtml += `
-      <div class="proj-row" style="flex-wrap:wrap">
-        <div class="proj-name" style="width:100%">${r.nome}<br><span style="font-size:.68rem;color:var(--gray)">${r.descricao}</span></div>
-        <div style="display:flex;gap:8px;width:100%">
-          <div class="proj-col" style="color:var(--pink-dark);font-weight:800">${r.qtd}</div>
-          <div class="proj-col">${fmtQ(estoqueAtual)}</div>
-          <div class="proj-col" style="color:${cor};font-weight:800">${fmtQ(estoqueApos)}</div>
-        </div>
-        ${insumosHtml}
-      </div>`;
-  });
-
-  previewHtml += `</div>`;
+      <div style="font-size:.76rem;color:var(--gray);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">🥤 Milky Shakes vendidos</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px">${resumoVendas}</div>
+      ${copesHtml}
+      ${insumosTableHtml}
+    </div>`;
 
   document.getElementById('importar-preview').innerHTML = previewHtml;
   document.getElementById('btn-confirmar-importar').style.display = '';
