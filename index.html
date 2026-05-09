@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.6.0</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.6.4</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -461,6 +461,7 @@
         <button class="btn btn-purple" onclick="abrirGerenciarSabores()" style="margin-bottom:0">🍦 Gerenciar Sabores</button>
       </div>
       <button class="btn btn-pink" onclick="salvarConfig()">💾 Salvar Configurações</button>
+      <button onclick="gerarPDFCadastros()" style="display:block;width:100%;padding:10px;border:1.5px solid #d1d5db;border-radius:12px;background:white;color:#6b7280;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;margin-top:4px">📄 Exportar cadastros em PDF</button>
     </div>
 
     <!-- MODAL GERENCIAR SABORES -->
@@ -2439,6 +2440,143 @@ async function excluirSabor(nome){
   } else {
     showToast('⚠️ Erro ao salvar!');
   }
+}
+
+
+function gerarPDFCadastros(){
+  const receitas = getReceitas();
+  const dataHoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  // ── SEÇÃO 1: ITENS DE ESTOQUE ──────────────────────────────────────────────
+  let secItens = '';
+  const CAT_LABEL = {alimentos:'🍓 Alimentos',bebidas:'🥤 Bebidas',caldas:'🫙 Caldas',insumos:'📦 Insumos',limpeza:'🧹 Limpeza',mimos:'🎀 Mimos'};
+  const catsOrdem = ['alimentos','bebidas','caldas','insumos','limpeza','mimos'];
+
+  catsOrdem.forEach(cat => {
+    const its = itensDaCat(cat);
+    if(!its.length) return;
+    secItens += `<tr><td colspan="7" style="background:#f3e8ff;padding:7px 10px;font-size:11px;font-weight:800;color:#6b21a8;text-transform:uppercase;letter-spacing:.5px">${CAT_LABEL[cat]||cat}</td></tr>`;
+    its.forEach(item => {
+      const min  = db.minimos[item.id] || '—';
+      const u2   = item.unidadeSecundaria || '—';
+      const qtd  = item.qtdPorUnidade || '—';
+      const val  = item.valor ? `R$ ${item.valor.toFixed(2)}` : '—';
+      secItens += `<tr>
+        <td style="padding:5px 10px;font-size:11px">${item.nome}</td>
+        <td style="padding:5px 10px;font-size:11px;text-align:center">${item.unidade||'—'}</td>
+        <td style="padding:5px 10px;font-size:11px;text-align:center">${min}</td>
+        <td style="padding:5px 10px;font-size:11px;text-align:center">${u2}</td>
+        <td style="padding:5px 10px;font-size:11px;text-align:center">${qtd}</td>
+        <td style="padding:5px 10px;font-size:11px;text-align:center">${val}</td>
+        <td style="padding:5px 10px;font-size:11px;text-align:center">${item.usoDiario?'✅':'—'}</td>
+      </tr>`;
+    });
+  });
+
+  // ── SEÇÃO 2: SABORES ───────────────────────────────────────────────────────
+  let secSabores = '';
+  const saboresOrdenados = Object.keys(receitas).sort();
+  const TAMANHOS = [180,300,500,700];
+
+  saboresOrdenados.forEach(sabor => {
+    const r = receitas[sabor];
+    const tamComIng = TAMANHOS.filter(t => r[t] && r[t].length > 0);
+    if(!tamComIng.length) return;
+
+    // Quantas linhas no total para fazer o rowspan do nome
+    const totalLinhas = tamComIng.reduce((acc,t) => acc + Math.max(r[t].length, 1), 0);
+
+    let primeiraLinha = true;
+    let blocoSabor = '';
+
+    tamComIng.forEach(tam => {
+      const ings = r[tam] || [];
+      const corTam = {180:'#059669',300:'#7c3aed',500:'#db2777',700:'#0369a1'}[tam] || '#374151';
+
+      if(!ings.length){
+        blocoSabor += `<tr>
+          ${primeiraLinha ? `<td rowspan="${totalLinhas}" style="padding:6px 10px;font-size:11px;font-weight:800;color:#c9345a;vertical-align:middle;border-right:2px solid #f3f4f6">${sabor}</td>` : ''}
+          <td style="padding:5px 10px;font-size:10px;font-weight:700;color:${corTam};text-align:center">${tam}ml</td>
+          <td colspan="3" style="padding:5px 10px;font-size:10px;color:#9ca3af;font-style:italic">sem ingredientes</td>
+        </tr>`;
+        primeiraLinha = false;
+      } else {
+        ings.forEach((ing, i) => {
+          const nomeItem = db.items.find(it=>it.id===ing.itemId)?.nome || ing.nome || ing.itemId;
+          blocoSabor += `<tr>
+            ${primeiraLinha ? `<td rowspan="${totalLinhas}" style="padding:6px 10px;font-size:11px;font-weight:800;color:#c9345a;vertical-align:middle;border-right:2px solid #f3f4f6">${sabor}</td>` : ''}
+            ${i===0 ? `<td rowspan="${ings.length}" style="padding:5px 8px;font-size:10px;font-weight:700;color:${corTam};text-align:center;vertical-align:middle">${tam}ml</td>` : ''}
+            <td style="padding:4px 10px;font-size:10px">${nomeItem}</td>
+            <td style="padding:4px 10px;font-size:10px;text-align:center">${ing.qty||'—'}</td>
+            <td style="padding:4px 10px;font-size:10px;text-align:center">${ing.unidade||'—'}</td>
+          </tr>`;
+          primeiraLinha = false;
+        });
+      }
+    });
+
+    secSabores += blocoSabor;
+    // Linha separadora entre sabores
+    secSabores += `<tr><td colspan="5" style="padding:0;border-top:2px solid #f3f4f6"></td></tr>`;
+  });
+
+  // ── MONTA HTML ─────────────────────────────────────────────────────────────
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+  <title>Cadastros Milky Moo – ${dataHoje}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;color:#222;font-size:12px}
+    h1{font-size:18px;color:#c9345a;margin-bottom:2px}
+    h2{font-size:13px;color:#6b21a8;margin:20px 0 8px;padding-bottom:4px;border-bottom:2px solid #e9d5ff}
+    .sub{font-size:11px;color:#6b7280;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;margin-bottom:8px}
+    th{background:#ff6b9d;color:white;padding:7px 10px;font-size:11px;text-align:left}
+    tr:nth-child(even) td{background:#fafafa}
+    td{border-bottom:1px solid #f3f4f6;vertical-align:middle}
+    .rodape{margin-top:24px;font-size:10px;color:#9ca3af;text-align:center;border-top:1px solid #e5e7eb;padding-top:10px}
+    @media print{body{margin:12px} .no-print{display:none}}
+  </style></head><body>
+  <h1>🐄 Milky Moo — Cadastros</h1>
+  <div class="sub">Gerado em ${dataHoje} &nbsp;|&nbsp; ${db.items.length} itens &nbsp;|&nbsp; ${saboresOrdenados.length} sabores</div>
+
+  <h2>📦 Itens de Estoque</h2>
+  <table>
+    <thead><tr>
+      <th>Item</th>
+      <th style="text-align:center;width:80px">Unidade</th>
+      <th style="text-align:center;width:55px">Mínimo</th>
+      <th style="text-align:center;width:70px">Un. Sec.</th>
+      <th style="text-align:center;width:65px">Qtd/Un.</th>
+      <th style="text-align:center;width:75px">Valor</th>
+      <th style="text-align:center;width:60px">Consumo</th>
+    </tr></thead>
+    <tbody>${secItens}</tbody>
+  </table>
+
+  <h2>🍦 Sabores de Milky Shake</h2>
+  <table>
+    <thead><tr>
+      <th style="width:120px">Sabor</th>
+      <th style="text-align:center;width:55px">Tam.</th>
+      <th>Ingrediente</th>
+      <th style="text-align:center;width:55px">Qtd</th>
+      <th style="text-align:center;width:65px">Unidade</th>
+    </tr></thead>
+    <tbody>${secSabores}</tbody>
+  </table>
+
+  <div class="rodape">Milky Moo – Sistema de Controle de Estoque</div>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
+
+  const blob = new Blob([html], {type:'text/html'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `milkymoo-cadastros-${new Date().toISOString().split('T')[0]}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📄 PDF gerado! Abra o arquivo para imprimir.');
 }
 
 window.addEventListener('firebaseReady',()=>{document.getElementById('btn-login').disabled=false;});
