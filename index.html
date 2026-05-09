@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.5.4</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.5.5</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1797,11 +1797,17 @@ function processarRelatorio(){
   secoes.forEach(s=>{
     const idx = txt.indexOf(s.nome);
     if(idx===-1) return;
-    // Pega o bloco até o próximo TOTAL
-    const bloco = txt.substring(idx, idx+2000);
-    const totalMatch = bloco.match(/^TOTAL\s+(\d+)/m);
-    if(!totalMatch) return;
-    const qtd = parseInt(totalMatch[1]);
+    // Delimita o bloco: da seção atual até a próxima seção ou fim
+    const nextSecIdx = secoes
+      .map(o=>o.nome!==s.nome ? txt.indexOf(o.nome, idx+1) : -1)
+      .filter(i=>i>idx);
+    const endIdx = nextSecIdx.length>0 ? Math.min(...nextSecIdx) : idx+3000;
+    const bloco = txt.substring(idx, endIdx);
+    // Pega o TOTAL da própria seção (último TOTAL no bloco)
+    const totalMatches = [...bloco.matchAll(/^TOTAL\s+(\d+)/mg)];
+    if(!totalMatches.length) return;
+    const lastTotal = totalMatches[totalMatches.length-1];
+    const qtd = parseInt(lastTotal[1]);
     if(qtd<=0) return;
     const itemId = COPO_MAP[s.tamanho];
     const item = db.items.find(i=>i.id===itemId);
