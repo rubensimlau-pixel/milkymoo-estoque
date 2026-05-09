@@ -1819,6 +1819,7 @@ const IMPORT_RULES = [
 
 // Mapa de tamanho → itemId do copo
 const COPO_MAP = {
+  180: 'cop180',
   300: 'cop300',
   500: 'cop500',
   700: 'cop700',
@@ -1843,51 +1844,91 @@ function processarRelatorio(){
     ? `${dataMatch[3]}-${dataMatch[2]}-${dataMatch[1]}`
     : document.getElementById('data-importar').value;
 
-  // Processa cada seção de milkshakes
-  const secoes = [
-    { nome:'MILKSHAKES 300 ML', tamanho:300 },
-    { nome:'MILKSHAKES 500 ML', tamanho:500 },
-    { nome:'MILKSHAKES 700 ML', tamanho:700 },
-  ];
+  // ── NOVA LÓGICA DE PARSING ──────────────────────────────────────────────────
+  // Percorre o relatório linha a linha detectando seções de milkshakes.
+  // Conta cada linha de produto individualmente e detecta o tamanho pelo
+  // nome do produto (ex: "PANDORA 300ML") ou pelo cabeçalho da seção.
+  // Sazonais (ex: "PEDE MOOLECA 300ML") são somados ao copo correto.
+  // ────────────────────────────────────────────────────────────────────────────
 
-  secoes.forEach(s=>{
-    const idx = txt.indexOf(s.nome);
-    if(idx===-1) return;
-    // Delimita o bloco: da seção atual até a próxima seção ou fim
-    const nextSecIdx = secoes
-      .map(o=>o.nome!==s.nome ? txt.indexOf(o.nome, idx+1) : -1)
-      .filter(i=>i>idx);
-    const endIdx = nextSecIdx.length>0 ? Math.min(...nextSecIdx) : idx+3000;
-    const bloco = txt.substring(idx, endIdx);
-    // Pega o TOTAL da própria seção (último TOTAL no bloco)
-    const totalMatches = [...bloco.matchAll(/^TOTAL\s+(\d+)/mg)];
-    if(!totalMatches.length) return;
-    const lastTotal = totalMatches[totalMatches.length-1];
-    const qtd = parseInt(lastTotal[1]);
-    if(qtd<=0) return;
-    const itemId = COPO_MAP[s.tamanho];
+  const totaisPorTamanho  = { 180:0, 300:0, 500:0, 700:0 };
+  const insumosPorTamanho = { 180:{}, 300:{}, 500:{}, 700:{} };
+
+  const SECOES_MILK   = ['MILKSHAKES 180 ML','MILKSHAKES 300 ML','MILKSHAKES 500 ML','MILKSHAKES 700 ML','SAZONAL'];
+  const TAMANHO_REGEX = /\b(180|300|500|700)\s*ML\b/i;
+
+  let dentroSecaoMilk = false;
+  let tamanhoSecao    = null;
+
+  txt.split('\n').forEach(linha => {
+    const trim = linha.trim();
+
+    // Linha TOTAL → fecha seção
+    if(/^TOTAL\s/.test(trim)){ dentroSecaoMilk = false; return; }
+
+    // Separadores --- não fecham seção (existem dentro das seções também)
+    if(/^-{10,}$/.test(trim)) return;
+
+    // Cabeçalho de seção: sem código numérico no início, só maiúsculas/números/espaços
+    if(!/^\s{2,}\d+\s/.test(linha) && trim.length > 2 && /^[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ0-9\s\/]+$/.test(trim)){
+      const isMilk = SECOES_MILK.some(s => trim === s || trim.startsWith(s));
+      if(isMilk){
+        dentroSecaoMilk = true;
+        const tm = trim.match(TAMANHO_REGEX);
+        tamanhoSecao = tm ? parseInt(tm[1]) : null; // null para SAZONAL
+      } else {
+        dentroSecaoMilk = false;
+        tamanhoSecao    = null;
+      }
+      return;
+    }
+
+    if(!dentroSecaoMilk) return;
+
+    // Linha de produto: "   [cod] NOME PRODUTO   [qtd]  [valor]  [%]"
+    const m = linha.match(/^\s{2,}\d+\s+(.+?)\s{2,}(\d+)\s+[\d.,]+\s+[\d.,]+/);
+    if(!m) return;
+
+    const nomeProd = m[1].trim();
+    const qtdProd  = parseInt(m[2]);
+    if(!qtdProd || qtdProd <= 0) return;
+
+    // Tamanho: pelo nome do produto primeiro (cobre sazonais), depois pelo cabeçalho
+    let tamanho = null;
+    const tmNome = nomeProd.match(TAMANHO_REGEX);
+    if(tmNome)        tamanho = parseInt(tmNome[1]);
+    else if(tamanhoSecao) tamanho = tamanhoSecao;
+
+    if(!tamanho || !totaisPorTamanho.hasOwnProperty(tamanho)) return;
+
+    totaisPorTamanho[tamanho] += qtdProd;
+
+    // Acumula insumos pela receita do sabor
+    const receita = buscarReceita(nomeProd, String(tamanho));
+    receita.forEach(ing => {
+      if(!ing.itemId) return;
+      if(!insumosPorTamanho[tamanho][ing.itemId]){
+        insumosPorTamanho[tamanho][ing.itemId] = {nome:ing.nome, qty:0, unidade:ing.unidade, itemId:ing.itemId};
+      }
+      insumosPorTamanho[tamanho][ing.itemId].qty += ing.qty * qtdProd;
+    });
+  });
+
+  // Monta resultado apenas para tamanhos com vendas
+  [180, 300, 500, 700].forEach(tamanho => {
+    const qtd = totaisPorTamanho[tamanho];
+    if(qtd <= 0) return;
+    const itemId = COPO_MAP[tamanho];
+    if(!itemId) return;
     const item = db.items.find(i=>i.id===itemId);
     if(!item) return;
-    // Calcula consumo de insumos com base nas receitas
-    const consumoInsumos = {};
-    const tamanhoStr = String(s.tamanho);
-    
-    // Extrai produtos individuais da seção
-    const linhasProd = bloco.split('\n').filter(l=>l.match(/^\s+\d+\s+.+\s+(\d+)\s+[\d,.]+/));
-    linhasProd.forEach(linha => {
-      const m = linha.match(/^\s+\d+\s+(.+?)\s{2,}(\d+)\s/);
-      if(!m) return;
-      const nomeProd = m[1].trim();
-      const qtdProd = parseInt(m[2]);
-      const receita = buscarReceita(nomeProd, tamanhoStr);
-      receita.forEach(ing => {
-        if(!ing.itemId) return;
-        if(!consumoInsumos[ing.itemId]) consumoInsumos[ing.itemId] = {nome:ing.nome, qty:0, unidade:ing.unidade, itemId:ing.itemId};
-        consumoInsumos[ing.itemId].qty += ing.qty * qtdProd;
-      });
+    resultado.push({
+      itemId,
+      nome:     item.nome,
+      qtd,
+      descricao:`${qtd} milkshake(s) ${tamanho}ml vendido(s)`,
+      insumos:  Object.values(insumosPorTamanho[tamanho])
     });
-
-    resultado.push({itemId, nome:item.nome, qtd, descricao:`${qtd} milkshake(s) ${s.tamanho}ml vendido(s)`, insumos:Object.values(consumoInsumos)});
   });
 
   // Extrai loja do relatório automaticamente
