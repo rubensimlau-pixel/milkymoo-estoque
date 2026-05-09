@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.9.3</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.9.4</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1890,8 +1890,7 @@ function processarRelatorio(){
   let dentroSecaoMilk = false;
   let tamanhoSecao    = null;
 
-  txt.split('
-').forEach(linha => {
+  txt.split('\n').forEach(linha => {
     const trim = linha.trim();
     if(/^TOTAL\s/.test(trim)){ dentroSecaoMilk = false; return; }
     if(/^-{10,}$/.test(trim)) return;
