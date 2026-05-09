@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.6.4</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.7.0</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -409,51 +409,14 @@
         <div class="cfg-item"><span class="cfg-name">Dias</span><input class="cfg-input" id="cd" type="number" min="1" max="14" value="7"></div>
       </div>
       <div class="card">
-        <div class="card-title"><span>📦</span>Gerenciar Itens e Estoque Mínimo</div>
-        <p style="font-size:.78rem;color:var(--gray);margin-bottom:12px">Abaixo do valor mínimo o item entra na lista de compras. Use 🗑️ para excluir.</p>
-        <div id="cfg-min"></div>
+        <div class="card-title"><span>📦</span>Itens e Estoque Mínimo</div>
+        <p style="font-size:.78rem;color:var(--gray);margin-bottom:12px">Gerencie os itens do estoque, mínimos e unidades.</p>
+        <button class="btn btn-teal" onclick="abrirGerenciarItens()" style="margin-bottom:0">📦 Gerenciar Itens</button>
       </div>
       <div class="card">
-        <div class="card-title"><span>➕</span>Novo Item</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-          <input id="ni-nome" type="text" placeholder="Nome do item" style="flex:1;min-width:120px;border:2px solid var(--border);border-radius:8px;padding:8px 10px;font-family:Nunito,sans-serif;font-size:.85rem">
-          <select id="ni-cat" style="border:2px solid var(--border);border-radius:8px;padding:8px;font-family:Nunito,sans-serif;font-size:.82rem">
-            <option value="alimentos">🍓 Alimentos</option>
-            <option value="bebidas">🥤 Bebidas</option>
-            <option value="caldas">🫙 Caldas</option>
-            <option value="insumos">📦 Insumos</option>
-            <option value="limpeza">🧹 Limpeza</option>
-            <option value="mimos">🎀 Mimos</option>
-          </select>
-          <input id="ni-unid" type="text" placeholder="unid/kg/litros" style="width:100px;border:2px solid var(--border);border-radius:8px;padding:8px;font-family:Nunito,sans-serif;font-size:.82rem">
-        </div>
-        <label style="font-size: .82rem; color: var(--gray); display: flex; align-items: center; gap: 5px; width: 100%; margin-bottom: 10px;">
-          <input type="checkbox" id="ni-consumo"> Aparece no Consumo Diário?
-        </label>
-        <button class="btn btn-teal" onclick="addItem()">➕ Adicionar Item</button>
-      </div>
-      <div class="card">
-        <div class="card-title"><span>👥</span>Gerenciar Usuários</div>
-        <div id="cfg-users"></div>
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-          <div style="font-size:.78rem;font-weight:700;color:var(--gray);margin-bottom:8px">➕ Novo Usuário</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-            <input id="nu-login" type="text" placeholder="Login (sem espaços)" style="flex:1;min-width:110px;border:2px solid var(--border);border-radius:8px;padding:8px 10px;font-family:Nunito,sans-serif;font-size:.85rem;background:var(--gray-light)">
-            <input id="nu-senha" type="text" placeholder="Senha" style="flex:1;min-width:110px;border:2px solid var(--border);border-radius:8px;padding:8px 10px;font-family:Nunito,sans-serif;font-size:.85rem;background:var(--gray-light)">
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-            <select id="nu-role" style="flex:1;border:2px solid var(--border);border-radius:8px;padding:8px;font-family:Nunito,sans-serif;font-size:.85rem">
-              <option value="admin">👑 Admin (acesso total)</option>
-              <option value="loja">👩 Funcionária</option>
-            </select>
-            <select id="nu-loja" style="flex:1;border:2px solid var(--border);border-radius:8px;padding:8px;font-family:Nunito,sans-serif;font-size:.85rem">
-              <option value="1">Loja 1</option>
-              <option value="2">Loja 2</option>
-              <option value="3">Loja 3</option>
-            </select>
-          </div>
-          <button class="btn btn-teal" onclick="adicionarUsuario()" style="margin-bottom:0">➕ Adicionar Usuário</button>
-        </div>
+        <div class="card-title"><span>👥</span>Usuários</div>
+        <p style="font-size:.78rem;color:var(--gray);margin-bottom:12px">Gerencie os acessos ao sistema.</p>
+        <button class="btn btn-teal" onclick="abrirGerenciarUsuarios()" style="margin-bottom:0">👥 Gerenciar Usuários</button>
       </div>
       <div class="card">
         <div class="card-title"><span>🍦</span>Sabores de Milky Shake</div>
@@ -461,7 +424,117 @@
         <button class="btn btn-purple" onclick="abrirGerenciarSabores()" style="margin-bottom:0">🍦 Gerenciar Sabores</button>
       </div>
       <button class="btn btn-pink" onclick="salvarConfig()">💾 Salvar Configurações</button>
-      <button onclick="gerarPDFCadastros()" style="display:block;width:100%;padding:10px;border:1.5px solid #d1d5db;border-radius:12px;background:white;color:#6b7280;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;margin-top:4px">📄 Exportar cadastros em PDF</button>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button onclick="gerarPDFInsumos()" style="flex:1;padding:10px;border:1.5px solid #d1d5db;border-radius:12px;background:white;color:#6b7280;font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer">📄 PDF Insumos</button>
+        <button onclick="gerarPDFSabores()" style="flex:1;padding:10px;border:1.5px solid #d1d5db;border-radius:12px;background:white;color:#6b7280;font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer">📄 PDF Sabores</button>
+      </div>
+    </div>
+
+    <!-- MODAL GERENCIAR ITENS -->
+    <div id="modal-itens" style="display:none;position:fixed;inset:0;background:white;z-index:600;flex-direction:column;overflow:hidden">
+      <div style="background:linear-gradient(135deg,#0d9488,#06b6d4);color:white;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <div>
+          <div style="font-family:'Baloo 2',cursive;font-size:1.15rem;font-weight:800">📦 Gerenciar Itens</div>
+          <div style="font-size:.75rem;opacity:.85" id="itens-contador">Carregando...</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button onclick="abrirNovoItem()" style="background:white;color:#0d9488;border:none;border-radius:50px;padding:7px 14px;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">➕ Novo</button>
+          <button onclick="fecharGerenciarItens()" style="background:rgba(255,255,255,.2);border:none;border-radius:50px;padding:7px 14px;color:white;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">✕ Fechar</button>
+        </div>
+      </div>
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border);flex-shrink:0;background:white">
+        <input id="busca-item" type="text" placeholder="🔍 Buscar item..." oninput="renderListaItens()"
+          style="width:100%;border:2px solid var(--border);border-radius:10px;padding:9px 14px;font-family:'Nunito',sans-serif;font-size:.9rem;background:var(--gray-light)">
+      </div>
+      <div id="lista-itens-modal" style="flex:1;overflow-y:auto;padding:14px"></div>
+    </div>
+
+    <!-- MODAL EDITAR ITEM -->
+    <div id="modal-editar-item" style="display:none;position:fixed;inset:0;background:white;z-index:700;flex-direction:column;overflow:hidden">
+      <div style="background:linear-gradient(135deg,#0d9488,#06b6d4);color:white;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <div>
+          <div style="font-family:'Baloo 2',cursive;font-size:1.1rem;font-weight:800" id="edit-item-titulo">Editar Item</div>
+          <div style="font-size:.75rem;opacity:.85">Configurações do item</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="salvarItemModal()" style="background:white;color:#0d9488;border:none;border-radius:50px;padding:7px 16px;font-family:'Baloo 2',cursive;font-size:.85rem;font-weight:700;cursor:pointer">💾 Salvar</button>
+          <button onclick="fecharEditarItem()" style="background:rgba(255,255,255,.2);border:none;border-radius:50px;padding:7px 14px;color:white;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">✕</button>
+        </div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:16px">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div>
+            <label class="field-label">Nome do Item</label>
+            <input id="ei-nome" type="text" class="field-input" style="margin-bottom:0">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <label class="field-label">Categoria</label>
+              <select id="ei-cat" class="field-input" style="margin-bottom:0">
+                <option value="alimentos">🍓 Alimentos</option>
+                <option value="bebidas">🥤 Bebidas</option>
+                <option value="caldas">🫙 Caldas</option>
+                <option value="insumos">📦 Insumos</option>
+                <option value="limpeza">🧹 Limpeza</option>
+                <option value="mimos">🎀 Mimos</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label">Unidade</label>
+              <input id="ei-unid" type="text" placeholder="unid/kg/litros" class="field-input" style="margin-bottom:0">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <label class="field-label">Estoque Mínimo</label>
+              <input id="ei-min" type="number" min="0" step="1" class="field-input" style="margin-bottom:0">
+            </div>
+            <div>
+              <label class="field-label">Un. Secundária</label>
+              <select id="ei-unid2" class="field-input" style="margin-bottom:0">
+                <option value="">—</option>
+                <option value="ml">ml</option>
+                <option value="gramas">gramas</option>
+                <option value="unidade">unidade</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <label class="field-label">Qtd por Unidade</label>
+              <input id="ei-qtdunid" type="number" min="0" step="1" class="field-input" style="margin-bottom:0">
+            </div>
+            <div>
+              <label class="field-label">Valor (R$)</label>
+              <input id="ei-valor" type="number" min="0" step="0.01" class="field-input" style="margin-bottom:0">
+            </div>
+          </div>
+          <label style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid var(--border);border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
+            <input type="checkbox" id="ei-consumo" style="width:18px;height:18px;accent-color:var(--teal);cursor:pointer">
+            Aparece no Consumo Diário?
+          </label>
+          <div id="ei-novo-extra" style="display:none">
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;font-size:.78rem;color:#166534">
+              ℹ️ Novo item — preencha acima e clique em 💾 Salvar para adicionar.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL GERENCIAR USUÁRIOS -->
+    <div id="modal-usuarios" style="display:none;position:fixed;inset:0;background:white;z-index:600;flex-direction:column;overflow:hidden">
+      <div style="background:linear-gradient(135deg,#374151,#6b7280);color:white;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <div>
+          <div style="font-family:'Baloo 2',cursive;font-size:1.15rem;font-weight:800">👥 Gerenciar Usuários</div>
+          <div style="font-size:.75rem;opacity:.85" id="usuarios-contador">Carregando...</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button onclick="abrirNovoUsuarioModal()" style="background:white;color:#374151;border:none;border-radius:50px;padding:7px 14px;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">➕ Novo</button>
+          <button onclick="fecharGerenciarUsuarios()" style="background:rgba(255,255,255,.2);border:none;border-radius:50px;padding:7px 14px;color:white;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">✕ Fechar</button>
+        </div>
+      </div>
+      <div id="lista-usuarios-modal" style="flex:1;overflow-y:auto;padding:14px"></div>
     </div>
 
     <!-- MODAL GERENCIAR SABORES -->
@@ -1428,37 +1501,6 @@ function renderConfig(){
   document.getElementById('cn2').value=db.config.nomeLoja2||'Iguatemi';
   document.getElementById('cn3').value=db.config.nomeLoja3||'Carapicuíba';
   document.getElementById('cd').value=db.config.diasSemana||7;
-  renderCfgUsers();
-  // Agrupa por categoria em ordem alfabética dentro de cada categoria
-  let cfgHtml = '';
-  cats().forEach(cat => {
-    const its = itensDaCat(cat);
-    if(!its.length) return;
-    cfgHtml += `<div style="font-size:.75rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;padding:10px 0 4px;border-bottom:2px solid var(--border);margin-bottom:4px">${CAT_ICONS[cat]} ${CAT_LABELS[cat]}</div>`;
-    cfgHtml += its.map(item=>`
-    <div class="cfg-item" style="flex-wrap:wrap;gap:6px;align-items:flex-start;padding:10px 0">
-      <div style="flex:1;min-width:160px">
-        <div class="cfg-name">${item.nome}</div>
-        <div style="font-size:.7rem;color:var(--gray);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <span>Mín: <input class="cfg-input" type="number" step="1" id="min-${item.id}" value="${db.minimos[item.id]||0}" style="width:45px;padding:2px"></span>
-          <span>Compra: <input class="cfg-input" type="text" id="unid-${item.id}" value="${item.unidade||''}" placeholder="unid" style="width:70px;padding:2px;text-align:left"></span>
-          <span>Qtd/unid: <input class="cfg-input" type="number" step="1" id="qtdunid-${item.id}" value="${item.qtdPorUnidade||''}" placeholder="-" style="width:50px;padding:2px"></span>
-          <span>Un.sec: <select class="cfg-input" id="unid2-${item.id}" style="width:72px;padding:2px"><option value="">-</option><option value="ml">ml</option><option value="gramas">gramas</option><option value="unidade">unidade</option></select></span>
-          <span>R$: <input class="cfg-input" type="number" step="0.01" id="valor-${item.id}" value="${item.valor||''}" placeholder="-" style="width:60px;padding:2px"></span>
-        </div>
-      </div>
-      <div style="display:flex;gap:6px;align-items:center">
-        <button onclick="salvarItem('${item.id}')" style="background:#16a34a;color:white;border:none;border-radius:8px;padding:4px 8px;font-size:.75rem;cursor:pointer;font-family:Nunito,sans-serif;font-weight:700">💾</button>
-        <button class="btn-del" onclick="deleteItem('${item.id}')" title="Excluir item">🗑️</button>
-      </div>
-    </div>`).join('');
-  });
-  document.getElementById('cfg-min').innerHTML = cfgHtml;
-  // Seta os selects de Un.sec com o valor salvo (não funciona via atributo no template)
-  db.items.forEach(item=>{
-    const sel=document.getElementById('unid2-'+item.id);
-    if(sel&&item.unidadeSecundaria) sel.value=item.unidadeSecundaria;
-  });
 }
 
 async function salvarConfig(){
@@ -1466,24 +1508,10 @@ async function salvarConfig(){
   db.config.nomeLoja2=document.getElementById('cn2').value;
   db.config.nomeLoja3=document.getElementById('cn3').value;
   db.config.diasSemana=parseInt(document.getElementById('cd').value);
-  db.items.forEach(item=>{
-    const elMin=document.getElementById('min-'+item.id);if(elMin)db.minimos[item.id]=parseFloat(elMin.value)||0;
-    const elUnid=document.getElementById('unid-'+item.id);if(elUnid&&elUnid.value.trim())item.unidade=elUnid.value.trim();
-    const elQtd=document.getElementById('qtdunid-'+item.id);if(elQtd){const v=parseFloat(elQtd.value)||0;if(v>0)item.qtdPorUnidade=v;else delete item.qtdPorUnidade;}
-    const elU2=document.getElementById('unid2-'+item.id);if(elU2){const v=elU2.value.trim();if(v)item.unidadeSecundaria=v;else delete item.unidadeSecundaria;}
-    const elVal=document.getElementById('valor-'+item.id);if(elVal){const v=parseFloat(elVal.value)||0;if(v>0)item.valor=v;else delete item.valor;}
-  });
-  await saveCloud(); showToast('💾 Configurações salvas!');
+  await saveCloud(); showToast('💾 Configurações salvas!'); aplicarNomes();
 }
 
-async function addItem(){
-  const nome=document.getElementById('ni-nome').value.trim();if(!nome)return;
-  const cat=document.getElementById('ni-cat').value;
-  const unidade=document.getElementById('ni-unid').value.trim()||'unid';
-  const noConsumo=document.getElementById('ni-consumo').checked;
-  db.items.push({id:'c_'+Date.now(),nome,cat,unidade,usoDiario:noConsumo});
-  await saveCloud(); renderConfig(); showToast('✅ Adicionado!');
-}
+// addItem migrado para salvarItemModal()
 
 async function salvarItem(id){
   const item = db.items.find(i=>i.id===id);
@@ -1510,45 +1538,6 @@ async function deleteItem(id){
   showToast('🗑️ Item removido!');
 }
 
-function renderCfgUsers(){
-  const users = getUsers();
-  const nomesLojas = [db.config.nomeLoja1||'Loja 1', db.config.nomeLoja2||'Loja 2', db.config.nomeLoja3||'Loja 3'];
-  document.getElementById('cfg-users').innerHTML = Object.entries(users).map(([login, u])=>{
-    const roleLabel = u.role==='admin' ? '👑 Admin' : `👩 Funcionária – ${nomesLojas[(u.loja||1)-1]}`;
-    const isMe = login === currentUser.name;
-    return `<div class="cfg-item" style="flex-wrap:wrap;gap:6px">
-      <div style="flex:1;min-width:120px">
-        <div class="cfg-name" style="font-size:.88rem">🔑 <strong>${login}</strong></div>
-        <div style="font-size:.72rem;color:var(--gray)">${roleLabel}</div>
-      </div>
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <input id="edit-pass-${login}" type="password" value="" placeholder="Nova senha (deixe vazio para manter)"
-          style="width:130px;border:2px solid var(--border);border-radius:8px;padding:5px 8px;font-family:Nunito,sans-serif;font-size:.82rem;background:var(--gray-light)"
-          placeholder="Senha atual">
-        <select id="edit-role-${login}" onchange="toggleLojaSelect('${login}')"
-          style="border:2px solid var(--border);border-radius:8px;padding:5px 6px;font-family:Nunito,sans-serif;font-size:.8rem">
-          <option value="admin" ${u.role==='admin'?'selected':''}>👑 Admin</option>
-          <option value="loja"  ${u.role==='loja' ?'selected':''}>👩 Funcionária</option>
-        </select>
-        <select id="edit-loja-${login}"
-          style="border:2px solid var(--border);border-radius:8px;padding:5px 6px;font-family:Nunito,sans-serif;font-size:.8rem;${u.role==='admin'?'display:none':''}"
-          >
-          <option value="1" ${u.loja==1?'selected':''}>Loja 1</option>
-          <option value="2" ${u.loja==2?'selected':''}>Loja 2</option>
-          <option value="3" ${u.loja==3?'selected':''}>Loja 3</option>
-        </select>
-        <button onclick="salvarUsuario('${login}')"
-          style="background:#16a34a;color:white;border:none;border-radius:8px;padding:5px 10px;font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">
-          💾
-        </button>
-        ${!isMe ? `<button onclick="removerUsuario('${login}')"
-          style="background:var(--red);color:white;border:none;border-radius:8px;padding:5px 10px;font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">
-          🗑️
-        </button>` : '<span style="font-size:.7rem;color:var(--gray)">(você)</span>'}
-      </div>
-    </div>`;
-  }).join('');
-}
 
 function toggleLojaSelect(login){
   const role = document.getElementById('edit-role-'+login).value;
@@ -1556,73 +1545,8 @@ function toggleLojaSelect(login){
   if(loja) loja.style.display = role==='admin' ? 'none' : '';
 }
 
-async function salvarUsuario(login){
-  const passRaw = document.getElementById('edit-pass-'+login).value.trim();
-  const role = document.getElementById('edit-role-'+login).value;
-  const lojaEl = document.getElementById('edit-loja-'+login);
-  const loja = parseInt(lojaEl?.value||1);
 
-  // Recarrega usuarios do Firebase para ter dados atualizados
-  const udFresh = await window.firebaseGetUsers().catch(()=>null);
-  if(udFresh) db.usuarios = {...DEFAULT_USERS, ...udFresh};
-  if(!db.usuarios) db.usuarios = {...DEFAULT_USERS};
 
-  // Se campo vazio, mantém a senha atual do Firebase
-  let pass;
-  if(!passRaw){
-    pass = db.usuarios[login]?.pass;
-    if(!pass){ showToast('⚠️ A senha não pode estar vazia!'); return; }
-  } else {
-    // Confirmação antes de salvar nova senha
-    if(!confirm(`Confirma a alteração da senha de "${login}" para:\n\n"${passRaw}"\n\nDeseja continuar?`)){
-      return;
-    }
-    pass = await hashSenha(passRaw);
-  }
-
-  const nomesLojas = [db.config.nomeLoja1||'Cajamar', db.config.nomeLoja2||'Iguatemi', db.config.nomeLoja3||'Carapicuíba'];
-  const userData = {pass, role, label: role==='admin' ? `${login} – Acesso Total` : `Funcionária – ${nomesLojas[loja-1]}`};
-  if(role==='loja') userData.loja = loja;
-  db.usuarios[login] = userData;
-
-  const ok = await window.firebaseSetUsers(JSON.parse(JSON.stringify(db.usuarios)));
-  if(ok){
-    renderCfgUsers();
-    showToast(`✅ Usuário "${login}" atualizado!`);
-  } else {
-    showToast(`⚠️ Erro ao salvar! Tente novamente.`);
-  }
-}
-
-async function adicionarUsuario(){
-  const login = document.getElementById('nu-login').value.trim().toLowerCase().replace(/\s+/g,'');
-  const senha = document.getElementById('nu-senha').value.trim();
-  const role  = document.getElementById('nu-role').value;
-  const loja  = parseInt(document.getElementById('nu-loja').value);
-  if(!login){ showToast('⚠️ Digite um login!'); return; }
-  if(!senha){ showToast('⚠️ Digite uma senha!'); return; }
-  if(!db.usuarios) db.usuarios = {...DEFAULT_USERS};
-  if(db.usuarios[login]){ showToast('⚠️ Este login já existe!'); return; }
-  const senhaHash = await hashSenha(senha);
-  const nomesLojas = [db.config.nomeLoja1||'Loja 1', db.config.nomeLoja2||'Loja 2', db.config.nomeLoja3||'Loja 3'];
-  const newUser = {pass: senhaHash, role, label: role==='admin' ? `${login} – Acesso Total` : `Funcionária – ${nomesLojas[loja-1]}`};
-  if(role==='loja') newUser.loja = loja;
-  db.usuarios[login] = newUser;
-  const ok = await window.firebaseSetUsers(JSON.parse(JSON.stringify(db.usuarios)));
-  document.getElementById('nu-login').value='';
-  document.getElementById('nu-senha').value='';
-  renderCfgUsers();
-  showToast(ok ? `✅ Usuário "${login}" criado!` : '⚠️ Erro ao salvar!');
-}
-
-async function removerUsuario(login){
-  if(!confirm(`Remover o usuário "${login}"? Essa ação não pode ser desfeita.`)) return;
-  if(!db.usuarios) db.usuarios = {...DEFAULT_USERS};
-  delete db.usuarios[login];
-  const ok = await window.firebaseSetUsers(db.usuarios);
-  renderCfgUsers();
-  showToast(ok ? `🗑️ Usuário "${login}" removido!` : '⚠️ Erro ao salvar!');
-}
 
 function baixarRelatorioCompras(){
   const hj = hoje();
@@ -2443,24 +2367,21 @@ async function excluirSabor(nome){
 }
 
 
-function gerarPDFCadastros(){
-  const receitas = getReceitas();
+function gerarPDFInsumos(){
   const dataHoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
-
-  // ── SEÇÃO 1: ITENS DE ESTOQUE ──────────────────────────────────────────────
-  let secItens = '';
   const CAT_LABEL = {alimentos:'🍓 Alimentos',bebidas:'🥤 Bebidas',caldas:'🫙 Caldas',insumos:'📦 Insumos',limpeza:'🧹 Limpeza',mimos:'🎀 Mimos'};
   const catsOrdem = ['alimentos','bebidas','caldas','insumos','limpeza','mimos'];
 
+  let secItens = '';
   catsOrdem.forEach(cat => {
     const its = itensDaCat(cat);
     if(!its.length) return;
     secItens += `<tr><td colspan="7" style="background:#f3e8ff;padding:7px 10px;font-size:11px;font-weight:800;color:#6b21a8;text-transform:uppercase;letter-spacing:.5px">${CAT_LABEL[cat]||cat}</td></tr>`;
     its.forEach(item => {
-      const min  = db.minimos[item.id] || '—';
-      const u2   = item.unidadeSecundaria || '—';
-      const qtd  = item.qtdPorUnidade || '—';
-      const val  = item.valor ? `R$ ${item.valor.toFixed(2)}` : '—';
+      const min = db.minimos[item.id] || '—';
+      const u2  = item.unidadeSecundaria || '—';
+      const qtd = item.qtdPorUnidade || '—';
+      const val = item.valor ? `R$ ${item.valor.toFixed(2)}` : '—';
       secItens += `<tr>
         <td style="padding:5px 10px;font-size:11px">${item.nome}</td>
         <td style="padding:5px 10px;font-size:11px;text-align:center">${item.unidade||'—'}</td>
@@ -2473,73 +2394,22 @@ function gerarPDFCadastros(){
     });
   });
 
-  // ── SEÇÃO 2: SABORES ───────────────────────────────────────────────────────
-  let secSabores = '';
-  const saboresOrdenados = Object.keys(receitas).sort();
-  const TAMANHOS = [180,300,500,700];
-
-  saboresOrdenados.forEach(sabor => {
-    const r = receitas[sabor];
-    const tamComIng = TAMANHOS.filter(t => r[t] && r[t].length > 0);
-    if(!tamComIng.length) return;
-
-    // Quantas linhas no total para fazer o rowspan do nome
-    const totalLinhas = tamComIng.reduce((acc,t) => acc + Math.max(r[t].length, 1), 0);
-
-    let primeiraLinha = true;
-    let blocoSabor = '';
-
-    tamComIng.forEach(tam => {
-      const ings = r[tam] || [];
-      const corTam = {180:'#059669',300:'#7c3aed',500:'#db2777',700:'#0369a1'}[tam] || '#374151';
-
-      if(!ings.length){
-        blocoSabor += `<tr>
-          ${primeiraLinha ? `<td rowspan="${totalLinhas}" style="padding:6px 10px;font-size:11px;font-weight:800;color:#c9345a;vertical-align:middle;border-right:2px solid #f3f4f6">${sabor}</td>` : ''}
-          <td style="padding:5px 10px;font-size:10px;font-weight:700;color:${corTam};text-align:center">${tam}ml</td>
-          <td colspan="3" style="padding:5px 10px;font-size:10px;color:#9ca3af;font-style:italic">sem ingredientes</td>
-        </tr>`;
-        primeiraLinha = false;
-      } else {
-        ings.forEach((ing, i) => {
-          const nomeItem = db.items.find(it=>it.id===ing.itemId)?.nome || ing.nome || ing.itemId;
-          blocoSabor += `<tr>
-            ${primeiraLinha ? `<td rowspan="${totalLinhas}" style="padding:6px 10px;font-size:11px;font-weight:800;color:#c9345a;vertical-align:middle;border-right:2px solid #f3f4f6">${sabor}</td>` : ''}
-            ${i===0 ? `<td rowspan="${ings.length}" style="padding:5px 8px;font-size:10px;font-weight:700;color:${corTam};text-align:center;vertical-align:middle">${tam}ml</td>` : ''}
-            <td style="padding:4px 10px;font-size:10px">${nomeItem}</td>
-            <td style="padding:4px 10px;font-size:10px;text-align:center">${ing.qty||'—'}</td>
-            <td style="padding:4px 10px;font-size:10px;text-align:center">${ing.unidade||'—'}</td>
-          </tr>`;
-          primeiraLinha = false;
-        });
-      }
-    });
-
-    secSabores += blocoSabor;
-    // Linha separadora entre sabores
-    secSabores += `<tr><td colspan="5" style="padding:0;border-top:2px solid #f3f4f6"></td></tr>`;
-  });
-
-  // ── MONTA HTML ─────────────────────────────────────────────────────────────
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-  <title>Cadastros Milky Moo – ${dataHoje}</title>
+  <title>Insumos Milky Moo – ${dataHoje}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Arial,sans-serif;color:#222;font-size:12px}
+    body{font-family:Arial,sans-serif;color:#222;font-size:12px;padding:16px}
     h1{font-size:18px;color:#c9345a;margin-bottom:2px}
-    h2{font-size:13px;color:#6b21a8;margin:20px 0 8px;padding-bottom:4px;border-bottom:2px solid #e9d5ff}
     .sub{font-size:11px;color:#6b7280;margin-bottom:16px}
-    table{width:100%;border-collapse:collapse;margin-bottom:8px}
+    table{width:100%;border-collapse:collapse}
     th{background:#ff6b9d;color:white;padding:7px 10px;font-size:11px;text-align:left}
     tr:nth-child(even) td{background:#fafafa}
     td{border-bottom:1px solid #f3f4f6;vertical-align:middle}
-    .rodape{margin-top:24px;font-size:10px;color:#9ca3af;text-align:center;border-top:1px solid #e5e7eb;padding-top:10px}
-    @media print{body{margin:12px} .no-print{display:none}}
+    .rodape{margin-top:20px;font-size:10px;color:#9ca3af;text-align:center;border-top:1px solid #e5e7eb;padding-top:8px}
+    @media print{body{padding:8px}}
   </style></head><body>
-  <h1>🐄 Milky Moo — Cadastros</h1>
-  <div class="sub">Gerado em ${dataHoje} &nbsp;|&nbsp; ${db.items.length} itens &nbsp;|&nbsp; ${saboresOrdenados.length} sabores</div>
-
-  <h2>📦 Itens de Estoque</h2>
+  <h1>🐄 Milky Moo — Insumos</h1>
+  <div class="sub">Gerado em ${dataHoje} &nbsp;|&nbsp; ${db.items.length} itens cadastrados</div>
   <table>
     <thead><tr>
       <th>Item</th>
@@ -2552,8 +2422,77 @@ function gerarPDFCadastros(){
     </tr></thead>
     <tbody>${secItens}</tbody>
   </table>
+  <div class="rodape">Milky Moo – Sistema de Controle de Estoque</div>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
 
-  <h2>🍦 Sabores de Milky Shake</h2>
+  const blob = new Blob([html],{type:'text/html'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href=url; a.download=`milkymoo-insumos-${new Date().toISOString().split('T')[0]}.html`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('📄 PDF de Insumos gerado!');
+}
+
+function gerarPDFSabores(){
+  const receitas = getReceitas();
+  const dataHoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const saboresOrdenados = Object.keys(receitas).sort();
+  const TAMANHOS = [180,300,500,700];
+
+  let secSabores = '';
+  saboresOrdenados.forEach(sabor => {
+    const r = receitas[sabor];
+    const tamComIng = TAMANHOS.filter(t => r[t] && r[t].length > 0);
+    if(!tamComIng.length) return;
+
+    const totalLinhas = tamComIng.reduce((acc,t) => acc + Math.max(r[t].length,1), 0);
+    let primeiraLinha = true;
+
+    tamComIng.forEach(tam => {
+      const ings = r[tam] || [];
+      const corTam = {180:'#059669',300:'#7c3aed',500:'#db2777',700:'#0369a1'}[tam]||'#374151';
+
+      if(!ings.length){
+        secSabores += `<tr>
+          ${primeiraLinha?`<td rowspan="${totalLinhas}" style="padding:6px 10px;font-size:11px;font-weight:800;color:#c9345a;vertical-align:middle;border-right:2px solid #f3f4f6">${sabor}</td>`:''}
+          <td style="padding:5px 10px;font-size:10px;font-weight:700;color:${corTam};text-align:center">${tam}ml</td>
+          <td colspan="3" style="padding:5px 10px;font-size:10px;color:#9ca3af;font-style:italic">sem ingredientes</td>
+        </tr>`;
+        primeiraLinha = false;
+      } else {
+        ings.forEach((ing,i) => {
+          const nomeItem = db.items.find(it=>it.id===ing.itemId)?.nome || ing.nome || ing.itemId;
+          secSabores += `<tr>
+            ${primeiraLinha?`<td rowspan="${totalLinhas}" style="padding:6px 10px;font-size:11px;font-weight:800;color:#c9345a;vertical-align:middle;border-right:2px solid #f3f4f6">${sabor}</td>`:''}
+            ${i===0?`<td rowspan="${ings.length}" style="padding:5px 8px;font-size:10px;font-weight:700;color:${corTam};text-align:center;vertical-align:middle">${tam}ml</td>`:''}
+            <td style="padding:4px 10px;font-size:10px">${nomeItem}</td>
+            <td style="padding:4px 10px;font-size:10px;text-align:center">${ing.qty||'—'}</td>
+            <td style="padding:4px 10px;font-size:10px;text-align:center">${ing.unidade||'—'}</td>
+          </tr>`;
+          primeiraLinha = false;
+        });
+      }
+    });
+    secSabores += `<tr><td colspan="5" style="padding:0;border-top:2px solid #f3f4f6"></td></tr>`;
+  });
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+  <title>Sabores Milky Moo – ${dataHoje}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;color:#222;font-size:12px;padding:16px}
+    h1{font-size:18px;color:#c9345a;margin-bottom:2px}
+    .sub{font-size:11px;color:#6b7280;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse}
+    th{background:#845ec2;color:white;padding:7px 10px;font-size:11px;text-align:left}
+    tr:nth-child(even) td{background:#fafafa}
+    td{border-bottom:1px solid #f3f4f6;vertical-align:middle}
+    .rodape{margin-top:20px;font-size:10px;color:#9ca3af;text-align:center;border-top:1px solid #e5e7eb;padding-top:8px}
+    @media print{body{padding:8px}}
+  </style></head><body>
+  <h1>🍦 Milky Moo — Sabores</h1>
+  <div class="sub">Gerado em ${dataHoje} &nbsp;|&nbsp; ${saboresOrdenados.length} sabores cadastrados</div>
   <table>
     <thead><tr>
       <th style="width:120px">Sabor</th>
@@ -2564,19 +2503,318 @@ function gerarPDFCadastros(){
     </tr></thead>
     <tbody>${secSabores}</tbody>
   </table>
-
   <div class="rodape">Milky Moo – Sistema de Controle de Estoque</div>
   <script>window.onload=function(){window.print();}<\/script>
   </body></html>`;
 
-  const blob = new Blob([html], {type:'text/html'});
+  const blob = new Blob([html],{type:'text/html'});
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `milkymoo-cadastros-${new Date().toISOString().split('T')[0]}.html`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('📄 PDF gerado! Abra o arquivo para imprimir.');
+  a.href=url; a.download=`milkymoo-sabores-${new Date().toISOString().split('T')[0]}.html`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('📄 PDF de Sabores gerado!');
+}
+
+
+
+// ════════════════════════════════════════════════════════════
+//  GERENCIAR ITENS (modal)
+// ════════════════════════════════════════════════════════════
+
+function abrirGerenciarItens(){
+  document.getElementById('busca-item').value = '';
+  renderListaItens();
+  document.getElementById('modal-itens').style.display = 'flex';
+}
+function fecharGerenciarItens(){
+  document.getElementById('modal-itens').style.display = 'none';
+}
+
+function renderListaItens(){
+  const busca = (document.getElementById('busca-item')?.value||'').trim().toLowerCase();
+  document.getElementById('itens-contador').textContent = `${db.items.length} itens cadastrados`;
+  const CAT_LABEL = {alimentos:'🍓 Alimentos',bebidas:'🥤 Bebidas',caldas:'🫙 Caldas',insumos:'📦 Insumos',limpeza:'🧹 Limpeza',mimos:'🎀 Mimos'};
+  const catsOrdem = ['alimentos','bebidas','caldas','insumos','limpeza','mimos'];
+  let html = '';
+  catsOrdem.forEach(cat => {
+    let its = itensDaCat(cat);
+    if(busca) its = its.filter(i => i.nome.toLowerCase().includes(busca));
+    if(!its.length) return;
+    html += `<div style="font-size:.72rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;padding:10px 0 5px;border-bottom:2px solid var(--border);margin-bottom:6px">${CAT_LABEL[cat]||cat}</div>`;
+    html += its.map(item => `
+      <div class="card" style="margin-bottom:8px;display:flex;align-items:center;gap:10px;padding:10px 14px">
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:.88rem;color:#333">${item.nome}</div>
+          <div style="font-size:.72rem;color:var(--gray);margin-top:2px">
+            ${item.unidade||'—'} &nbsp;|&nbsp; Mín: ${db.minimos[item.id]||0}
+            ${item.unidadeSecundaria?' &nbsp;|&nbsp; Un.sec: '+item.unidadeSecundaria:''} 
+            ${item.valor?' &nbsp;|&nbsp; R$ '+item.valor.toFixed(2):''}
+            ${item.usoDiario?' &nbsp;|&nbsp; ✅ Consumo':''}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button onclick="abrirEditarItem('${item.id}')"
+            style="background:#0d9488;color:white;border:none;border-radius:8px;padding:6px 12px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer">✏️</button>
+          <button onclick="deleteItemModal('${item.id}')"
+            style="background:var(--red);color:white;border:none;border-radius:8px;padding:6px 12px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer">🗑️</button>
+        </div>
+      </div>`).join('');
+  });
+  if(!html) html = `<div class="empty"><span class="ej">📦</span><p>Nenhum item encontrado.</p></div>`;
+  document.getElementById('lista-itens-modal').innerHTML = html;
+}
+
+let _editandoItemId = null; // null = novo
+
+function abrirNovoItem(){
+  _editandoItemId = null;
+  document.getElementById('edit-item-titulo').textContent = '➕ Novo Item';
+  document.getElementById('ei-nome').value = '';
+  document.getElementById('ei-cat').value = 'alimentos';
+  document.getElementById('ei-unid').value = '';
+  document.getElementById('ei-min').value = '0';
+  document.getElementById('ei-unid2').value = '';
+  document.getElementById('ei-qtdunid').value = '';
+  document.getElementById('ei-valor').value = '';
+  document.getElementById('ei-consumo').checked = false;
+  document.getElementById('ei-novo-extra').style.display = '';
+  document.getElementById('modal-editar-item').style.display = 'flex';
+}
+
+function abrirEditarItem(id){
+  const item = db.items.find(i=>i.id===id);
+  if(!item) return;
+  _editandoItemId = id;
+  document.getElementById('edit-item-titulo').textContent = '✏️ ' + item.nome;
+  document.getElementById('ei-nome').value = item.nome;
+  document.getElementById('ei-cat').value = item.cat;
+  document.getElementById('ei-unid').value = item.unidade||'';
+  document.getElementById('ei-min').value = db.minimos[id]||0;
+  document.getElementById('ei-unid2').value = item.unidadeSecundaria||'';
+  document.getElementById('ei-qtdunid').value = item.qtdPorUnidade||'';
+  document.getElementById('ei-valor').value = item.valor||'';
+  document.getElementById('ei-consumo').checked = !!item.usoDiario;
+  document.getElementById('ei-novo-extra').style.display = 'none';
+  document.getElementById('modal-editar-item').style.display = 'flex';
+}
+
+function fecharEditarItem(){
+  document.getElementById('modal-editar-item').style.display = 'none';
+}
+
+async function salvarItemModal(){
+  const nome = document.getElementById('ei-nome').value.trim();
+  if(!nome){ showToast('⚠️ Digite o nome do item!'); return; }
+
+  if(_editandoItemId === null){
+    // Novo item
+    const novoId = 'c_'+Date.now();
+    const novoItem = {
+      id: novoId,
+      nome,
+      cat:       document.getElementById('ei-cat').value,
+      unidade:   document.getElementById('ei-unid').value.trim()||'unid',
+      usoDiario: document.getElementById('ei-consumo').checked,
+    };
+    const min = parseFloat(document.getElementById('ei-min').value)||0;
+    if(min>0) db.minimos[novoId] = min;
+    const u2 = document.getElementById('ei-unid2').value;
+    if(u2) novoItem.unidadeSecundaria = u2;
+    const qtd = parseFloat(document.getElementById('ei-qtdunid').value)||0;
+    if(qtd>0) novoItem.qtdPorUnidade = qtd;
+    const val = parseFloat(document.getElementById('ei-valor').value)||0;
+    if(val>0) novoItem.valor = val;
+    db.items.push(novoItem);
+    showToast('✅ Item adicionado!');
+  } else {
+    // Editar existente
+    const item = db.items.find(i=>i.id===_editandoItemId);
+    if(!item) return;
+    item.nome    = nome;
+    item.cat     = document.getElementById('ei-cat').value;
+    item.unidade = document.getElementById('ei-unid').value.trim()||item.unidade;
+    item.usoDiario = document.getElementById('ei-consumo').checked;
+    const min = parseFloat(document.getElementById('ei-min').value)||0;
+    db.minimos[_editandoItemId] = min;
+    const u2 = document.getElementById('ei-unid2').value;
+    if(u2) item.unidadeSecundaria=u2; else delete item.unidadeSecundaria;
+    const qtd = parseFloat(document.getElementById('ei-qtdunid').value)||0;
+    if(qtd>0) item.qtdPorUnidade=qtd; else delete item.qtdPorUnidade;
+    const val = parseFloat(document.getElementById('ei-valor').value)||0;
+    if(val>0) item.valor=val; else delete item.valor;
+    showToast('✅ Item atualizado!');
+  }
+
+  const ok = await saveCloud();
+  if(ok){
+    fecharEditarItem();
+    renderListaItens();
+  } else {
+    showToast('⚠️ Erro ao salvar!');
+  }
+}
+
+async function deleteItemModal(id){
+  const item = db.items.find(i=>i.id===id);
+  if(!item||!confirm(`Excluir "${item.nome}"? Ação irreversível.`)) return;
+  db.items = db.items.filter(i=>i.id!==id);
+  delete db.minimos[id];
+  const ok = await saveCloud();
+  if(ok){ renderListaItens(); showToast('🗑️ Item removido!'); }
+  else showToast('⚠️ Erro ao salvar!');
+}
+
+// ════════════════════════════════════════════════════════════
+//  GERENCIAR USUÁRIOS (modal)
+// ════════════════════════════════════════════════════════════
+
+function abrirGerenciarUsuarios(){
+  // Recarrega usuários do Firebase antes de abrir
+  window.firebaseGetUsers().catch(()=>null).then(ud=>{
+    if(ud){ db.usuarios={...DEFAULT_USERS}; Object.entries(ud).forEach(([k,v])=>{ db.usuarios[k]={...v}; }); }
+    renderListaUsuariosModal();
+    document.getElementById('modal-usuarios').style.display = 'flex';
+  });
+}
+function fecharGerenciarUsuarios(){
+  document.getElementById('modal-usuarios').style.display = 'none';
+}
+
+function renderListaUsuariosModal(){
+  const users = getUsers();
+  const nomesLojas = [db.config.nomeLoja1||'Loja 1', db.config.nomeLoja2||'Loja 2', db.config.nomeLoja3||'Loja 3'];
+  document.getElementById('usuarios-contador').textContent = `${Object.keys(users).length} usuários`;
+
+  const html = Object.entries(users).map(([login, u])=>{
+    const roleLabel = u.role==='admin' ? '👑 Admin' : `👩 Funcionária – ${nomesLojas[(u.loja||1)-1]}`;
+    const isMe = login === currentUser?.name;
+    return `<div class="card" style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="font-size:1.4rem">${u.role==='admin'?'👑':'👩'}</div>
+        <div style="flex:1">
+          <div style="font-weight:800;font-size:.92rem;color:#333">${login} ${isMe?'<span style="font-size:.7rem;color:var(--gray);font-weight:600">(você)</span>':''}</div>
+          <div style="font-size:.72rem;color:var(--gray)">${roleLabel}</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <input id="mp-pass-${login}" type="password" placeholder="Nova senha (deixe vazio para manter)"
+          style="width:100%;border:2px solid var(--border);border-radius:8px;padding:8px 10px;font-family:'Nunito',sans-serif;font-size:.85rem;background:var(--gray-light)">
+        <div style="display:flex;gap:8px">
+          <select id="mp-role-${login}" onchange="toggleLojaSelectModal('${login}')"
+            style="flex:1;border:2px solid var(--border);border-radius:8px;padding:8px;font-family:'Nunito',sans-serif;font-size:.82rem">
+            <option value="admin" ${u.role==='admin'?'selected':''}>👑 Admin</option>
+            <option value="loja"  ${u.role==='loja' ?'selected':''}>👩 Funcionária</option>
+          </select>
+          <select id="mp-loja-${login}"
+            style="flex:1;border:2px solid var(--border);border-radius:8px;padding:8px;font-family:'Nunito',sans-serif;font-size:.82rem;${u.role==='admin'?'display:none':''}">
+            <option value="1" ${u.loja==1?'selected':''}>Loja 1</option>
+            <option value="2" ${u.loja==2?'selected':''}>Loja 2</option>
+            <option value="3" ${u.loja==3?'selected':''}>Loja 3</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="salvarUsuarioModal('${login}')"
+            style="flex:1;padding:9px;background:#16a34a;color:white;border:none;border-radius:10px;font-family:'Baloo 2',cursive;font-size:.85rem;font-weight:700;cursor:pointer">💾 Salvar</button>
+          ${!isMe?`<button onclick="removerUsuarioModal('${login}')"
+            style="padding:9px 14px;background:var(--red);color:white;border:none;border-radius:10px;font-family:'Baloo 2',cursive;font-size:.85rem;font-weight:700;cursor:pointer">🗑️</button>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('') + `
+    <!-- Formulário novo usuário -->
+    <div class="card" style="border:2px dashed var(--border)">
+      <div style="font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;color:var(--gray);margin-bottom:12px">➕ Novo Usuário</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;gap:8px">
+          <input id="mu-login" type="text" placeholder="Login (sem espaços)"
+            style="flex:1;border:2px solid var(--border);border-radius:8px;padding:8px 10px;font-family:'Nunito',sans-serif;font-size:.85rem;background:var(--gray-light)">
+          <input id="mu-senha" type="text" placeholder="Senha"
+            style="flex:1;border:2px solid var(--border);border-radius:8px;padding:8px 10px;font-family:'Nunito',sans-serif;font-size:.85rem;background:var(--gray-light)">
+        </div>
+        <div style="display:flex;gap:8px">
+          <select id="mu-role" style="flex:1;border:2px solid var(--border);border-radius:8px;padding:8px;font-family:'Nunito',sans-serif;font-size:.85rem">
+            <option value="admin">👑 Admin (acesso total)</option>
+            <option value="loja">👩 Funcionária</option>
+          </select>
+          <select id="mu-loja" style="flex:1;border:2px solid var(--border);border-radius:8px;padding:8px;font-family:'Nunito',sans-serif;font-size:.85rem">
+            <option value="1">Loja 1</option>
+            <option value="2">Loja 2</option>
+            <option value="3">Loja 3</option>
+          </select>
+        </div>
+        <button onclick="adicionarUsuarioModal()"
+          style="padding:10px;background:var(--teal);color:white;border:none;border-radius:10px;font-family:'Baloo 2',cursive;font-size:.9rem;font-weight:700;cursor:pointer">➕ Adicionar Usuário</button>
+      </div>
+    </div>`;
+
+  document.getElementById('lista-usuarios-modal').innerHTML = html;
+}
+
+function toggleLojaSelectModal(login){
+  const role = document.getElementById('mp-role-'+login).value;
+  const sel  = document.getElementById('mp-loja-'+login);
+  if(sel) sel.style.display = role==='admin' ? 'none' : '';
+}
+
+async function salvarUsuarioModal(login){
+  const passRaw = document.getElementById('mp-pass-'+login).value.trim();
+  const role    = document.getElementById('mp-role-'+login).value;
+  const lojaEl  = document.getElementById('mp-loja-'+login);
+  const loja    = parseInt(lojaEl?.value||1);
+
+  const udFresh = await window.firebaseGetUsers().catch(()=>null);
+  if(udFresh) db.usuarios = {...DEFAULT_USERS,...udFresh};
+  if(!db.usuarios) db.usuarios = {...DEFAULT_USERS};
+
+  let pass;
+  if(!passRaw){
+    pass = db.usuarios[login]?.pass;
+    if(!pass){ showToast('⚠️ A senha não pode estar vazia!'); return; }
+  } else {
+    if(!confirm(`Confirma alteração da senha de "${login}"?`)) return;
+    pass = await hashSenha(passRaw);
+  }
+
+  const nomesLojas = [db.config.nomeLoja1||'Cajamar',db.config.nomeLoja2||'Iguatemi',db.config.nomeLoja3||'Carapicuíba'];
+  const userData = {pass,role,label:role==='admin'?`${login} – Acesso Total`:`Funcionária – ${nomesLojas[loja-1]}`};
+  if(role==='loja') userData.loja = loja;
+  db.usuarios[login] = userData;
+
+  const ok = await window.firebaseSetUsers(JSON.parse(JSON.stringify(db.usuarios)));
+  if(ok){ renderListaUsuariosModal(); showToast(`✅ Usuário "${login}" atualizado!`); }
+  else showToast('⚠️ Erro ao salvar!');
+}
+
+async function removerUsuarioModal(login){
+  if(!confirm(`Remover "${login}"? Ação irreversível.`)) return;
+  if(!db.usuarios) db.usuarios = {...DEFAULT_USERS};
+  delete db.usuarios[login];
+  const ok = await window.firebaseSetUsers(db.usuarios);
+  if(ok){ renderListaUsuariosModal(); showToast(`🗑️ "${login}" removido!`); }
+  else showToast('⚠️ Erro ao salvar!');
+}
+
+async function adicionarUsuarioModal(){
+  const login = document.getElementById('mu-login').value.trim().toLowerCase().replace(/\s+/g,'');
+  const senha = document.getElementById('mu-senha').value.trim();
+  const role  = document.getElementById('mu-role').value;
+  const loja  = parseInt(document.getElementById('mu-loja').value);
+  if(!login){ showToast('⚠️ Digite um login!'); return; }
+  if(!senha){ showToast('⚠️ Digite uma senha!'); return; }
+  if(!db.usuarios) db.usuarios = {...DEFAULT_USERS};
+  if(db.usuarios[login]){ showToast('⚠️ Este login já existe!'); return; }
+  const senhaHash = await hashSenha(senha);
+  const nomesLojas = [db.config.nomeLoja1||'Loja 1',db.config.nomeLoja2||'Loja 2',db.config.nomeLoja3||'Loja 3'];
+  const newUser = {pass:senhaHash,role,label:role==='admin'?`${login} – Acesso Total`:`Funcionária – ${nomesLojas[loja-1]}`};
+  if(role==='loja') newUser.loja = loja;
+  db.usuarios[login] = newUser;
+  const ok = await window.firebaseSetUsers(JSON.parse(JSON.stringify(db.usuarios)));
+  if(ok){ document.getElementById('mu-login').value=''; document.getElementById('mu-senha').value=''; renderListaUsuariosModal(); showToast(`✅ "${login}" criado!`); }
+  else showToast('⚠️ Erro ao salvar!');
+}
+
+function abrirNovoUsuarioModal(){
+  document.getElementById('lista-usuarios-modal').scrollTop = 9999;
 }
 
 window.addEventListener('firebaseReady',()=>{document.getElementById('btn-login').disabled=false;});
