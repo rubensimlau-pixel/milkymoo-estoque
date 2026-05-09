@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.9.6</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.9.7</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1891,15 +1891,19 @@ function processarRelatorio(){
   let tamanhoSecao    = null;
 
   txt.split('\n').forEach(linha => {
+    // Normaliza: remove \r e substitui non-breaking spaces por espaço normal
+    linha = linha.replace(/\r/g,'').replace(/\u00a0/g,' ');
     const trim = linha.trim();
     if(/^TOTAL\s/.test(trim)){ dentroSecaoMilk = false; return; }
     if(/^-{10,}$/.test(trim)) return;
 
     if(!/^\s{2,}\d+\s/.test(linha) && trim.length > 2 && /^[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ0-9\s\/]+$/.test(trim)){
-      const isMilk = SECOES_MILK.some(s => trim === s || trim.startsWith(s));
+      // Normaliza trim para comparação (colapsa múltiplos espaços)
+      const trimNorm = trim.replace(/\s+/g,' ');
+      const isMilk = SECOES_MILK.some(s => trimNorm === s || trimNorm.startsWith(s));
       if(isMilk){
         dentroSecaoMilk = true;
-        const tm = trim.match(TAMANHO_REGEX);
+        const tm = trimNorm.match(TAMANHO_REGEX);
         tamanhoSecao = tm ? parseInt(tm[1]) : null;
       } else { dentroSecaoMilk = false; tamanhoSecao = null; }
       return;
