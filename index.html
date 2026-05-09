@@ -1442,7 +1442,7 @@ function renderConfig(){
           <span>Mín: <input class="cfg-input" type="number" step="1" id="min-${item.id}" value="${db.minimos[item.id]||0}" style="width:45px;padding:2px"></span>
           <span>Compra: <input class="cfg-input" type="text" id="unid-${item.id}" value="${item.unidade||''}" placeholder="unid" style="width:70px;padding:2px;text-align:left"></span>
           <span>Qtd/unid: <input class="cfg-input" type="number" step="1" id="qtdunid-${item.id}" value="${item.qtdPorUnidade||''}" placeholder="-" style="width:50px;padding:2px"></span>
-          <span>Un.sec: <input class="cfg-input" type="text" id="unid2-${item.id}" value="${item.unidadeSecundaria||''}" placeholder="-" style="width:55px;padding:2px;text-align:left"></span>
+          <span>Un.sec: <select class="cfg-input" id="unid2-${item.id}" style="width:72px;padding:2px"><option value="">-</option><option value="ml">ml</option><option value="gramas">gramas</option><option value="unidade">unidade</option></select></span>
           <span>R$: <input class="cfg-input" type="number" step="0.01" id="valor-${item.id}" value="${item.valor||''}" placeholder="-" style="width:60px;padding:2px"></span>
         </div>
       </div>
@@ -1453,6 +1453,11 @@ function renderConfig(){
     </div>`).join('');
   });
   document.getElementById('cfg-min').innerHTML = cfgHtml;
+  // Seta os selects de Un.sec com o valor salvo (não funciona via atributo no template)
+  db.items.forEach(item=>{
+    const sel=document.getElementById('unid2-'+item.id);
+    if(sel&&item.unidadeSecundaria) sel.value=item.unidadeSecundaria;
+  });
 }
 
 async function salvarConfig(){
