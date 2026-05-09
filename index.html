@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.5.7</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.6.0</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -455,7 +455,56 @@
           <button class="btn btn-teal" onclick="adicionarUsuario()" style="margin-bottom:0">➕ Adicionar Usuário</button>
         </div>
       </div>
+      <div class="card">
+        <div class="card-title"><span>🍦</span>Sabores de Milky Shake</div>
+        <p style="font-size:.78rem;color:var(--gray);margin-bottom:12px">Gerencie os sabores cadastrados usados para calcular insumos a partir dos relatórios.</p>
+        <button class="btn btn-purple" onclick="abrirGerenciarSabores()" style="margin-bottom:0">🍦 Gerenciar Sabores</button>
+      </div>
       <button class="btn btn-pink" onclick="salvarConfig()">💾 Salvar Configurações</button>
+    </div>
+
+    <!-- MODAL GERENCIAR SABORES -->
+    <div id="modal-sabores" style="display:none;position:fixed;inset:0;background:white;z-index:600;flex-direction:column;overflow:hidden">
+      <div style="background:linear-gradient(135deg,var(--purple),#c084fc);color:white;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <div>
+          <div style="font-family:'Baloo 2',cursive;font-size:1.15rem;font-weight:800">🍦 Gerenciar Sabores</div>
+          <div style="font-size:.75rem;opacity:.85" id="sabores-contador">Carregando...</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button onclick="abrirNovoSabor()" style="background:white;color:var(--purple);border:none;border-radius:50px;padding:7px 14px;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">➕ Novo</button>
+          <button onclick="fecharGerenciarSabores()" style="background:rgba(255,255,255,.2);border:none;border-radius:50px;padding:7px 14px;color:white;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">✕ Fechar</button>
+        </div>
+      </div>
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border);flex-shrink:0;background:white">
+        <input id="busca-sabor" type="text" placeholder="🔍 Buscar sabor..." oninput="renderListaSabores()"
+          style="width:100%;border:2px solid var(--border);border-radius:10px;padding:9px 14px;font-family:'Nunito',sans-serif;font-size:.9rem;background:var(--gray-light)">
+      </div>
+      <div id="lista-sabores-modal" style="flex:1;overflow-y:auto;padding:14px"></div>
+    </div>
+
+    <!-- MODAL EDITAR SABOR -->
+    <div id="modal-editar-sabor" style="display:none;position:fixed;inset:0;background:white;z-index:700;flex-direction:column;overflow:hidden">
+      <div style="background:linear-gradient(135deg,var(--pink-dark),var(--purple));color:white;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <div>
+          <div style="font-family:'Baloo 2',cursive;font-size:1.1rem;font-weight:800" id="edit-sabor-titulo">Editar Sabor</div>
+          <div style="font-size:.75rem;opacity:.85">Defina os ingredientes por tamanho de copo</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="salvarSaborEditado()" style="background:white;color:var(--pink-dark);border:none;border-radius:50px;padding:7px 16px;font-family:'Baloo 2',cursive;font-size:.85rem;font-weight:700;cursor:pointer">💾 Salvar</button>
+          <button onclick="fecharEditarSabor()" style="background:rgba(255,255,255,.2);border:none;border-radius:50px;padding:7px 14px;color:white;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">✕</button>
+        </div>
+      </div>
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border);flex-shrink:0;background:#fdf4ff">
+        <label style="font-size:.72rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Nome do Sabor</label>
+        <input id="edit-sabor-nome" type="text" placeholder="Ex: PANDORA"
+          style="width:100%;border:2px solid var(--border);border-radius:10px;padding:9px 14px;font-family:'Nunito',sans-serif;font-size:.95rem;font-weight:700;text-transform:uppercase;background:white">
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:14px" id="sabor-scroll-area">
+        <div id="sabor-section-180"></div>
+        <div id="sabor-section-300"></div>
+        <div id="sabor-section-500"></div>
+        <div id="sabor-section-700"></div>
+      </div>
     </div>
 
     <!-- ENTRADAS DE COMPRA -->
@@ -647,7 +696,7 @@ const DEFAULT_ITEMS=[
   {id:'bob-maq',nome:'Bobina Maquininha',cat:'mimos',unidade:'unidades'},
 ];
 
-let db={items:[...DEFAULT_ITEMS],inventarios:[],consumos:[],entradas:[],perdas:[],relatorios:[],historico:[],minimos:{},usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7}};
+let db={items:[...DEFAULT_ITEMS],inventarios:[],consumos:[],entradas:[],perdas:[],relatorios:[],historico:[],minimos:{},receitas:null,usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7}};
 let lojaC=1,lojaI=1,lojaP=1,lojaD=1,lojaE=1,lojaPr=1,lojaImp=1;
 let autoRefreshInterval=null;
 
@@ -666,6 +715,7 @@ async function doLogin(){
     db={...db,...r};
     if(!db.entradas)db.entradas=[];
     if(!db.historico)db.historico=[];
+    if(!db.receitas)db.receitas=null;
   }
   const usersDoc=await window.firebaseGetUsers().catch(()=>null);
   // Firebase tem prioridade total — DEFAULT só preenche usuários ausentes
@@ -1031,21 +1081,25 @@ const RECEITAS = {"MALHADA": {"300": [{"itemId": "canudo", "nome": "CANUDO", "qt
 // Busca receita de um sabor pelo nome do produto no Degust
 // Ex: "PANDORA 500ML" → receita do PANDORA no tamanho 500
 function buscarReceita(nomeProduto, tamanho) {
+  // Usa receitas do Firebase se disponíveis, senão usa as hardcoded
+  const receitas = getReceitas();
+
   // Normaliza o nome: remove tamanho, acentos, espaços extras
   let nome = nomeProduto.toUpperCase()
-    .replace(/\s*(300|500|700)\s*ML.*$/i, '')
+    .replace(/\s*(180|300|500|700)\s*ML.*$/i, '')
     .replace(/PASSATEMPO/i, '')
     .trim();
   // Remove acentos
   nome = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  
+
   // Busca exata primeiro
-  if(RECEITAS[nome]) return RECEITAS[nome][tamanho] || [];
-  
-  // Busca parcial
-  for(const sabor of Object.keys(RECEITAS)) {
-    if(nome.includes(sabor) || sabor.includes(nome)) {
-      return RECEITAS[sabor][tamanho] || [];
+  if(receitas[nome]) return receitas[nome][tamanho] || [];
+
+  // Busca parcial (ignora acentos na comparação)
+  for(const sabor of Object.keys(receitas)) {
+    const saborNorm = sabor.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if(nome.includes(saborNorm) || saborNorm.includes(nome)) {
+      return receitas[sabor][tamanho] || [];
     }
   }
   return [];
@@ -2150,6 +2204,237 @@ function fmtQ(n){const v=parseFloat(n);if(n===undefined||n===null||n===''||isNaN
 function fmtDate(d){if(!d)return''; const[y,m,dd]=d.split('-'); return`${dd}/${m}`;}
 function setLoad(v){document.getElementById('loading').classList.toggle('show',v);}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+
+// ════════════════════════════════════════════════════════════
+//  GERENCIAR SABORES
+// ════════════════════════════════════════════════════════════
+
+// Retorna as receitas vigentes: Firebase tem prioridade sobre hardcoded
+function getReceitas(){
+  return db.receitas || RECEITAS;
+}
+
+// Abre o modal de lista de sabores
+function abrirGerenciarSabores(){
+  document.getElementById('busca-sabor').value = '';
+  renderListaSabores();
+  document.getElementById('modal-sabores').style.display = 'flex';
+}
+
+function fecharGerenciarSabores(){
+  document.getElementById('modal-sabores').style.display = 'none';
+}
+
+// Renderiza a lista de sabores com busca
+function renderListaSabores(){
+  const busca = (document.getElementById('busca-sabor')?.value || '').trim().toUpperCase();
+  const receitas = getReceitas();
+  let sabores = Object.keys(receitas).sort();
+  if(busca) sabores = sabores.filter(s => s.includes(busca));
+
+  document.getElementById('sabores-contador').textContent =
+    `${Object.keys(receitas).length} sabores cadastrados`;
+
+  if(!sabores.length){
+    document.getElementById('lista-sabores-modal').innerHTML =
+      `<div class="empty"><span class="ej">🍦</span><p>Nenhum sabor encontrado.</p></div>`;
+    return;
+  }
+
+  document.getElementById('lista-sabores-modal').innerHTML = sabores.map(nome => {
+    const r = receitas[nome];
+    const tamanhos = Object.keys(r).filter(t => r[t] && r[t].length > 0);
+    const ingCount = tamanhos.reduce((acc, t) => acc + (r[t]?.length || 0), 0);
+    return `<div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:10px;padding:12px 14px">
+      <div style="font-size:1.4rem">🍦</div>
+      <div style="flex:1">
+        <div style="font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;color:var(--pink-dark)">${nome}</div>
+        <div style="font-size:.72rem;color:var(--gray);margin-top:2px">
+          Tamanhos: ${tamanhos.map(t=>t+'ml').join(', ')} &nbsp;|&nbsp; ${ingCount} ingrediente(s)
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="abrirEditarSabor('${nome.replace(/'/g,"\'")}')"
+          style="background:var(--purple);color:white;border:none;border-radius:8px;padding:6px 12px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer">✏️</button>
+        <button onclick="excluirSabor('${nome.replace(/'/g,"\'")}' )"
+          style="background:var(--red);color:white;border:none;border-radius:8px;padding:6px 12px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Estado temporário do sabor em edição
+let _saborEditandoNomeOriginal = null; // null = novo sabor
+let _saborEditandoIngredientes = { 180:[], 300:[], 500:[], 700:[] };
+
+function abrirNovoSabor(){
+  _saborEditandoNomeOriginal = null;
+  _saborEditandoIngredientes = { 180:[], 300:[], 500:[], 700:[] };
+  document.getElementById('edit-sabor-nome').value = '';
+  document.getElementById('edit-sabor-titulo').textContent = '➕ Novo Sabor';
+  renderTodosTamanhos();
+  document.getElementById('modal-editar-sabor').style.display = 'flex';
+  document.getElementById('sabor-scroll-area').scrollTop = 0;
+}
+
+function abrirEditarSabor(nome){
+  _saborEditandoNomeOriginal = nome;
+  const receitas = getReceitas();
+  const r = receitas[nome] || {};
+  _saborEditandoIngredientes = {
+    180: JSON.parse(JSON.stringify(r['180'] || [])),
+    300: JSON.parse(JSON.stringify(r['300'] || [])),
+    500: JSON.parse(JSON.stringify(r['500'] || [])),
+    700: JSON.parse(JSON.stringify(r['700'] || [])),
+  };
+  document.getElementById('edit-sabor-nome').value = nome;
+  document.getElementById('edit-sabor-titulo').textContent = '✏️ Editar: ' + nome;
+  renderTodosTamanhos();
+  document.getElementById('modal-editar-sabor').style.display = 'flex';
+  document.getElementById('sabor-scroll-area').scrollTop = 0;
+}
+
+function fecharEditarSabor(){
+  document.getElementById('modal-editar-sabor').style.display = 'none';
+}
+
+// Renderiza os 3 tamanhos numa tela só (scroll vertical)
+function renderTodosTamanhos(){
+  [180,300,500,700].forEach(tam => renderSecaoTamanho(tam));
+}
+
+function renderSecaoTamanho(tam){
+  const ings = _saborEditandoIngredientes[tam] || [];
+  const container = document.getElementById('sabor-section-'+tam);
+  if(!container) return;
+
+  const COR = {180:'#059669',300:'#7c3aed',500:'#db2777',700:'#0369a1'};
+  const optsItems = db.items
+    .slice().sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'))
+    .map(i=>`<option value="${i.id}">${i.nome}</option>`).join('');
+
+  let html = `
+    <div style="margin-bottom:16px;border:2px solid ${COR[tam]}22;border-radius:14px;overflow:hidden">
+      <div style="background:${COR[tam]};color:white;padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800">🥤 ${tam}ml</span>
+        <span style="font-size:.75rem;opacity:.85">${ings.length} ingrediente(s)</span>
+      </div>
+      <div style="padding:10px 12px;background:white">`;
+
+  if(ings.length === 0){
+    html += `<div style="font-size:.78rem;color:var(--gray);padding:6px 0;text-align:center">Nenhum ingrediente. Clique em ➕ para adicionar.</div>`;
+  }
+
+  ings.forEach((ing, idx) => {
+    html += `
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:7px;padding:8px;background:var(--gray-light);border-radius:10px">
+        <select onchange="atualizarIng(${tam},${idx},'itemId',this.value)"
+          style="flex:1;min-width:0;border:2px solid var(--border);border-radius:8px;padding:5px 6px;font-family:'Nunito',sans-serif;font-size:.78rem">
+          <option value="">— Item —</option>${optsItems}
+        </select>
+        <input type="number" min="0" step="0.01" value="${ing.qty||''}"
+          onchange="atualizarIng(${tam},${idx},'qty',parseFloat(this.value)||0)"
+          placeholder="Qtd" style="width:60px;border:2px solid var(--border);border-radius:8px;padding:5px;font-family:'Nunito',sans-serif;font-size:.8rem;text-align:center">
+        <input type="text" value="${ing.unidade||''}"
+          onchange="atualizarIng(${tam},${idx},'unidade',this.value)"
+          placeholder="unid" style="width:52px;border:2px solid var(--border);border-radius:8px;padding:5px;font-family:'Nunito',sans-serif;font-size:.75rem">
+        <button onclick="removerIng(${tam},${idx})"
+          style="background:var(--red);color:white;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;font-size:.8rem;flex-shrink:0">✕</button>
+      </div>`;
+  });
+
+  html += `
+        <button onclick="adicionarIng(${tam})"
+          style="width:100%;margin-top:4px;padding:8px;border:2px dashed ${COR[tam]};background:white;border-radius:10px;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;color:${COR[tam]};cursor:pointer">
+          ➕ Ingrediente ${tam}ml
+        </button>
+      </div>
+    </div>`;
+
+  container.innerHTML = html;
+
+  // Seta selects com valor correto
+  ings.forEach((ing, idx) => {
+    const sel = container.querySelectorAll('select')[idx];
+    if(sel && ing.itemId) sel.value = ing.itemId;
+  });
+}
+
+function atualizarIng(tam, idx, campo, valor){
+  if(!_saborEditandoIngredientes[tam]) return;
+  _saborEditandoIngredientes[tam][idx][campo] = valor;
+  if(campo === 'itemId'){
+    const item = db.items.find(i=>i.id===valor);
+    if(item){
+      _saborEditandoIngredientes[tam][idx].nome = item.nome;
+      if(!_saborEditandoIngredientes[tam][idx].unidade){
+        _saborEditandoIngredientes[tam][idx].unidade = item.unidade;
+        renderSecaoTamanho(tam);
+      }
+    }
+  }
+}
+
+function adicionarIng(tam){
+  if(!_saborEditandoIngredientes[tam]) _saborEditandoIngredientes[tam] = [];
+  _saborEditandoIngredientes[tam].push({itemId:'', nome:'', qty:0, unidade:''});
+  renderSecaoTamanho(tam);
+}
+
+function removerIng(tam, idx){
+  _saborEditandoIngredientes[tam].splice(idx, 1);
+  renderSecaoTamanho(tam);
+}
+
+async function salvarSaborEditado(){
+  const nomeRaw = document.getElementById('edit-sabor-nome').value.trim().toUpperCase();
+  if(!nomeRaw){ showToast('⚠️ Digite o nome do sabor!'); return; }
+
+  // Valida que pelo menos um tamanho tem ingredientes
+  const temIng = [180,300,500,700].some(t =>
+    (_saborEditandoIngredientes[t]||[]).some(i=>i.itemId && i.qty > 0)
+  );
+  if(!temIng){ showToast('⚠️ Adicione pelo menos um ingrediente!'); return; }
+
+  // Inicializa db.receitas se não existir
+  if(!db.receitas) db.receitas = JSON.parse(JSON.stringify(RECEITAS));
+
+  // Remove nome antigo se renomeou
+  if(_saborEditandoNomeOriginal && _saborEditandoNomeOriginal !== nomeRaw){
+    delete db.receitas[_saborEditandoNomeOriginal];
+  }
+
+  // Salva apenas ingredientes válidos
+  db.receitas[nomeRaw] = {
+    180: (_saborEditandoIngredientes[180]||[]).filter(i=>i.itemId && i.qty > 0),
+    300: (_saborEditandoIngredientes[300]||[]).filter(i=>i.itemId && i.qty > 0),
+    500: (_saborEditandoIngredientes[500]||[]).filter(i=>i.itemId && i.qty > 0),
+    700: (_saborEditandoIngredientes[700]||[]).filter(i=>i.itemId && i.qty > 0),
+  };
+
+  const ok = await saveCloud();
+  if(ok){
+    fecharEditarSabor();
+    renderListaSabores();
+    showToast(`✅ Sabor "${nomeRaw}" salvo!`);
+  } else {
+    showToast('⚠️ Erro ao salvar!');
+  }
+}
+
+async function excluirSabor(nome){
+  if(!confirm(`Excluir o sabor "${nome}"?\n\nEsta ação não pode ser desfeita.`)) return;
+  if(!db.receitas) db.receitas = JSON.parse(JSON.stringify(RECEITAS));
+  delete db.receitas[nome];
+  const ok = await saveCloud();
+  if(ok){
+    renderListaSabores();
+    showToast(`🗑️ Sabor "${nome}" removido!`);
+  } else {
+    showToast('⚠️ Erro ao salvar!');
+  }
+}
 
 window.addEventListener('firebaseReady',()=>{document.getElementById('btn-login').disabled=false;});
 </script>
