@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.9.0</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.9.2</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1993,16 +1993,29 @@ function processarRelatorio(){
   }
 
   // ── Consolida insumos de todos os tamanhos numa tabela única ──────────────
-  const insumosMap = {}; // itemId → { nome, unidade, qty, valor }
+  // Função de formatação monetária brasileira
+  const fmtBRL = v => v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  const insumosMap = {}; // itemId → { nome, unidade, qty, custoPorUnit, ... }
   resultado.forEach(r => {
     (r.insumos||[]).forEach(ing => {
       if(!ing.itemId) return;
       if(!insumosMap[ing.itemId]){
         const itm = db.items.find(i=>i.id===ing.itemId);
+        const valorEmbalagem = itm ? (itm.valor||0) : 0;
+        const qtdPorUnidade  = itm ? (itm.qtdPorUnidade||0) : 0;
+        const temFracao = valorEmbalagem > 0 && qtdPorUnidade > 0 && itm && itm.unidadeSecundaria;
         insumosMap[ing.itemId] = {
-          nome:    itm ? itm.nome    : (ing.nome||ing.itemId),
-          unidade: itm ? (itm.unidade||ing.unidade) : ing.unidade,
-          valorUnit: itm ? (itm.valor||0) : 0,
+          nome:          itm ? itm.nome : (ing.nome||ing.itemId),
+          unidade:       ing.unidade || (itm && (itm.unidadeSecundaria||itm.unidade)) || '',
+          unidadePrim:   itm ? (itm.unidade||'') : '',
+          valorEmbalagem,
+          qtdPorUnidade,
+          temFracao,
+          // custo por unidade secundária (ex: por ml, por grama)
+          // com fracao: R$ embalagem / qtd total da embalagem
+          // sem fracao: valor direto do item
+          custoPorUnit:  temFracao ? valorEmbalagem / qtdPorUnidade : valorEmbalagem,
           qty: 0,
         };
       }
@@ -2010,7 +2023,7 @@ function processarRelatorio(){
     });
   });
   const insumosList = Object.values(insumosMap).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
-  const totalGastoGeral = insumosList.reduce((acc,i)=> acc + i.qty * i.valorUnit, 0);
+  const totalGastoGeral = insumosList.reduce((acc,i)=> acc + i.qty * i.custoPorUnit, 0);
 
   // ── Cabeçalho resumo de vendas por tamanho ───────────────────────────────
   const resumoVendas = resultado.map(r=>{
@@ -2025,57 +2038,39 @@ function processarRelatorio(){
       <div style="margin-top:14px">
         <div style="font-size:.78rem;font-weight:800;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📦 Insumos consumidos no dia</div>
         <div style="background:white;border-radius:10px;border:1px solid var(--border);overflow:hidden">
-          <div style="display:grid;grid-template-columns:1fr 80px 80px 90px;background:#f9fafb;padding:7px 12px;font-size:.7rem;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border)">
-            <span>Insumo</span><span style="text-align:center">Qtd</span><span style="text-align:center">Vlr unit.</span><span style="text-align:right">Total gasto</span>
+          <div style="display:grid;grid-template-columns:1fr 80px 110px 100px;background:#f9fafb;padding:7px 12px;font-size:.7rem;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border)">
+            <span>Insumo</span><span style="text-align:center">Qtd</span><span style="text-align:center">Custo/unid.</span><span style="text-align:right">Total gasto</span>
           </div>
           ${insumosList.map((ing,idx)=>{
-            const total = ing.qty * ing.valorUnit;
+            const total = ing.qty * ing.custoPorUnit;
             const bg = idx%2===0 ? 'white' : '#fafafa';
-            const valorCell = ing.valorUnit > 0
-              ? `R$ ${ing.valorUnit.toFixed(2)}`
+            const explicacao = ing.temFracao
+              ? `<span style="font-size:.62rem;color:#9ca3af;display:block">${ing.unidadePrim} R$\u00a0${fmtBRL(ing.valorEmbalagem)} ÷ ${fmtQ(ing.qtdPorUnidade)}${ing.unidade}</span>`
+              : '';
+            const custoCell = ing.custoPorUnit > 0
+              ? `R$\u00a0${fmtBRL(ing.custoPorUnit)}/${ing.unidade||'un'}`
               : '<span style="color:#d1d5db">—</span>';
-            const totalCell = ing.valorUnit > 0
-              ? `<strong style="color:#c9345a">R$ ${total.toFixed(2)}</strong>`
+            const totalCell = ing.custoPorUnit > 0
+              ? `<strong style="color:#c9345a">R$\u00a0${fmtBRL(total)}</strong>`
               : '<span style="color:#d1d5db">—</span>';
-            return `<div style="display:grid;grid-template-columns:1fr 80px 80px 90px;padding:7px 12px;font-size:.78rem;background:${bg};border-bottom:1px solid #f3f4f6;align-items:center">
-              <span style="font-weight:600">${ing.nome}<br><span style="font-size:.66rem;color:var(--gray);font-weight:400">${ing.unidade}</span></span>
-              <span style="text-align:center;font-weight:700;color:#0369a1">${fmtQ(ing.qty)}</span>
-              <span style="text-align:center;font-size:.74rem;color:#6b7280">${valorCell}</span>
+            return `<div style="display:grid;grid-template-columns:1fr 80px 110px 100px;padding:7px 12px;font-size:.78rem;background:${bg};border-bottom:1px solid #f3f4f6;align-items:center">
+              <span style="font-weight:600">${ing.nome}${explicacao}</span>
+              <span style="text-align:center;font-weight:700;color:#0369a1">${fmtQ(ing.qty)} ${ing.unidade}</span>
+              <span style="text-align:center;font-size:.72rem;color:#6b7280">${custoCell}</span>
               <span style="text-align:right">${totalCell}</span>
             </div>`;
           }).join('')}
           ${totalGastoGeral > 0 ? `
-          <div style="display:grid;grid-template-columns:1fr 80px 80px 90px;padding:8px 12px;background:#fff7ed;border-top:2px solid #fed7aa;font-size:.8rem;font-weight:800">
+          <div style="display:grid;grid-template-columns:1fr 80px 110px 100px;padding:8px 12px;background:#fff7ed;border-top:2px solid #fed7aa;font-size:.8rem;font-weight:800">
             <span style="color:#92400e">💰 Total do dia</span>
             <span></span><span></span>
-            <span style="text-align:right;color:#c9345a;font-size:.9rem">R$ ${totalGastoGeral.toFixed(2)}</span>
+            <span style="text-align:right;color:#c9345a;font-size:.9rem">R$\u00a0${fmtBRL(totalGastoGeral)}</span>
           </div>` : ''}
         </div>
       </div>`;
   }
 
-  // ── Calcula estoque de copos para mostrar impacto ─────────────────────────
-  const proj = calcProjetado(lojaDetectada, hoje());
-  let copesHtml = `
-    <div class="row-hdr" style="margin-top:10px">
-      <div class="rh-name">Copo</div>
-      <div class="rh-col">Vendas</div>
-      <div class="rh-col">Estoque atual</div>
-      <div class="rh-col">Após desconto</div>
-    </div>`;
-  resultado.forEach(r=>{
-    const estoqueAtual = proj ? (proj.proj[r.itemId]!==null&&proj.proj[r.itemId]!==undefined ? Number(proj.proj[r.itemId]) : '–') : '–';
-    const estoqueApos  = proj && typeof estoqueAtual==='number' ? estoqueAtual - r.qtd : '–';
-    const cor = typeof estoqueApos==='number' && estoqueApos<0 ? 'var(--red)' : 'var(--teal-dark)';
-    copesHtml += `
-      <div class="proj-row">
-        <div class="proj-name">${r.nome}</div>
-        <div class="proj-col" style="color:var(--pink-dark);font-weight:800">${r.qtd}</div>
-        <div class="proj-col">${fmtQ(estoqueAtual)}</div>
-        <div class="proj-col" style="color:${cor};font-weight:800">${fmtQ(estoqueApos)}</div>
-      </div>`;
-  });
-
+  // ── Monta o preview (sem tabela de copos separada — copos estão em insumos) ──
   let previewHtml = `
     <div class="card">
       <div class="card-title"><span>🔍</span>Preview da Importação</div>
@@ -2086,34 +2081,51 @@ function processarRelatorio(){
       </div>
       <div style="font-size:.76rem;color:var(--gray);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">🥤 Milky Shakes vendidos</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px">${resumoVendas}</div>
-      ${copesHtml}
       ${insumosTableHtml}
     </div>`;
 
   document.getElementById('importar-preview').innerHTML = previewHtml;
   document.getElementById('btn-confirmar-importar').style.display = '';
 
-  // Salva para confirmar depois
-  importacaoPendente = { resultado, dataRelatorio };
+  // Salva para confirmar depois — inclui insumosList consolidado para uso no confronto
+  importacaoPendente = { resultado, dataRelatorio, insumosList };
 }
 
 async function confirmarImportacao(){
   if(!importacaoPendente){ showToast('⚠️ Processe o relatório primeiro!'); return; }
-  const {resultado, dataRelatorio} = importacaoPendente;
+  const {resultado, dataRelatorio, insumosList} = importacaoPendente;
 
-  if(!confirm(`Confirma o lançamento de ${resultado.length} item(ns) no consumo de ${nomeLoja(lojaImp)} em ${fmtDate(dataRelatorio)}?`)) return;
+  if(!confirm(`Confirma o lançamento do relatório de ${nomeLoja(lojaImp)} em ${fmtDate(dataRelatorio)}?`)) return;
 
   const btn = document.getElementById('btn-confirmar-importar');
   btn.disabled = true;
 
   // Salva dados do relatório em db.relatorios (NÃO altera consumos)
+  // Agora salva TODOS os insumos calculados (copos, canudos, tampas, xaropes etc.)
   if(!db.relatorios) db.relatorios=[];
 
-  // Soma múltiplos PDVs do mesmo dia/loja
+  // Remove entradas anteriores dessa data/loja para evitar duplicação em reimportação
+  db.relatorios = db.relatorios.filter(x=>!(x.data===dataRelatorio&&x.loja==lojaImp));
+
+  // Salva cada insumo consolidado
+  (insumosList||[]).forEach(ing=>{
+    if(!ing.itemId) return;
+    db.relatorios.push({
+      data:     dataRelatorio,
+      loja:     lojaImp,
+      itemId:   ing.itemId,
+      qty:      ing.qty,
+      unidade:  ing.unidade,
+      nome:     ing.nome,
+    });
+  });
+
+  // Também salva os copos (resultado) para compatibilidade
   resultado.forEach(r=>{
-    const existing = db.relatorios.find(x=>x.data===dataRelatorio&&x.loja==lojaImp&&x.itemId===r.itemId);
-    if(existing){ existing.qty += r.qtd; }
-    else { db.relatorios.push({data:dataRelatorio, loja:lojaImp, itemId:r.itemId, qty:r.qtd}); }
+    const jaExiste = db.relatorios.find(x=>x.data===dataRelatorio&&x.loja==lojaImp&&x.itemId===r.itemId);
+    if(!jaExiste){
+      db.relatorios.push({data:dataRelatorio, loja:lojaImp, itemId:r.itemId, qty:r.qtd, unidade:'unidades', nome:r.nome});
+    }
   });
 
   // Registra no histórico
@@ -2125,7 +2137,7 @@ async function confirmarImportacao(){
     loja:lojaImp,
     responsavel:`Rubens (PDV ${pdvNum})`,
     timestamp:new Date().toISOString(),
-    itens: resultado.map(r=>({nome:r.nome, qty:r.qtd, unidade:'unidades'}))
+    itens: (insumosList||[]).map(i=>({nome:i.nome, qty:i.qty, unidade:i.unidade}))
   });
 
   const ok = await saveCloud('consumo');
@@ -2145,7 +2157,7 @@ function mostrarConfronto(data){
   const container = document.getElementById('confronto-resultado');
   if(!container){ return; }
 
-  // Itens do relatório importado para essa data/loja
+  // Insumos do relatório importado para essa data/loja
   const relItems = (db.relatorios||[]).filter(r=>r.data===data&&r.loja==lojaImp);
   if(!relItems.length){
     container.innerHTML=`<div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;">
@@ -2157,54 +2169,68 @@ function mostrarConfronto(data){
   // Consumo manual das funcionárias para essa data/loja
   const consumoManual = db.consumos.filter(c=>c.data===data&&c.loja==lojaImp);
 
+  // Une todos os itemIds: os do relatório + os do manual (para mostrar extras dos dois lados)
+  const todosIds = [...new Set([
+    ...relItems.map(r=>r.itemId),
+    ...consumoManual.map(c=>c.itemId)
+  ])];
+
   let temDivergencia = false;
+  let rowsOk = '', rowsDiff = '';
+
+  todosIds.forEach(itemId=>{
+    const item = db.items.find(i=>i.id===itemId);
+    const nomeItem = item ? item.nome : (relItems.find(r=>r.itemId===itemId)?.nome || itemId);
+    const unidItem = item ? (item.unidadeSecundaria||item.unidade) : (relItems.find(r=>r.itemId===itemId)?.unidade||'');
+
+    const relRec = relItems.find(r=>r.itemId===itemId);
+    const relQty = relRec ? relRec.qty : 0;
+    const manual = consumoManual.filter(c=>c.itemId===itemId).reduce((s,c)=>s+c.qty,0);
+
+    const diff = manual - relQty;
+    const diffColor = diff===0 ? 'var(--teal-dark)' : diff>0 ? '#d97706' : 'var(--red)';
+    const diffSign = diff>0?'+':'';
+    const diffLabel = diff===0 ? '✅' : `${diffSign}${fmtQ(diff)}`;
+    if(diff!==0) temDivergencia=true;
+
+    const row = `<div class="proj-row">
+      <div class="proj-name">${nomeItem}<br><span style="font-size:.66rem;color:var(--gray)">${unidItem}</span></div>
+      <div class="proj-col" style="font-weight:800;${manual===0?'color:var(--gray)':''}">${fmtQ(manual)||'—'}</div>
+      <div class="proj-col" style="color:var(--gray)">${fmtQ(relQty)||'—'}</div>
+      <div class="proj-col" style="color:${diffColor};font-weight:800">${diffLabel}</div>
+    </div>`;
+
+    if(diff===0) rowsOk += row;
+    else rowsDiff += row;
+  });
+
   let html = `
     <div class="card">
       <div class="card-title"><span>🔍</span>Confronto – ${fmtDate(data)} – ${nomeLoja(lojaImp)}</div>
       <div style="font-size:.75rem;color:var(--gray);margin-bottom:12px">
-        Comparando lançamento manual das funcionárias vs relatório do Degust.
+        Lançamento manual das funcionárias vs insumos calculados pelo relatório Degust.
         <strong>O estoque usa sempre o valor manual.</strong>
-      </div>
+      </div>`;
+
+  if(rowsDiff){
+    html += `<div style="font-size:.72rem;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">⚠️ Com divergência</div>
       <div class="row-hdr">
-        <div class="rh-name">Item</div>
+        <div class="rh-name">Insumo</div>
         <div class="rh-col">Manual</div>
         <div class="rh-col">Relatório</div>
         <div class="rh-col">Diferença</div>
-      </div>`;
+      </div>${rowsDiff}`;
+  }
 
-  relItems.forEach(r=>{
-    const item = db.items.find(i=>i.id===r.itemId);
-    if(!item) return;
-    const manual = consumoManual.filter(c=>c.itemId===r.itemId).reduce((s,c)=>s+c.qty,0);
-    const relQty = r.qty;
-    const diff = manual - relQty;
-    const diffColor = diff===0 ? 'var(--teal-dark)' : diff>0 ? '#d97706' : 'var(--red)';
-    const diffSign = diff>0?'+':'';
-    const diffLabel = diff===0 ? '✅ OK' : `${diffSign}${fmtQ(diff)}`;
-    if(diff!==0) temDivergencia=true;
-
-    html+=`<div class="proj-row">
-      <div class="proj-name">${item.nome}<br><span style="font-size:.66rem;color:var(--gray)">${item.unidade}</span></div>
-      <div class="proj-col" style="font-weight:800">${fmtQ(manual)}</div>
-      <div class="proj-col" style="color:var(--gray)">${fmtQ(relQty)}</div>
-      <div class="proj-col" style="color:${diffColor};font-weight:800">${diffLabel}</div>
-    </div>`;
-  });
-
-  // Itens no manual que não estão no relatório
-  const relIds = relItems.map(r=>r.itemId);
-  const coposNoManual = consumoManual.filter(c=>['cop300','cop500','cop700'].includes(c.itemId)&&!relIds.includes(c.itemId));
-  coposNoManual.forEach(c=>{
-    const item = db.items.find(i=>i.id===c.itemId);
-    if(!item) return;
-    temDivergencia=true;
-    html+=`<div class="proj-row">
-      <div class="proj-name">${item.nome}<br><span style="font-size:.66rem;color:var(--gray)">${item.unidade}</span></div>
-      <div class="proj-col" style="font-weight:800;color:#d97706">${fmtQ(c.qty)}</div>
-      <div class="proj-col" style="color:var(--gray)">0</div>
-      <div class="proj-col" style="color:#d97706;font-weight:800">+${fmtQ(c.qty)}</div>
-    </div>`;
-  });
+  if(rowsOk){
+    html += `<div style="font-size:.72rem;font-weight:800;color:var(--teal-dark);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px">✅ Conferindo</div>
+      <div class="row-hdr">
+        <div class="rh-name">Insumo</div>
+        <div class="rh-col">Manual</div>
+        <div class="rh-col">Relatório</div>
+        <div class="rh-col"></div>
+      </div>${rowsOk}`;
+  }
 
   html += `</div>`;
 
@@ -2215,7 +2241,7 @@ function mostrarConfronto(data){
     </div>`;
   } else {
     html += `<div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;">
-      <strong>⚠️ Há divergências!</strong> Positivo (+) = manual maior que relatório. Negativo (−) = relatório maior que manual.
+      <strong>⚠️ Há divergências!</strong> (+) = manual maior que relatório. (−) = relatório maior que manual.
     </div>`;
   }
 
