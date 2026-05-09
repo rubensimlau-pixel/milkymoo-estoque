@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.5.5</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v2.4.6</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -265,46 +265,6 @@
       <button class="btn btn-pink" id="btn-sv-perdas" onclick="salvarPerdas()" style="background:#ef476f;box-shadow:0 4px 14px rgba(239,71,111,.35)">💔 Registrar Perda</button>
     </div>
 
-    <!-- IMPORTAR RELATÓRIO -->
-    <div id="sec-importar" class="section">
-      <div class="info-box" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534;">
-        <strong>📥 Importar Relatório de Fechamento</strong>
-        Cole aqui o texto do relatório de fechamento do Degust. O sistema vai identificar os itens vendidos e descontar os copos do estoque automaticamente.
-      </div>
-
-      <div class="loja-sel">
-        <button class="loja-btn active" id="blimp1" onclick="selLoja(1,'imp')"><div class="li">🏪</div><div class="ln" id="lnimp1">Cajamar</div></button>
-        <button class="loja-btn" id="blimp2" onclick="selLoja(2,'imp')"><div class="li">🏬</div><div class="ln" id="lnimp2">Iguatemi</div></button>
-        <button class="loja-btn" id="blimp3" onclick="selLoja(3,'imp')"><div class="li">🏗️</div><div class="ln" id="lnimp3">Carapicuíba</div></button>
-      </div>
-
-      <div class="date-bar"><label>📅 Data do relatório:</label><input type="date" id="data-importar"></div>
-
-      <div class="card">
-        <div class="card-title"><span>📋</span>Texto do Relatório</div>
-        <textarea id="txt-relatorio" placeholder="Cole aqui o conteúdo do arquivo TXT de fechamento de caixa do Degust..."
-          style="width:100%;height:200px;border:2px solid var(--border);border-radius:10px;padding:10px;font-family:monospace;font-size:.78rem;resize:vertical;background:var(--gray-light)"></textarea>
-      </div>
-
-      <button class="btn btn-pink" onclick="processarRelatorio()" style="margin-bottom:10px">🔍 Processar Relatório</button>
-
-      <!-- Preview do resultado -->
-      <div id="importar-preview"></div>
-
-      <div id="confronto-resultado"></div>
-
-      <!-- Confronto histórico por data -->
-      <div class="card" style="margin-top:14px">
-        <div class="card-title"><span>🔍</span>Confrontar data anterior</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="date" id="data-confronto" style="border:2px solid var(--border);border-radius:8px;padding:8px;font-family:Nunito,sans-serif;font-size:.88rem">
-          <button onclick="mostrarConfronto(document.getElementById('data-confronto').value)" class="btn btn-outline" style="margin:0;padding:8px 16px;width:auto">🔍 Confrontar</button>
-        </div>
-      </div>
-
-      <button class="btn btn-pink" id="btn-confirmar-importar" onclick="confirmarImportacao()" style="display:none;background:#16a34a;box-shadow:0 4px 14px rgba(22,163,74,.35)">✅ Salvar Relatório para Confronto</button>
-    </div>
-
     <div id="sec-divergencia" class="section">
       <div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;"><strong>⚠️ Divergência</strong>Inventário anterior − consumo vs inventário real. <strong>Negativo = possível perda.</strong></div>
       <div class="loja-sel">
@@ -320,25 +280,6 @@
       <div class="info-box" style="background:#f0f9ff;border-color:#bae6fd;color:#0c4a6e;">
         <strong>📜 Histórico de Preenchimentos</strong>
         Quem preencheu, quando, em qual loja e quais itens foram lançados.
-      </div>
-      <!-- Filtros -->
-      <div class="card" style="margin-bottom:14px;padding:12px 16px">
-        <div style="font-size:.75rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Filtrar por loja</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button id="filt-hist-0" onclick="filtrarHistorico(0)" style="padding:6px 14px;border-radius:50px;border:2px solid var(--pink);background:var(--pink);color:white;font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">🏪🏬🏗️ Todas</button>
-          <button id="filt-hist-1" onclick="filtrarHistorico(1)" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">🏪 <span id="filt-nome1">Cajamar</span></button>
-          <button id="filt-hist-2" onclick="filtrarHistorico(2)" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">🏬 <span id="filt-nome2">Iguatemi</span></button>
-          <button id="filt-hist-3" onclick="filtrarHistorico(3)" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">🏗️ <span id="filt-nome3">Carapicuíba</span></button>
-        </div>
-        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
-          <div style="font-size:.75rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;width:100%">Filtrar por tipo</div>
-          <button id="filt-tipo-todos" onclick="filtrarHistoricoTipo('')" style="padding:6px 14px;border-radius:50px;border:2px solid var(--pink);background:var(--pink);color:white;font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">Todos</button>
-          <button id="filt-tipo-consumo" onclick="filtrarHistoricoTipo('consumo')" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">📦 Consumo</button>
-          <button id="filt-tipo-inventario" onclick="filtrarHistoricoTipo('inventario')" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">📋 Inventário</button>
-          <button id="filt-tipo-entrada" onclick="filtrarHistoricoTipo('entrada')" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">🛍️ Entradas</button>
-          <button id="filt-tipo-perda" onclick="filtrarHistoricoTipo('perda')" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">💔 Perdas</button>
-          <button id="filt-tipo-importacao" onclick="filtrarHistoricoTipo('importacao')" style="padding:6px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">📥 Importações</button>
-        </div>
       </div>
       <div id="hist-lista"></div>
       <button class="btn" onclick="abrirModalReset()" style="background:#ef476f;color:white;margin-top:8px;box-shadow:0 4px 14px rgba(239,71,111,.35)">🗑️ Apagar Lançamentos</button>
@@ -381,9 +322,6 @@
             </label>
             <label style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600" onclick="toggleReset(this)">
               <input type="checkbox" id="rst-hist" style="width:18px;height:18px;accent-color:var(--pink);cursor:pointer"> 📜 Histórico
-            </label>
-            <label style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600" onclick="toggleReset(this)">
-              <input type="checkbox" id="rst-relatorios" style="width:18px;height:18px;accent-color:var(--pink);cursor:pointer"> 📥 Relatórios importados
             </label>
             <label style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #fee2e2;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:700;color:#991b1b;background:#fff5f5" onclick="toggleResetTudo(this)">
               <input type="checkbox" id="rst-tudo" style="width:18px;height:18px;accent-color:#ef476f;cursor:pointer"> 🔴 Apagar tudo acima
@@ -647,8 +585,8 @@ const DEFAULT_ITEMS=[
   {id:'bob-maq',nome:'Bobina Maquininha',cat:'mimos',unidade:'unidades'},
 ];
 
-let db={items:[...DEFAULT_ITEMS],inventarios:[],consumos:[],entradas:[],perdas:[],relatorios:[],historico:[],minimos:{},usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7}};
-let lojaC=1,lojaI=1,lojaP=1,lojaD=1,lojaE=1,lojaPr=1,lojaImp=1;
+let db={items:[...DEFAULT_ITEMS],inventarios:[],consumos:[],entradas:[],perdas:[],historico:[],minimos:{},usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7}};
+let lojaC=1,lojaI=1,lojaP=1,lojaD=1,lojaE=1,lojaPr=1;
 let autoRefreshInterval=null;
 
 async function cloudGet(){try{return window.firebaseGet?await window.firebaseGet():null;}catch(e){return null;}}
@@ -717,7 +655,6 @@ function renderTabs(){
     {id:'perdas',     label:'💔 Perdas',        adminOnly:false},
     {id:'inventario', label:'📋 Inventário',    adminOnly:false},
     {id:'projetado',  label:'📊 Estoque',       adminOnly:false},
-    {id:'importar',   label:'📥 Importar',      adminOnly:true},
     {id:'divergencia',label:'⚠️ Divergência',  adminOnly:true},
     {id:'compras',    label:'🛒 Compras',       adminOnly:true},
     {id:'entradas',   label:'🛍️ Entradas',      adminOnly:true},
@@ -738,7 +675,7 @@ function ajustarBotoesLoja(){
   const isAdmin = currentUser.role==='admin';
   [1,2,3].forEach(n=>{
     // Prefixos de todos os seletores de loja
-    ['blc','bli','blp','bld','ble','blpr','blimp'].forEach(p=>{
+    ['blc','bli','blp','bld','ble','blpr'].forEach(p=>{
       const el=document.getElementById(p+n);
       if(!el) return;
       if(isAdmin){
@@ -801,14 +738,13 @@ async function atualizarDados(forcado=false){
   // Nas abas de preenchimento (consumo/inventário), o auto-refresh NÃO re-renderiza
   // para não apagar o que a funcionária está digitando.
   // Só re-renderiza se foi clique manual no botão 🔄
-  const abaDigitacao = (name==='consumo'||name==='inventario'||name==='entradas'||name==='perdas'||name==='importar');
+  const abaDigitacao = (name==='consumo'||name==='inventario'||name==='entradas'||name==='perdas');
   if(!abaDigitacao || forcado){
     if(name==='consumo')renderConsumo();
     if(name==='inventario')renderInv();
     if(name==='projetado')renderProjetado();
     if(name==='compras')gerarCompras();
     if(name==='perdas')renderPerdas();
-  if(name==='importar')renderImportar();
   if(name==='divergencia')renderDivergencia();
     if(name==='historico')renderHistorico();
   }
@@ -835,7 +771,6 @@ function showTab(name,btn){
   if(name==='projetado')renderProjetado();
   if(name==='compras')gerarCompras();
   if(name==='perdas')renderPerdas();
-  if(name==='importar')renderImportar();
   if(name==='divergencia')renderDivergencia();
   if(name==='historico')renderHistorico();
   if(name==='entradas')renderEntradas();
@@ -856,12 +791,11 @@ function selLoja(n,ctx){
   if(ctx==='d'){lojaD=n;[1,2,3].forEach(i=>document.getElementById('bld'+i).classList.toggle('active',i===n));renderDivergencia();}
   if(ctx==='e'){lojaE=n;[1,2,3].forEach(i=>document.getElementById('ble'+i).classList.toggle('active',i===n));renderEntradas();}
   if(ctx==='pr'){lojaPr=n;[1,2,3].forEach(i=>document.getElementById('blpr'+i).classList.toggle('active',i===n));renderPerdas();}
-  if(ctx==='imp'){lojaImp=n;[1,2,3].forEach(i=>document.getElementById('blimp'+i).classList.toggle('active',i===n));}
 }
 
 function nomeLoja(n){return n===1?(db.config.nomeLoja1||'Cajamar'):n===2?(db.config.nomeLoja2||'Iguatemi'):(db.config.nomeLoja3||'Carapicuíba');}
 function lojaIcon(n){return n===1?'🏪':n===2?'🏬':'🏗️';}
-function aplicarNomes(){[1,2,3].forEach(n=>{const nm=nomeLoja(n);['lnc','lni','lnp','lnd','lne','lnpr','lnimp'].forEach(p=>{const el=document.getElementById(p+n);if(el)el.textContent=nm;});});}
+function aplicarNomes(){[1,2,3].forEach(n=>{const nm=nomeLoja(n);['lnc','lni','lnp','lnd','lne','lnpr'].forEach(p=>{const el=document.getElementById(p+n);if(el)el.textContent=nm;});});}
 
 function ultimoInventario(loja,ateData){
   const refs=db.inventarios.filter(r=>r.loja==loja&&r.data<=ateData);if(!refs.length)return null;
@@ -948,7 +882,6 @@ document.getElementById('data-inv').addEventListener('change', function(){
 });
 document.getElementById('data-entrada').value=hoje();
 document.getElementById('data-perdas').value=hoje();
-document.getElementById('data-importar').value=hoje();
 document.getElementById('data-perdas').addEventListener('change', function(){
   if(currentUser && currentUser.role!=='admin' && this.value<hoje()){
     this.value=hoje();
@@ -1242,55 +1175,21 @@ function gerarCompras(){
 }
 
 function renderDivergencia(){ document.getElementById('div-lista').innerHTML='<div class="empty">Selecione um período.</div>'; }
-let histFiltroLoja=0, histFiltroTipo='';
-
-function filtrarHistorico(loja){
-  histFiltroLoja=loja;
-  [0,1,2,3].forEach(i=>{
-    const btn=document.getElementById('filt-hist-'+i);
-    if(!btn)return;
-    const ativo=i===loja;
-    btn.style.background=ativo?'var(--pink)':'white';
-    btn.style.color=ativo?'white':'var(--gray)';
-    btn.style.borderColor=ativo?'var(--pink)':'var(--border)';
-  });
-  renderHistorico();
-}
-
-function filtrarHistoricoTipo(tipo){
-  histFiltroTipo=tipo;
-  ['todos','consumo','inventario','entrada','perda','importacao'].forEach(t=>{
-    const btn=document.getElementById('filt-tipo-'+(t||'todos'));
-    if(!btn)return;
-    const ativo=t===tipo;
-    btn.style.background=ativo?'var(--pink)':'white';
-    btn.style.color=ativo?'white':'var(--gray)';
-    btn.style.borderColor=ativo?'var(--pink)':'var(--border)';
-  });
-  renderHistorico();
-}
-
 function renderHistorico(){
   // Mostra/esconde botão de reset conforme perfil
   const btnReset = document.querySelector('#sec-historico .btn');
   if(btnReset) btnReset.style.display = currentUser?.role==='admin' ? '' : 'none';
   const container=document.getElementById('hist-lista');
-  // Atualiza nomes nos filtros
-  const fn1=document.getElementById('filt-nome1');const fn2=document.getElementById('filt-nome2');const fn3=document.getElementById('filt-nome3');
-  if(fn1)fn1.textContent=nomeLoja(1);if(fn2)fn2.textContent=nomeLoja(2);if(fn3)fn3.textContent=nomeLoja(3);
-
-  let hist=(db.historico||[]).slice().sort((a,b)=>b.timestamp.localeCompare(a.timestamp));
-  if(histFiltroLoja>0) hist=hist.filter(h=>h.loja==histFiltroLoja);
-  if(histFiltroTipo) hist=hist.filter(h=>h.tipo===histFiltroTipo);
+  const hist=(db.historico||[]).slice().sort((a,b)=>b.timestamp.localeCompare(a.timestamp));
   if(!hist.length){
     container.innerHTML=`<div class="empty"><span class="ej">📜</span><p>Nenhum preenchimento registrado ainda.</p></div>`;
     return;
   }
-  const tipoIcon={consumo:'📦',inventario:'📋',entrada:'🛍️',perda:'💔',importacao:'📥'};
-  const tipoLabel={consumo:'Consumo Diário',inventario:'Inventário Físico',entrada:'Entrada de Compra',perda:'Perda / Erro',importacao:'Importação de Relatório'};
-  const tipoColor={consumo:'#1e40af',inventario:'#6b21a8',entrada:'#9a3412',perda:'#991b1b',importacao:'#166534'};
-  const tipoBg={consumo:'#eff6ff',inventario:'#fdf4ff',entrada:'#fff7ed',perda:'#fff0f0',importacao:'#f0fdf4'};
-  const tipoBorder={consumo:'#bfdbfe',inventario:'#e9d5ff',entrada:'#fed7aa',perda:'#fecaca',importacao:'#bbf7d0'};
+  const tipoIcon={consumo:'📦',inventario:'📋',entrada:'🛍️',perda:'💔'};
+  const tipoLabel={consumo:'Consumo Diário',inventario:'Inventário Físico',entrada:'Entrada de Compra',perda:'Perda / Erro'};
+  const tipoColor={consumo:'#1e40af',inventario:'#6b21a8',entrada:'#9a3412',perda:'#991b1b'};
+  const tipoBg={consumo:'#eff6ff',inventario:'#fdf4ff',entrada:'#fff7ed',perda:'#fff0f0'};
+  const tipoBorder={consumo:'#bfdbfe',inventario:'#e9d5ff',entrada:'#fed7aa',perda:'#fecaca'};
 
   container.innerHTML = hist.map(h => {
     const d = new Date(h.timestamp);
@@ -1594,7 +1493,7 @@ function abrirModalReset(){
   document.getElementById('rst-nome-loja2').textContent=nomeLoja(2);
   document.getElementById('rst-nome-loja3').textContent=nomeLoja(3);
   // Reset checkboxes
-  ['rst-consumo','rst-inv','rst-entradas','rst-hist','rst-relatorios','rst-tudo'].forEach(id=>{
+  ['rst-consumo','rst-inv','rst-entradas','rst-hist','rst-tudo'].forEach(id=>{
     document.getElementById(id).checked=false;
   });
   // Reset loja para "Todas"
@@ -1646,7 +1545,7 @@ function toggleReset(label){
 function toggleResetTudo(label){
   setTimeout(()=>{
     const checked=document.getElementById('rst-tudo').checked;
-    ['rst-consumo','rst-inv','rst-entradas','rst-hist','rst-relatorios'].forEach(id=>{
+    ['rst-consumo','rst-inv','rst-entradas','rst-hist'].forEach(id=>{
       const el=document.getElementById(id);
       el.checked=checked;
       const lbl=el.closest('label');
@@ -1672,24 +1571,23 @@ async function confirmarReset(){
   if(apagaInv)itens.push('Inventários');
   if(apagaEntradas)itens.push('Entradas');
   if(apagaHist)itens.push('Histórico');
-  if(apagaRelatorios)itens.push('Relatórios importados');
 
   const lojaLabel = lojaVal===0 ? 'TODAS AS LOJAS' : nomeLoja(lojaVal);
 
   if(!confirm(`Confirma a exclusão de:\n\n• ${itens.join('\n• ')}\n\nLoja: ${lojaLabel}\n\nEsta ação é irreversível!`)){return;}
 
   if(lojaVal===0){
+    // Apaga de todas as lojas
     if(apagaConsumo) db.consumos=[];
     if(apagaInv) db.inventarios=[];
     if(apagaEntradas) db.entradas=[];
     if(apagaHist) db.historico=[];
-    if(apagaRelatorios) db.relatorios=[];
   } else {
+    // Apaga só da loja selecionada
     if(apagaConsumo) db.consumos=db.consumos.filter(c=>c.loja!=lojaVal);
     if(apagaInv) db.inventarios=db.inventarios.filter(r=>r.loja!=lojaVal);
     if(apagaEntradas) db.entradas=db.entradas.filter(e=>e.loja!=lojaVal);
     if(apagaHist) db.historico=db.historico.filter(h=>h.loja!=lojaVal);
-    if(apagaRelatorios) db.relatorios=db.relatorios.filter(r=>r.loja!=lojaVal);
   }
 
   const ok=await cloudSet(db);
@@ -1751,270 +1649,7 @@ async function confirmarResetSenha(){
   }
 }
 
-// Mapeamento: palavras-chave no relatório → itemId no estoque
-const IMPORT_RULES = [
-  // Copos 300ml
-  { pattern: /MILKSHAKES 300 ML[\s\S]*?TOTAL\s+([\d]+)/i, tipo:'secao', tamanho:300 },
-  // Copos 500ml
-  { pattern: /MILKSHAKES 500 ML[\s\S]*?TOTAL\s+([\d]+)/i, tipo:'secao', tamanho:500 },
-  // Copos 700ml
-  { pattern: /MILKSHAKES 700 ML[\s\S]*?TOTAL\s+([\d]+)/i, tipo:'secao', tamanho:700 },
-];
-
-// Mapa de tamanho → itemId do copo
-const COPO_MAP = {
-  300: 'cop300',
-  500: 'cop500',
-  700: 'cop700',
-};
-
-let importacaoPendente = null;
-
-function renderImportar(){
-  document.getElementById('importar-preview').innerHTML='';
-  document.getElementById('btn-confirmar-importar').style.display='none';
-}
-
-function processarRelatorio(){
-  const txt = document.getElementById('txt-relatorio').value;
-  if(!txt.trim()){ showToast('⚠️ Cole o texto do relatório primeiro!'); return; }
-
-  const resultado = [];
-
-  // Extrai data do relatório
-  const dataMatch = txt.match(/Data Abertura[\s.]*[:\s]*(\d{2})\/(\d{2})\/(\d{4})/);
-  const dataRelatorio = dataMatch
-    ? `${dataMatch[3]}-${dataMatch[2]}-${dataMatch[1]}`
-    : document.getElementById('data-importar').value;
-
-  // Processa cada seção de milkshakes
-  const secoes = [
-    { nome:'MILKSHAKES 300 ML', tamanho:300 },
-    { nome:'MILKSHAKES 500 ML', tamanho:500 },
-    { nome:'MILKSHAKES 700 ML', tamanho:700 },
-  ];
-
-  secoes.forEach(s=>{
-    const idx = txt.indexOf(s.nome);
-    if(idx===-1) return;
-    // Delimita o bloco: da seção atual até a próxima seção ou fim
-    const nextSecIdx = secoes
-      .map(o=>o.nome!==s.nome ? txt.indexOf(o.nome, idx+1) : -1)
-      .filter(i=>i>idx);
-    const endIdx = nextSecIdx.length>0 ? Math.min(...nextSecIdx) : idx+3000;
-    const bloco = txt.substring(idx, endIdx);
-    // Pega o TOTAL da própria seção (último TOTAL no bloco)
-    const totalMatches = [...bloco.matchAll(/^TOTAL\s+(\d+)/mg)];
-    if(!totalMatches.length) return;
-    const lastTotal = totalMatches[totalMatches.length-1];
-    const qtd = parseInt(lastTotal[1]);
-    if(qtd<=0) return;
-    const itemId = COPO_MAP[s.tamanho];
-    const item = db.items.find(i=>i.id===itemId);
-    if(!item) return;
-    resultado.push({itemId, nome:item.nome, qtd, descricao:`${qtd} milkshake(s) ${s.tamanho}ml vendido(s)`});
-  });
-
-  // Extrai loja do relatório automaticamente
-  const lojaMatch = txt.match(/MILKY MOO[^\n]*/i);
-  const lojaInfo = lojaMatch ? lojaMatch[0].trim() : '';
-
-  // Detecta qual loja baseado no nome encontrado no relatório
-  let lojaDetectada = lojaImp; // fallback para loja selecionada
-  if(lojaInfo){
-    const lojaInfoUpper = lojaInfo.toUpperCase();
-    const nomeLoja1 = (db.config.nomeLoja1||'Cajamar').toUpperCase();
-    const nomeLoja2 = (db.config.nomeLoja2||'Iguatemi').toUpperCase();
-    const nomeLoja3 = (db.config.nomeLoja3||'Carapicuíba').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    const lojaInfoNorm = lojaInfoUpper.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    if(lojaInfoUpper.includes(nomeLoja1)||lojaInfoNorm.includes(nomeLoja1)) lojaDetectada=1;
-    else if(lojaInfoUpper.includes(nomeLoja2)||lojaInfoNorm.includes(nomeLoja2)) lojaDetectada=2;
-    else if(lojaInfoUpper.includes(nomeLoja3.normalize('NFD').replace(/[\u0300-\u036f]/g,''))||lojaInfoNorm.includes('CARAPICUIBA')) lojaDetectada=3;
-  }
-
-  // Atualiza seletor de loja automaticamente
-  lojaImp = lojaDetectada;
-  [1,2,3].forEach(i=>document.getElementById('blimp'+i).classList.toggle('active',i===lojaDetectada));
-
-  // Atualiza campo de data automaticamente
-  if(dataMatch) document.getElementById('data-importar').value = dataRelatorio;
-
-  if(!resultado.length){
-    document.getElementById('importar-preview').innerHTML=`
-      <div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;">
-        <strong>⚠️ Nenhum item encontrado</strong>
-        Verifique se o texto copiado está completo e contém a seção "MOVIMENTACAO DE PRODUTO".
-      </div>`;
-    return;
-  }
-
-  // Calcula estoque atual para mostrar preview
-  const proj = calcProjetado(lojaDetectada, hoje());
-
-  let previewHtml = `
-    <div class="card">
-      <div class="card-title"><span>🔍</span>Preview da Importação</div>
-      <div style="font-size:.78rem;margin-bottom:10px;background:#f0fdf4;border-radius:8px;padding:8px 12px;border:1px solid #bbf7d0">
-        📅 Data detectada: <strong style="color:#166534">${fmtDate(dataRelatorio)}</strong> &nbsp;|&nbsp;
-        ${lojaIcon(lojaDetectada)} Loja detectada: <strong style="color:#166534">${nomeLoja(lojaDetectada)}</strong>
-        ${lojaInfo ? `<br><span style="font-size:.72rem;color:var(--gray)">📋 ${lojaInfo}</span>` : ''}
-      </div>
-      <div class="row-hdr">
-        <div class="rh-name">Item</div>
-        <div class="rh-col">Vendas</div>
-        <div class="rh-col">Estoque atual</div>
-        <div class="rh-col">Após desconto</div>
-      </div>`;
-
-  resultado.forEach(r=>{
-    const estoqueAtual = proj ? (proj.proj[r.itemId]!==null&&proj.proj[r.itemId]!==undefined ? Number(proj.proj[r.itemId]) : '–') : '–';
-    const estoqueApos = proj && typeof estoqueAtual==='number' ? estoqueAtual - r.qtd : '–';
-    const cor = typeof estoqueApos==='number' && estoqueApos<0 ? 'var(--red)' : 'var(--teal-dark)';
-    previewHtml += `
-      <div class="proj-row">
-        <div class="proj-name">${r.nome}<br><span style="font-size:.68rem;color:var(--gray)">${r.descricao}</span></div>
-        <div class="proj-col" style="color:var(--pink-dark);font-weight:800">${r.qtd}</div>
-        <div class="proj-col">${fmtQ(estoqueAtual)}</div>
-        <div class="proj-col" style="color:${cor};font-weight:800">${fmtQ(estoqueApos)}</div>
-      </div>`;
-  });
-
-  previewHtml += `</div>`;
-
-  document.getElementById('importar-preview').innerHTML = previewHtml;
-  document.getElementById('btn-confirmar-importar').style.display = '';
-
-  // Salva para confirmar depois
-  importacaoPendente = { resultado, dataRelatorio };
-}
-
-async function confirmarImportacao(){
-  if(!importacaoPendente){ showToast('⚠️ Processe o relatório primeiro!'); return; }
-  const {resultado, dataRelatorio} = importacaoPendente;
-
-  if(!confirm(`Confirma o lançamento de ${resultado.length} item(ns) no consumo de ${nomeLoja(lojaImp)} em ${fmtDate(dataRelatorio)}?`)) return;
-
-  const btn = document.getElementById('btn-confirmar-importar');
-  btn.disabled = true;
-
-  // Salva dados do relatório em db.relatorios (NÃO altera consumos)
-  if(!db.relatorios) db.relatorios=[];
-
-  // Soma múltiplos PDVs do mesmo dia/loja
-  resultado.forEach(r=>{
-    const existing = db.relatorios.find(x=>x.data===dataRelatorio&&x.loja==lojaImp&&x.itemId===r.itemId);
-    if(existing){ existing.qty += r.qtd; }
-    else { db.relatorios.push({data:dataRelatorio, loja:lojaImp, itemId:r.itemId, qty:r.qtd}); }
-  });
-
-  // Registra no histórico
-  if(!db.historico) db.historico=[];
-  const pdvNum = db.historico.filter(h=>h.data===dataRelatorio&&h.loja==lojaImp&&h.tipo==='importacao').length+1;
-  db.historico.push({
-    tipo:'importacao',
-    data:dataRelatorio,
-    loja:lojaImp,
-    responsavel:`Rubens (PDV ${pdvNum})`,
-    timestamp:new Date().toISOString(),
-    itens: resultado.map(r=>({nome:r.nome, qty:r.qtd, unidade:'unidades'}))
-  });
-
-  const ok = await saveCloud('consumo');
-  if(ok){
-    document.getElementById('txt-relatorio').value='';
-    importacaoPendente=null;
-    mostrarConfronto(dataRelatorio);
-    showToast('✅ Relatório salvo! Veja o confronto abaixo.');
-  } else {
-    showToast('⚠️ Erro ao salvar!');
-  }
-  btn.disabled=false;
-}
-
-function mostrarConfronto(data){
-  if(!data){ showToast('⚠️ Selecione uma data!'); return; }
-  const container = document.getElementById('confronto-resultado');
-  if(!container){ return; }
-
-  // Itens do relatório importado para essa data/loja
-  const relItems = (db.relatorios||[]).filter(r=>r.data===data&&r.loja==lojaImp);
-  if(!relItems.length){
-    container.innerHTML=`<div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;">
-      <strong>⚠️ Nenhum relatório importado</strong> para ${fmtDate(data)} em ${nomeLoja(lojaImp)}.
-    </div>`;
-    return;
-  }
-
-  // Consumo manual das funcionárias para essa data/loja
-  const consumoManual = db.consumos.filter(c=>c.data===data&&c.loja==lojaImp);
-
-  let temDivergencia = false;
-  let html = `
-    <div class="card">
-      <div class="card-title"><span>🔍</span>Confronto – ${fmtDate(data)} – ${nomeLoja(lojaImp)}</div>
-      <div style="font-size:.75rem;color:var(--gray);margin-bottom:12px">
-        Comparando lançamento manual das funcionárias vs relatório do Degust.
-        <strong>O estoque usa sempre o valor manual.</strong>
-      </div>
-      <div class="row-hdr">
-        <div class="rh-name">Item</div>
-        <div class="rh-col">Manual</div>
-        <div class="rh-col">Relatório</div>
-        <div class="rh-col">Diferença</div>
-      </div>`;
-
-  relItems.forEach(r=>{
-    const item = db.items.find(i=>i.id===r.itemId);
-    if(!item) return;
-    const manual = consumoManual.filter(c=>c.itemId===r.itemId).reduce((s,c)=>s+c.qty,0);
-    const relQty = r.qty;
-    const diff = manual - relQty;
-    const diffColor = diff===0 ? 'var(--teal-dark)' : diff>0 ? '#d97706' : 'var(--red)';
-    const diffSign = diff>0?'+':'';
-    const diffLabel = diff===0 ? '✅ OK' : `${diffSign}${fmtQ(diff)}`;
-    if(diff!==0) temDivergencia=true;
-
-    html+=`<div class="proj-row">
-      <div class="proj-name">${item.nome}<br><span style="font-size:.66rem;color:var(--gray)">${item.unidade}</span></div>
-      <div class="proj-col" style="font-weight:800">${fmtQ(manual)}</div>
-      <div class="proj-col" style="color:var(--gray)">${fmtQ(relQty)}</div>
-      <div class="proj-col" style="color:${diffColor};font-weight:800">${diffLabel}</div>
-    </div>`;
-  });
-
-  // Itens no manual que não estão no relatório
-  const relIds = relItems.map(r=>r.itemId);
-  const coposNoManual = consumoManual.filter(c=>['cop300','cop500','cop700'].includes(c.itemId)&&!relIds.includes(c.itemId));
-  coposNoManual.forEach(c=>{
-    const item = db.items.find(i=>i.id===c.itemId);
-    if(!item) return;
-    temDivergencia=true;
-    html+=`<div class="proj-row">
-      <div class="proj-name">${item.nome}<br><span style="font-size:.66rem;color:var(--gray)">${item.unidade}</span></div>
-      <div class="proj-col" style="font-weight:800;color:#d97706">${fmtQ(c.qty)}</div>
-      <div class="proj-col" style="color:var(--gray)">0</div>
-      <div class="proj-col" style="color:#d97706;font-weight:800">+${fmtQ(c.qty)}</div>
-    </div>`;
-  });
-
-  html += `</div>`;
-
-  if(!temDivergencia){
-    html += `<div class="card" style="text-align:center;padding:20px">
-      <div style="font-size:2rem">🎉</div>
-      <div style="font-family:'Baloo 2',cursive;font-size:1rem;color:var(--teal-dark);margin-top:6px">Tudo confere! Manual = Relatório.</div>
-    </div>`;
-  } else {
-    html += `<div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;">
-      <strong>⚠️ Há divergências!</strong> Positivo (+) = manual maior que relatório. Negativo (−) = relatório maior que manual.
-    </div>`;
-  }
-
-  container.innerHTML = html;
-  document.getElementById('data-confronto').value = data;
-}
-
-function fmtQ(n){const v=parseFloat(n);if(n===undefined||n===null||n===''||isNaN(v))return'–';return Number.isInteger(v)?v:parseFloat(v.toFixed(1));}
+function fmtQ(n){return n===null?'–':Number.isInteger(n)?n:n.toFixed(1);}
 function fmtDate(d){if(!d)return''; const[y,m,dd]=d.split('-'); return`${dd}/${m}`;}
 function setLoad(v){document.getElementById('loading').classList.toggle('show',v);}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
