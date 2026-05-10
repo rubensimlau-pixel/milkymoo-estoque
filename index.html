@@ -119,6 +119,14 @@
   .empty p{font-size:.88rem;line-height:1.6;}
   .resp-input{width:100%;border:2px solid var(--border);border-radius:10px;padding:10px 14px;font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:600;background:var(--gray-light);color:#333;margin-top:4px;}
   .resp-input:focus{outline:none;border-color:var(--pink);background:white;}
+  .filtro-bar{display:flex;gap:6px;align-items:stretch;margin-bottom:12px;}
+  .filtro-bar .filtro-busca{flex:1;min-width:0;border:2px solid var(--border);border-radius:10px;padding:10px 12px;font-family:'Nunito',sans-serif;font-size:.88rem;font-weight:600;background:white;color:#333;}
+  .filtro-bar .filtro-busca:focus{outline:none;border-color:var(--pink);}
+  .filtro-bar .filtro-cat{border:2px solid var(--border);border-radius:10px;padding:0 8px;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:700;background:white;color:#333;cursor:pointer;max-width:130px;}
+  .filtro-bar .filtro-cat:focus{outline:none;border-color:var(--pink);}
+  .filtro-bar .filtro-clear{border:2px solid var(--border);border-radius:10px;background:white;color:var(--gray);font-size:.95rem;font-weight:700;padding:0 12px;cursor:pointer;}
+  .filtro-bar .filtro-clear:hover{background:var(--gray-light);}
+  .filtro-vazio{text-align:center;padding:24px 12px;color:var(--gray);font-size:.85rem;font-weight:600;}
 </style>
 </head>
 <body>
@@ -134,7 +142,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.5.1</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.7.0</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -190,6 +198,19 @@
         <button class="loja-btn" id="blc2" onclick="selLoja(2,'c')"><div class="li">🏬</div><div class="ln" id="lnc2">Iguatemi</div></button>
         <button class="loja-btn" id="blc3" onclick="selLoja(3,'c')"><div class="li">🏗️</div><div class="ln" id="lnc3">Carapicuíba</div></button>
       </div>
+      <div class="filtro-bar">
+        <input type="text" class="filtro-busca" id="busca-consumo" placeholder="🔍 Buscar item..." oninput="aplicarFiltroBusca('consumo')">
+        <select class="filtro-cat" id="cat-consumo" onchange="aplicarFiltroBusca('consumo')">
+          <option value="">Todas</option>
+          <option value="alimentos">🍓 Alimentos</option>
+          <option value="bebidas">🥤 Bebidas</option>
+          <option value="caldas">🫙 Caldas</option>
+          <option value="insumos">📦 Insumos</option>
+          <option value="limpeza">🧹 Limpeza</option>
+          <option value="mimos">🎀 Mimos</option>
+        </select>
+        <button class="filtro-clear" onclick="limparFiltro('consumo')" title="Limpar filtros">✕</button>
+      </div>
       <div id="consumo-lista"></div>
       <button class="btn btn-pink" id="btn-sv-cons" onclick="salvarConsumo()">✅ Salvar Consumo do Dia</button>
     </div>
@@ -207,6 +228,19 @@
         <button class="loja-btn" id="bli2" onclick="selLoja(2,'i')"><div class="li">🏬</div><div class="ln" id="lni2">Iguatemi</div></button>
         <button class="loja-btn" id="bli3" onclick="selLoja(3,'i')"><div class="li">🏗️</div><div class="ln" id="lni3">Carapicuíba</div></button>
       </div>
+      <div class="filtro-bar">
+        <input type="text" class="filtro-busca" id="busca-inv" placeholder="🔍 Buscar item..." oninput="aplicarFiltroBusca('inv')">
+        <select class="filtro-cat" id="cat-inv" onchange="aplicarFiltroBusca('inv')">
+          <option value="">Todas</option>
+          <option value="alimentos">🍓 Alimentos</option>
+          <option value="bebidas">🥤 Bebidas</option>
+          <option value="caldas">🫙 Caldas</option>
+          <option value="insumos">📦 Insumos</option>
+          <option value="limpeza">🧹 Limpeza</option>
+          <option value="mimos">🎀 Mimos</option>
+        </select>
+        <button class="filtro-clear" onclick="limparFiltro('inv')" title="Limpar filtros">✕</button>
+      </div>
       <div id="inv-lista"></div>
       <button class="btn btn-purple" id="btn-sv-inv" onclick="salvarInventario()">📋 Salvar Inventário</button>
     </div>
@@ -218,12 +252,29 @@
         <button class="loja-btn" id="blp2" onclick="selLoja(2,'p')"><div class="li">🏬</div><div class="ln" id="lnp2">Iguatemi</div></button>
         <button class="loja-btn" id="blp3" onclick="selLoja(3,'p')"><div class="li">🏗️</div><div class="ln" id="lnp3">Carapicuíba</div></button>
       </div>
+      <div class="filtro-bar">
+        <input type="text" class="filtro-busca" id="busca-proj" placeholder="🔍 Buscar item..." oninput="aplicarFiltroBusca('proj')">
+        <select class="filtro-cat" id="cat-proj" onchange="aplicarFiltroBusca('proj')">
+          <option value="">Todas</option>
+          <option value="alimentos">🍓 Alimentos</option>
+          <option value="bebidas">🥤 Bebidas</option>
+          <option value="caldas">🫙 Caldas</option>
+          <option value="insumos">📦 Insumos</option>
+          <option value="limpeza">🧹 Limpeza</option>
+          <option value="mimos">🎀 Mimos</option>
+        </select>
+        <button class="filtro-clear" onclick="limparFiltro('proj')" title="Limpar filtros">✕</button>
+      </div>
       <div id="proj-lista"></div>
     </div>
 
     <div id="sec-compras" class="section">
       <div class="rel-hdr" style="background:linear-gradient(135deg,var(--pink),#ffd6e4);"><h2>🛒 Lista de Compras</h2><p id="compras-periodo">próximos 7 dias</p></div>
       <div id="compras-chips" class="chips"></div>
+      <div class="filtro-bar">
+        <input type="text" class="filtro-busca" id="busca-compras" placeholder="🔍 Buscar item..." oninput="aplicarFiltroBusca('compras')">
+        <button class="filtro-clear" onclick="limparFiltro('compras')" title="Limpar filtros">✕</button>
+      </div>
       <div id="compras-lista"></div>
       <div style="display:flex;gap:10px;margin-bottom:10px">
         <button class="btn btn-outline" onclick="gerarCompras()" style="margin-bottom:0">🔄 Atualizar</button>
@@ -563,6 +614,19 @@
         <button class="loja-btn" id="ble2" onclick="selLoja(2,'e')"><div class="li">🏬</div><div class="ln" id="lne2">Iguatemi</div></button>
         <button class="loja-btn" id="ble3" onclick="selLoja(3,'e')"><div class="li">🏗️</div><div class="ln" id="lne3">Carapicuíba</div></button>
       </div>
+      <div class="filtro-bar">
+        <input type="text" class="filtro-busca" id="busca-ent" placeholder="🔍 Buscar item..." oninput="aplicarFiltroBusca('ent')">
+        <select class="filtro-cat" id="cat-ent" onchange="aplicarFiltroBusca('ent')">
+          <option value="">Todas</option>
+          <option value="alimentos">🍓 Alimentos</option>
+          <option value="bebidas">🥤 Bebidas</option>
+          <option value="caldas">🫙 Caldas</option>
+          <option value="insumos">📦 Insumos</option>
+          <option value="limpeza">🧹 Limpeza</option>
+          <option value="mimos">🎀 Mimos</option>
+        </select>
+        <button class="filtro-clear" onclick="limparFiltro('ent')" title="Limpar filtros">✕</button>
+      </div>
       <div id="entrada-lista"></div>
       <button class="btn btn-pink" id="btn-sv-entrada" onclick="salvarEntrada()" style="background:var(--orange);box-shadow:0 4px 14px rgba(244,162,97,.4)">🛍️ Confirmar Entrada de Compra</button>
     </div>
@@ -601,16 +665,50 @@
         <div>
           <label class="field-label" style="margin-bottom:4px;">Período</label>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button class="hist-per-btn active" data-per="hoje" onclick="setHistPeriodo('hoje',this)" style="flex:1;min-width:64px;border:2px solid var(--pink);background:var(--pink);color:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">Hoje</button>
+            <button class="hist-per-btn" data-per="hoje" onclick="setHistPeriodo('hoje',this)" style="flex:1;min-width:64px;border:2px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">Hoje</button>
             <button class="hist-per-btn" data-per="7" onclick="setHistPeriodo('7',this)" style="flex:1;min-width:64px;border:2px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">7 dias</button>
             <button class="hist-per-btn" data-per="30" onclick="setHistPeriodo('30',this)" style="flex:1;min-width:64px;border:2px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">30 dias</button>
-            <button class="hist-per-btn" data-per="tudo" onclick="setHistPeriodo('tudo',this)" style="flex:1;min-width:64px;border:2px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">Tudo</button>
+            <button class="hist-per-btn active" data-per="tudo" onclick="setHistPeriodo('tudo',this)" style="flex:1;min-width:64px;border:2px solid var(--pink);background:var(--pink);color:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">Tudo</button>
           </div>
         </div>
       </div>
 
       <div id="hist-resumo" style="font-size:.78rem;color:var(--gray);text-align:center;margin:10px 0 6px;font-weight:600;"></div>
       <div id="hist-lista"></div>
+    </div>
+
+    <!-- FINANCEIRO -->
+    <div id="sec-financeiro" class="section">
+      <div id="sync-financeiro" class="sync-bar"><div class="sync-dot"></div><span>Sincronizado</span></div>
+      <div class="info-box" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
+        <strong>💰 Financeiro</strong>
+        Histórico financeiro de cada importação de relatório. Toque em um card pra ver o detalhamento completo (vendas, sabores, insumos). Em breve: custos extras (impostos, aluguel, água, luz, funcionários) e cálculo de lucro real.
+      </div>
+
+      <div class="card" style="padding:12px;">
+        <div style="margin-bottom:8px;">
+          <label class="field-label" style="margin-bottom:4px;">Loja</label>
+          <select id="fin-filtro-loja" onchange="renderFinanceiro()" style="width:100%;border:2px solid var(--border);border-radius:10px;padding:8px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:600;background:white;">
+            <option value="">Todas</option>
+            <option value="1">🏪 Cajamar</option>
+            <option value="2">🏬 Iguatemi</option>
+            <option value="3">🏗️ Carapicuíba</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label" style="margin-bottom:4px;">Período</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="fin-per-btn" data-per="hoje" onclick="setFinPeriodo('hoje',this)" style="flex:1;min-width:64px;border:2px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">Hoje</button>
+            <button class="fin-per-btn" data-per="7" onclick="setFinPeriodo('7',this)" style="flex:1;min-width:64px;border:2px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">7 dias</button>
+            <button class="fin-per-btn" data-per="30" onclick="setFinPeriodo('30',this)" style="flex:1;min-width:64px;border:2px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">30 dias</button>
+            <button class="fin-per-btn active" data-per="tudo" onclick="setFinPeriodo('tudo',this)" style="flex:1;min-width:64px;border:2px solid var(--pink);background:var(--pink);color:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">Tudo</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="fin-totalizadores" style="margin:10px 0;"></div>
+      <div id="fin-resumo" style="font-size:.78rem;color:var(--gray);text-align:center;margin:0 0 6px;font-weight:600;"></div>
+      <div id="fin-lista"></div>
     </div>
 
     <!-- MODAL EDITAR LANÇAMENTO -->
@@ -805,7 +903,7 @@ const DEFAULT_ITEMS=[
   {id:'bob-maq',nome:'Bobina Maquininha',cat:'mimos',unidade:'unidades'},
 ];
 
-let db={items:[],inventarios:[],consumos:[],entradas:[],perdas:[],relatorios:[],minimos:{},receitas:null,usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7,diasLoja1:7,diasLoja2:7,diasLoja3:7}};
+let db={items:[],inventarios:[],consumos:[],entradas:[],perdas:[],relatorios:[],financeiro:[],minimos:{},receitas:null,usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7,diasLoja1:7,diasLoja2:7,diasLoja3:7}};
 let lojaC=1,lojaI=1,lojaP=1,lojaD=1,lojaE=1,lojaPr=1,lojaImp=1;
 let autoRefreshInterval=null;
 
@@ -827,6 +925,7 @@ async function doLogin(){
     if(!Array.isArray(db.inventarios)) db.inventarios=[];
     if(!Array.isArray(db.entradas))    db.entradas=[];
     if(!Array.isArray(db.relatorios))  db.relatorios=[];
+    if(!Array.isArray(db.financeiro))  db.financeiro=[];
     if(!Array.isArray(db.items))       db.items=[];
     if(!db.receitas)db.receitas=null;
   }
@@ -885,6 +984,7 @@ function renderTabs(){
     {id:'compras',    label:'🛒 Compras',       adminOnly:true},
     {id:'entradas',   label:'🛍️ Entradas',      adminOnly:true},
     {id:'historico',  label:'📜 Histórico',     adminOnly:true},
+    {id:'financeiro', label:'💰 Financeiro',    adminOnly:true},
     {id:'config',     label:'⚙️ Config',        adminOnly:true},
   ];
   const visible=allTabs.filter(t=>isAdmin||!t.adminOnly);
@@ -931,6 +1031,7 @@ async function carregarDados(){
     if(!Array.isArray(db.inventarios)) db.inventarios=[];
     if(!Array.isArray(db.entradas))    db.entradas=[];
     if(!Array.isArray(db.relatorios))  db.relatorios=[];
+    if(!Array.isArray(db.financeiro))  db.financeiro=[];
     // Firebase tem prioridade — DEFAULT só preenche usuários ausentes
     if(usuariosSalvos){
       db.usuarios = {...DEFAULT_USERS};
@@ -962,6 +1063,7 @@ async function atualizarDados(forcado=false){
     if(!Array.isArray(db.inventarios)) db.inventarios=[];
     if(!Array.isArray(db.entradas))    db.entradas=[];
     if(!Array.isArray(db.relatorios))  db.relatorios=[];
+    if(!Array.isArray(db.financeiro))  db.financeiro=[];
     if(!Array.isArray(db.items))       db.items=[];
   }
   const ud=await window.firebaseGetUsers();
@@ -1009,6 +1111,7 @@ function showTab(name,btn){
   if(name==='divergencia')renderDivergencia();
   if(name==='entradas')renderEntradas();
   if(name==='historico')renderHistorico();
+  if(name==='financeiro')renderFinanceiro();
   if(name==='config'){
     // Recarrega usuários do Firebase antes de renderizar
     window.firebaseGetUsers().catch(()=>null).then(ud=>{
@@ -1085,13 +1188,14 @@ function renderConsumo(){
   const cats=['alimentos','caldas','insumos','bebidas','limpeza','mimos'];
   document.getElementById('consumo-lista').innerHTML=cats.map(cat=>{
     const its=itensDaCat(cat).filter(i=>permiteConsumo(i));if(!its.length)return'';
-    return`<div class="card"><div class="card-title"><span>${CAT_ICONS[cat]}</span>${CAT_LABELS[cat]}</div>
+    return`<div class="card" data-cat="${cat}"><div class="card-title"><span>${CAT_ICONS[cat]}</span>${CAT_LABELS[cat]}</div>
       <div class="row-hdr"><div class="rh-name">Item</div><div class="rh-col">Usado hoje</div></div>
       ${its.map(item=>{const r=db.consumos.find(c=>c.data===dt&&c.loja==lojaC&&c.itemId===item.id);
-        return`<div class="item-row"><div class="item-info"><div class="item-name">${item.nome}</div><div class="item-unit">${item.unidade}</div></div>
+        return`<div class="item-row" data-nome="${item.nome.toLowerCase()}"><div class="item-info"><div class="item-name">${item.nome}</div><div class="item-unit">${item.unidade}</div></div>
           <div><input class="qty-input" type="number" min="0" step="1" id="con-${item.id}" placeholder="0" value="${r?r.qty:''}"></div></div>`;
       }).join('')}</div>`;
   }).join('');
+  aplicarFiltroBusca('consumo');
 }
 
 async function salvarConsumo(){
@@ -1138,10 +1242,11 @@ function renderInv(){
   const saved={};db.inventarios.filter(r=>r.data===dt&&r.loja==lojaI).forEach(r=>saved[r.itemId]=r.qty);
   document.getElementById('inv-lista').innerHTML=cats().map(cat=>{
     const its=itensDaCat(cat);if(!its.length)return'';
-    return`<div class="card"><div class="card-title"><span>${CAT_ICONS[cat]}</span>${CAT_LABELS[cat]}</div>
-      ${its.map(item=>`<div class="item-row"><div class="item-info"><div class="item-name">${item.nome}</div><div class="item-unit">${item.unidade}</div></div>
+    return`<div class="card" data-cat="${cat}"><div class="card-title"><span>${CAT_ICONS[cat]}</span>${CAT_LABELS[cat]}</div>
+      ${its.map(item=>`<div class="item-row" data-nome="${item.nome.toLowerCase()}"><div class="item-info"><div class="item-name">${item.nome}</div><div class="item-unit">${item.unidade}</div></div>
         <div><input class="qty-input" type="number" min="0" step="1" id="inv-${item.id}" placeholder="0" value="${saved[item.id]??''}"></div></div>`).join('')}</div>`;
   }).join('');
+  aplicarFiltroBusca('inv');
 }
 
 async function salvarInventario(){
@@ -1173,7 +1278,7 @@ function renderProjetado(){
   let html=`<div class="info-box" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534;">Base: inventário de <strong>${fmtDate(dataBase)}</strong> com consumo descontado até hoje.</div>`;
   cats().forEach(cat=>{
     const its=itensDaCat(cat).filter(i=>proj[i.id]!==null);if(!its.length)return;
-    html+=`<div class="card"><div class="card-title"><span>${CAT_ICONS[cat]}</span>${CAT_LABELS[cat]}</div>
+    html+=`<div class="card" data-cat="${cat}"><div class="card-title"><span>${CAT_ICONS[cat]}</span>${CAT_LABELS[cat]}</div>
       <div class="row-hdr"><div class="rh-name">Item</div><div class="rh-col">Qtd.</div><div class="rh-col">Status</div></div>`;
     its.forEach(item=>{
       const q=proj[item.id]; const min=db.minimos[item.id]||0;
@@ -1183,7 +1288,7 @@ function renderProjetado(){
           ? `<span class="badge b-low">Baixo</span>`
           : `<span class="badge b-ok">OK</span>`;
       const color = q<=0?'var(--red)':min>0&&q<min?'var(--orange)':'var(--teal-dark)';
-      html+=`<div class="proj-row">
+      html+=`<div class="proj-row" data-nome="${item.nome.toLowerCase()}">
         <div class="proj-name">${item.nome}</div>
         <div class="proj-col" style="color:${color};font-weight:800">${fmtQ(q)}<br><span style="font-size:.62rem;color:var(--gray);font-weight:400">${item.unidade}</span></div>
         <div class="proj-col">${badge}</div>
@@ -1192,6 +1297,7 @@ function renderProjetado(){
     html+=`</div>`;
   });
   container.innerHTML=html;
+  aplicarFiltroBusca('proj');
 }
 
 // Definição dos copos de perda
@@ -1316,15 +1422,16 @@ function renderEntradas(){
   const cats=[...new Set(db.items.map(i=>i.cat))];
   document.getElementById('entrada-lista').innerHTML=cats.map(cat=>{
     const its=db.items.filter(i=>i.cat===cat);if(!its.length)return'';
-    return`<div class="card"><div class="card-title"><span>${CAT_ICONS[cat]}</span>${CAT_LABELS[cat]}</div>
+    return`<div class="card" data-cat="${cat}"><div class="card-title"><span>${CAT_ICONS[cat]}</span>${CAT_LABELS[cat]}</div>
       <div class="row-hdr"><div class="rh-name">Item</div><div class="rh-col">Qtd. comprada</div></div>
       ${its.map(item=>{
         const prev=db.entradas.filter(e=>e.data===dt&&e.loja==lojaE&&e.itemId===item.id).reduce((s,e)=>s+e.qty,0);
-        return`<div class="item-row"><div class="item-info"><div class="item-name">${item.nome}</div><div class="item-unit">${item.unidade}</div></div>
+        return`<div class="item-row" data-nome="${item.nome.toLowerCase()}"><div class="item-info"><div class="item-name">${item.nome}</div><div class="item-unit">${item.unidade}</div></div>
           <div><input class="qty-input" type="number" min="0" step="1" id="ent-${item.id}" placeholder="0" value="${prev||''}">
           <div style="font-size:.65rem;color:var(--gray);text-align:center">${item.unidade}</div></div></div>`;
       }).join('')}</div>`;
   }).join('');
+  aplicarFiltroBusca('ent');
 }
 
 async function salvarEntrada(){
@@ -1398,7 +1505,7 @@ function gerarCompras(){
         const ci=its.filter(x=>x.item.cat===cat); if(!ci.length) return;
         html+=`<div style="font-size:.74rem;font-weight:700;color:var(--gray);margin:8px 0 3px">${CAT_ICONS[cat]} ${CAT_LABELS[cat]}</div>`;
         ci.forEach(x=>{
-          html+=`<div class="proj-row">
+          html+=`<div class="proj-row" data-nome="${x.item.nome.toLowerCase()}">
             <div class="proj-name">${x.item.nome}<br><span style="font-size:.66rem;color:var(--gray)">${x.item.unidade}</span></div>
             <div class="proj-col" style="color:var(--red);font-weight:800">${fmtQ(x.est)}</div>
             <div class="proj-col" style="color:var(--gray)">${fmtQ(x.min)}</div>
@@ -1421,7 +1528,7 @@ function gerarCompras(){
           <div class="rh-col">Mínimo</div>
         </div>`;
       its.forEach(x=>{
-        html+=`<div class="proj-row">
+        html+=`<div class="proj-row" data-nome="${x.item.nome.toLowerCase()}">
           <div class="proj-name">${x.item.nome}<br><span style="font-size:.66rem;color:var(--gray)">${x.item.unidade}</span></div>
           <div class="proj-col" style="color:var(--teal-dark);font-weight:800">${fmtQ(x.est)}</div>
           <div class="proj-col" style="color:var(--gray)">${fmtQ(x.min)}</div>
@@ -1432,6 +1539,7 @@ function gerarCompras(){
   }
 
   document.getElementById('compras-lista').innerHTML=html;
+  aplicarFiltroBusca('compras');
 }
 
 function renderDivergencia(){ document.getElementById('div-lista').innerHTML='<div class="empty">Selecione um período.</div>'; }
@@ -1916,12 +2024,21 @@ function processarRelatorio(){
   document.getElementById('importar-preview').innerHTML = previewHtml;
   document.getElementById('btn-confirmar-importar').style.display = '';
 
-  importacaoPendente = { resultado, dataRelatorio, insumosList };
+  importacaoPendente = {
+    resultado, dataRelatorio, insumosList,
+    saboresList, totalFaturado, totalCustoSabores,
+    totaisPorTamanho, totalGastoGeral,
+    lojaImp,
+  };
 }
 
 async function confirmarImportacao(){
   if(!importacaoPendente){ showToast('⚠️ Processe o relatório primeiro!'); return; }
-  const {resultado, dataRelatorio, insumosList} = importacaoPendente;
+  const {
+    resultado, dataRelatorio, insumosList,
+    saboresList, totalFaturado, totalCustoSabores,
+    totaisPorTamanho, totalGastoGeral,
+  } = importacaoPendente;
 
   if(!confirm(`Confirma o lançamento do relatório de ${nomeLoja(lojaImp)} em ${fmtDate(dataRelatorio)}?`)) return;
 
@@ -1959,6 +2076,41 @@ async function confirmarImportacao(){
     if(!jaExiste){
       db.relatorios.push({data:dataRelatorio, loja:lojaImp, itemId:r.itemId, qty:r.qtd, unidade:'unidades', nome:r.nome, usuario:respImp, ts:tsImp});
     }
+  });
+
+  // ── FINANCEIRO: salva snapshot completo do preview ────────────────────────
+  if(!Array.isArray(db.financeiro)) db.financeiro=[];
+  // Remove registro anterior dessa data/loja para evitar duplicação em reimportação
+  db.financeiro = db.financeiro.filter(x=>!(x.data===dataRelatorio&&x.loja==lojaImp));
+  db.financeiro.push({
+    id: `fin_${dataRelatorio}_${lojaImp}`,
+    data: dataRelatorio,
+    loja: lojaImp,
+    ts: tsImp,
+    usuario: respImp,
+    porTamanho: {...totaisPorTamanho},
+    sabores: (saboresList||[]).map(s=>({
+      nomeProd: s.nomeProd,
+      tamanho: s.tamanho,
+      qtd: s.qtd,
+      subtotal: s.subtotal,
+      custoInsumos: s.custoInsumos||0,
+    })),
+    insumos: (insumosList||[]).map(ing=>({
+      itemId: ing.itemId,
+      nome: ing.nome,
+      qty: ing.qty,
+      unidade: ing.unidade||'',
+      unidadePrim: ing.unidadePrim||'',
+      valorEmbalagem: ing.valorEmbalagem||0,
+      qtdPorUnidade: ing.qtdPorUnidade||0,
+      temFracao: !!ing.temFracao,
+      custoPorUnit: ing.custoPorUnit||0,
+    })),
+    totalFaturado: totalFaturado||0,
+    totalCustoSabores: totalCustoSabores||0,
+    totalGastoInsumos: totalGastoGeral||0,
+    custosExtras: [],  // futuro: impostos, aluguel, água, luz, funcionários...
   });
 
   const ok = await saveCloud('consumo');
@@ -2849,10 +3001,84 @@ async function salvarUnidades(){
 let _resetLoja = 0; // 0=todas
 
 // ════════════════════════════════════════════════════════════
+//  FILTRO DE BUSCA (multi-aba)
+// ════════════════════════════════════════════════════════════
+// Mapeia prefixo da aba -> seletor do container que tem os cards/itens.
+const FILTRO_CONTAINERS = {
+  'consumo': '#consumo-lista',
+  'inv':     '#inv-lista',
+  'proj':    '#proj-lista',
+  'ent':     '#entrada-lista',
+  'compras': '#compras-lista',
+};
+
+function aplicarFiltroBusca(prefixo){
+  const containerSel = FILTRO_CONTAINERS[prefixo];
+  if(!containerSel) return;
+  const container = document.querySelector(containerSel);
+  if(!container) return;
+
+  const inputBusca = document.getElementById('busca-'+prefixo);
+  const selectCat = document.getElementById('cat-'+prefixo);
+  const termo = (inputBusca?.value||'').trim().toLowerCase();
+  const cat = selectCat?.value||'';
+
+  // Remove "vazio" anterior se existir
+  const aviso = container.querySelector('.filtro-vazio');
+  if(aviso) aviso.remove();
+
+  let totalVisivel = 0;
+
+  container.querySelectorAll('.card').forEach(card=>{
+    const cardCat = card.getAttribute('data-cat')||'';
+    // Se o filtro de categoria está ativo e o card tem data-cat (compras não tem),
+    // esconde se não bater
+    let cardEscondidoPorCat = false;
+    if(cat && cardCat && cardCat !== cat){
+      cardEscondidoPorCat = true;
+    }
+
+    let visiveisNoCard = 0;
+    card.querySelectorAll('[data-nome]').forEach(row=>{
+      const nome = row.getAttribute('data-nome')||'';
+      let visivel = true;
+      if(termo && !nome.includes(termo)) visivel = false;
+      if(cardEscondidoPorCat) visivel = false;
+      row.style.display = visivel ? '' : 'none';
+      if(visivel) visiveisNoCard++;
+    });
+
+    // Esconde o card inteiro se não tiver nada visível dentro
+    if(visiveisNoCard === 0 && (termo || cat)){
+      card.style.display = 'none';
+    } else {
+      card.style.display = '';
+      totalVisivel += visiveisNoCard;
+    }
+  });
+
+  // Se não tem item visível e há filtro ativo, mostra aviso
+  if(totalVisivel === 0 && (termo || cat)){
+    const div = document.createElement('div');
+    div.className = 'filtro-vazio';
+    div.innerHTML = '🔍 Nenhum item encontrado.<br><span style="font-size:.78rem;font-weight:500;">Tente outro termo ou categoria.</span>';
+    container.appendChild(div);
+  }
+}
+
+function limparFiltro(prefixo){
+  const inputBusca = document.getElementById('busca-'+prefixo);
+  const selectCat = document.getElementById('cat-'+prefixo);
+  if(inputBusca) inputBusca.value = '';
+  if(selectCat) selectCat.value = '';
+  aplicarFiltroBusca(prefixo);
+}
+
+// ════════════════════════════════════════════════════════════
 //  HISTÓRICO
 // ════════════════════════════════════════════════════════════
 
-let histPeriodo = 'hoje'; // hoje | 7 | 30 | tudo
+let histPeriodo = 'tudo'; // hoje | 7 | 30 | tudo
 let editLancRef = null;   // {tipo, idx, registro}
 
 function setHistPeriodo(p, btn){
@@ -2947,7 +3173,10 @@ function _coletarHistorico(){
     itens.push({tipo:'entrada', tipoLabel:'Entrada', icone:'🛍️', cor:'#f59e0b', idx, registro:r});
   });
   (db.relatorios||[]).forEach((r,idx)=>{
-    if(!passaFiltroData(r.data)) return;
+    // Importar: filtra pelo ts (data em que foi importado), não pela data do relatório.
+    // Assim, se você importa hoje um relatório de ontem, ele aparece em "Hoje".
+    const dataParaFiltro = r.ts ? r.ts.slice(0,10) : r.data;
+    if(!passaFiltroData(dataParaFiltro)) return;
     itens.push({tipo:'importar', tipoLabel:'Importar', icone:'📥', cor:'#8b5cf6', idx, registro:r});
   });
 
@@ -2989,7 +3218,14 @@ function renderHistorico(){
   // Agrupa por dia (data do lançamento)
   const grupos = {};
   itens.forEach(it=>{
-    const k = it.registro.data || 'sem-data';
+    // Agrupamento: Importar usa data do ts (quando foi importado).
+    // Outros tipos usam r.data (o dia do lançamento).
+    let k;
+    if(it.tipo === 'importar' && it.registro.ts){
+      k = it.registro.ts.slice(0,10);
+    } else {
+      k = it.registro.data || 'sem-data';
+    }
     if(!grupos[k]) grupos[k] = [];
     grupos[k].push(it);
   });
@@ -3028,6 +3264,12 @@ function renderHistorico(){
       html += `</div>`;
       html += `<div style="font-size:.75rem;color:var(--gray);margin-top:3px;line-height:1.5;">`;
       html += `<strong style="color:#222;">${r.qty} ${unidade}</strong>${sabor} · ${lojaIc} ${lojaNome}`;
+      // Pra Importar, mostra a data do relatório original (Degust) — útil quando
+      // ela difere da data em que a importação foi feita.
+      if(it.tipo === 'importar' && r.data){
+        const [yy,mm,dd] = r.data.split('-');
+        if(yy) html += ` · 📄 Relatório de ${dd}/${mm}/${yy}`;
+      }
       html += `</div>`;
       html += `<div style="font-size:.7rem;color:var(--gray);margin-top:2px;">`;
       html += `👤 ${usuario}${horaSalvo?` · 🕐 ${horaSalvo}`:''}`;
@@ -3139,6 +3381,273 @@ async function apagarLancamento(tipo, idx){
   if(ok){
     showToast('🗑️ Lançamento apagado');
     renderHistorico();
+  } else {
+    showToast('⚠️ Erro ao apagar');
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  FINANCEIRO
+// ════════════════════════════════════════════════════════════
+
+let finPeriodo = 'tudo'; // hoje | 7 | 30 | tudo
+let finExpandidos = {};  // {id: true} controla quais cards estão abertos
+
+function setFinPeriodo(p, btn){
+  finPeriodo = p;
+  document.querySelectorAll('.fin-per-btn').forEach(b=>{
+    b.classList.remove('active');
+    b.style.background = 'white';
+    b.style.color = '#333';
+    b.style.borderColor = 'var(--border)';
+  });
+  if(btn){
+    btn.classList.add('active');
+    btn.style.background = 'var(--pink)';
+    btn.style.color = 'white';
+    btn.style.borderColor = 'var(--pink)';
+  }
+  renderFinanceiro();
+}
+
+function _finDataLimite(){
+  if(finPeriodo === 'tudo') return null;
+  const hj = new Date();
+  hj.setHours(0,0,0,0);
+  let dias = 0;
+  if(finPeriodo === 'hoje') dias = 0;
+  else if(finPeriodo === '7') dias = 6;
+  else if(finPeriodo === '30') dias = 29;
+  hj.setDate(hj.getDate() - dias);
+  const y = hj.getFullYear();
+  const m = String(hj.getMonth()+1).padStart(2,'0');
+  const d = String(hj.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
+
+function _fmtBRL(v){
+  return (Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function renderFinanceiro(){
+  const lista = document.getElementById('fin-lista');
+  const resumo = document.getElementById('fin-resumo');
+  const tots = document.getElementById('fin-totalizadores');
+  if(!lista) return;
+
+  const filtroLoja = document.getElementById('fin-filtro-loja').value;
+  const limite = _finDataLimite();
+
+  let registros = (db.financeiro||[]).slice();
+
+  // Filtro de período usa a data do relatório (r.data) — pra Financeiro faz mais
+  // sentido olhar pelo dia do faturamento, não pelo dia em que foi importado
+  if(limite) registros = registros.filter(r => (r.data||'') >= limite);
+  if(filtroLoja) registros = registros.filter(r => String(r.loja) === String(filtroLoja));
+
+  // Ordena: data desc (mais recente no topo); se mesma data, ordena por loja
+  registros.sort((a,b)=>{
+    const c = (b.data||'').localeCompare(a.data||'');
+    if(c!==0) return c;
+    return Number(a.loja) - Number(b.loja);
+  });
+
+  // Totalizadores do período filtrado
+  const totFat = registros.reduce((s,r)=> s + (r.totalFaturado||0), 0);
+  const totCustoIns = registros.reduce((s,r)=> s + (r.totalGastoInsumos||0), 0);
+  const totDif = totFat - totCustoIns;
+  const totQtd = registros.reduce((s,r)=> s + Object.values(r.porTamanho||{}).reduce((a,b)=>a+(b||0),0), 0);
+
+  if(registros.length === 0){
+    tots.innerHTML = '';
+    resumo.textContent = 'Nenhum registro financeiro no período/filtros.';
+    lista.innerHTML = '';
+    return;
+  }
+
+  resumo.textContent = `${registros.length} registro${registros.length===1?'':'s'} · período somado abaixo`;
+  tots.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:10px;text-align:center;">
+        <div style="font-size:.65rem;color:#166534;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">💰 Faturado</div>
+        <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#166534;margin-top:2px;">R$ ${_fmtBRL(totFat)}</div>
+      </div>
+      <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px;text-align:center;">
+        <div style="font-size:.65rem;color:#9a3412;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">📦 Custo Insumos</div>
+        <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#9a3412;margin-top:2px;">R$ ${_fmtBRL(totCustoIns)}</div>
+      </div>
+      <div style="background:${totDif>=0?'#eff6ff':'#fef2f2'};border:1px solid ${totDif>=0?'#bfdbfe':'#fecaca'};border-radius:12px;padding:10px;text-align:center;">
+        <div style="font-size:.65rem;color:${totDif>=0?'#1e40af':'#991b1b'};font-weight:700;text-transform:uppercase;letter-spacing:.5px;">📊 Diferença</div>
+        <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:${totDif>=0?'#1e40af':'#991b1b'};margin-top:2px;">R$ ${_fmtBRL(totDif)}</div>
+      </div>
+      <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:12px;padding:10px;text-align:center;">
+        <div style="font-size:.65rem;color:#6b21a8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">🥤 Copos</div>
+        <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#6b21a8;margin-top:2px;">${totQtd}</div>
+      </div>
+    </div>`;
+
+  // Lista de cards (um por importação)
+  let html = '';
+  registros.forEach(r => {
+    const dif = (r.totalFaturado||0) - (r.totalGastoInsumos||0);
+    const expandido = !!finExpandidos[r.id];
+    const [yy,mm,dd] = (r.data||'').split('-');
+    const dataFmt = yy ? `${dd}/${mm}/${yy}` : (r.data||'—');
+    const totalCopos = Object.values(r.porTamanho||{}).reduce((a,b)=>a+(b||0),0);
+
+    html += `<div class="card" style="padding:10px 12px;margin-bottom:10px;">`;
+
+    // Header clicável
+    html += `<div onclick="toggleFinDetalhe('${r.id}')" style="cursor:pointer;display:flex;align-items:center;gap:8px;">`;
+    html += `<div style="font-size:1.1rem;flex-shrink:0;">${lojaIcon(Number(r.loja))}</div>`;
+    html += `<div style="flex:1;min-width:0;">`;
+    html += `<div style="font-size:.86rem;font-weight:800;color:#222;">${nomeLoja(Number(r.loja))} · ${dataFmt}</div>`;
+    html += `<div style="font-size:.72rem;color:var(--gray);margin-top:2px;">${totalCopos} copo${totalCopos===1?'':'s'} · 👤 ${r.usuario||'—'}</div>`;
+    html += `</div>`;
+    html += `<div style="font-size:1rem;color:var(--gray);flex-shrink:0;">${expandido?'▾':'▸'}</div>`;
+    html += `</div>`;
+
+    // Resumo financeiro sempre visível
+    html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;font-size:.72rem;text-align:center;">`;
+    html += `<div><div style="color:var(--gray);font-weight:600;">Faturado</div><div style="font-weight:800;color:#166534;font-size:.84rem;">R$ ${_fmtBRL(r.totalFaturado)}</div></div>`;
+    html += `<div><div style="color:var(--gray);font-weight:600;">Custo Ins.</div><div style="font-weight:800;color:#9a3412;font-size:.84rem;">R$ ${_fmtBRL(r.totalGastoInsumos)}</div></div>`;
+    html += `<div><div style="color:var(--gray);font-weight:600;">Diferença</div><div style="font-weight:800;color:${dif>=0?'#1e40af':'#991b1b'};font-size:.84rem;">R$ ${_fmtBRL(dif)}</div></div>`;
+    html += `</div>`;
+
+    // Detalhamento (expansível)
+    if(expandido){
+      html += _renderFinDetalhe(r);
+    }
+
+    html += `</div>`;
+  });
+
+  lista.innerHTML = html;
+}
+
+function _renderFinDetalhe(r){
+  let html = `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);">`;
+
+  // Chips de resumo por tamanho
+  const chips = Object.entries(r.porTamanho||{})
+    .filter(([t,q])=> q>0)
+    .map(([t,q])=> `<span style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:8px;padding:4px 10px;font-size:.75rem;font-weight:700;color:#6b21a8;">${t}ml: <strong>${q}</strong></span>`)
+    .join('');
+  if(chips){
+    html += `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">${chips}</div>`;
+  }
+
+  // Tabela de sabores
+  const sabores = (r.sabores||[]).slice().sort((a,b)=> (a.tamanho||0) - (b.tamanho||0) || (a.nomeProd||'').localeCompare(b.nomeProd||'','pt-BR'));
+  if(sabores.length){
+    const totalQtd = sabores.reduce((s,x)=>s+(x.qtd||0),0);
+    const totalFat = sabores.reduce((s,x)=>s+(x.subtotal||0),0);
+    const totalCusto = sabores.reduce((s,x)=>s+(x.custoInsumos||0),0);
+    html += `
+      <div style="margin-bottom:14px">
+        <div style="font-size:.74rem;font-weight:800;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">🥤 Vendas por sabor</div>
+        <div style="background:white;border-radius:10px;border:1px solid var(--border);overflow-x:auto;">
+          <div style="min-width:480px;">
+          <div style="display:grid;grid-template-columns:1fr 50px 90px 90px 90px;background:#f9fafb;padding:6px 10px;font-size:.65rem;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">
+            <span>Sabor</span><span style="text-align:center">Qtd</span><span style="text-align:right">Faturado</span><span style="text-align:right">Custo</span><span style="text-align:right">Difer.</span>
+          </div>`;
+    sabores.forEach((s,idx)=>{
+      const bg = idx%2===0 ? 'white' : '#fafafa';
+      const dif = (s.subtotal||0) > 0 && (s.custoInsumos||0) > 0 ? (s.subtotal - s.custoInsumos) : null;
+      const difCell = dif !== null
+        ? `<span style="color:${dif>=0?'var(--teal-dark)':'var(--red)'}">R$&nbsp;${_fmtBRL(dif)}</span>`
+        : '<span style="color:#d1d5db">—</span>';
+      const custoCell = (s.custoInsumos||0) > 0
+        ? `R$&nbsp;${_fmtBRL(s.custoInsumos)}`
+        : '<span style="color:#d1d5db">—</span>';
+      html += `<div style="display:grid;grid-template-columns:1fr 50px 90px 90px 90px;padding:5px 10px;font-size:.72rem;background:${bg};border-bottom:1px solid #f3f4f6;align-items:center;">
+        <span style="font-weight:700">${s.nomeProd}<br><span style="font-size:.62rem;color:var(--gray);font-weight:400">${s.tamanho}ml</span></span>
+        <span style="text-align:center;font-weight:800;color:#0369a1">${s.qtd}</span>
+        <span style="text-align:right">R$&nbsp;${_fmtBRL(s.subtotal)}</span>
+        <span style="text-align:right">${custoCell}</span>
+        <span style="text-align:right">${difCell}</span>
+      </div>`;
+    });
+    html += `<div style="display:grid;grid-template-columns:1fr 50px 90px 90px 90px;padding:7px 10px;background:#f0fdf4;border-top:2px solid #bbf7d0;font-size:.74rem;font-weight:800;">
+        <span style="color:#166534">Total</span>
+        <span style="text-align:center;color:#0369a1">${totalQtd}</span>
+        <span style="text-align:right;color:#166534">R$&nbsp;${_fmtBRL(totalFat)}</span>
+        <span style="text-align:right;color:#c9345a">${totalCusto>0?'R$&nbsp;'+_fmtBRL(totalCusto):'—'}</span>
+        <span style="text-align:right;color:${(totalFat-totalCusto)>=0?'var(--teal-dark)':'var(--red)'}">${totalCusto>0?'R$&nbsp;'+_fmtBRL(totalFat-totalCusto):'—'}</span>
+      </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Tabela de insumos
+  const insumos = (r.insumos||[]).slice().sort((a,b)=> (a.nome||'').localeCompare(b.nome||'','pt-BR'));
+  if(insumos.length){
+    html += `
+      <div style="margin-bottom:14px">
+        <div style="font-size:.74rem;font-weight:800;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">📦 Insumos consumidos</div>
+        <div style="background:white;border-radius:10px;border:1px solid var(--border);overflow-x:auto;">
+          <div style="min-width:480px;">
+          <div style="display:grid;grid-template-columns:1fr 80px 110px 100px;background:#f9fafb;padding:6px 10px;font-size:.65rem;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">
+            <span>Insumo</span><span style="text-align:center">Qtd</span><span style="text-align:center">Custo/un.</span><span style="text-align:right">Total</span>
+          </div>`;
+    insumos.forEach((ing,idx)=>{
+      const total = (ing.qty||0) * (ing.custoPorUnit||0);
+      const bg = idx%2===0 ? 'white' : '#fafafa';
+      const explicacao = ing.temFracao
+        ? `<span style="font-size:.6rem;color:#9ca3af;display:block">${ing.unidadePrim} R$&nbsp;${_fmtBRL(ing.valorEmbalagem)} ÷ ${fmtQ(ing.qtdPorUnidade)}${ing.unidade}</span>`
+        : '';
+      const custoCell = (ing.custoPorUnit||0) > 0
+        ? `R$&nbsp;${_fmtBRL(ing.custoPorUnit)}/${ing.unidade||'un'}`
+        : '<span style="color:#d1d5db">—</span>';
+      const totalCell = (ing.custoPorUnit||0) > 0
+        ? `<strong style="color:#c9345a">R$&nbsp;${_fmtBRL(total)}</strong>`
+        : '<span style="color:#d1d5db">—</span>';
+      html += `<div style="display:grid;grid-template-columns:1fr 80px 110px 100px;padding:6px 10px;font-size:.74rem;background:${bg};border-bottom:1px solid #f3f4f6;align-items:center;">
+        <span style="font-weight:600">${ing.nome}${explicacao}</span>
+        <span style="text-align:center;font-weight:700;color:#0369a1">${fmtQ(ing.qty)} ${ing.unidade}</span>
+        <span style="text-align:center;font-size:.7rem;color:#6b7280">${custoCell}</span>
+        <span style="text-align:right">${totalCell}</span>
+      </div>`;
+    });
+    if((r.totalGastoInsumos||0) > 0){
+      html += `<div style="display:grid;grid-template-columns:1fr 80px 110px 100px;padding:7px 10px;background:#fff7ed;border-top:2px solid #fed7aa;font-size:.76rem;font-weight:800;">
+          <span style="color:#92400e">💰 Total do dia</span>
+          <span></span><span></span>
+          <span style="text-align:right;color:#c9345a;font-size:.84rem;">R$&nbsp;${_fmtBRL(r.totalGastoInsumos)}</span>
+        </div>`;
+    }
+    html += `</div></div></div>`;
+  }
+
+  // Botão apagar
+  html += `<div style="display:flex;justify-content:flex-end;margin-top:8px;">
+    <button onclick="apagarFinanceiro('${r.id}')" style="background:#fee2e2;color:#991b1b;border:none;border-radius:8px;padding:7px 14px;font-size:.78rem;font-weight:700;cursor:pointer;">🗑️ Apagar registro</button>
+  </div>`;
+
+  html += `</div>`;
+  return html;
+}
+
+function toggleFinDetalhe(id){
+  finExpandidos[id] = !finExpandidos[id];
+  renderFinanceiro();
+}
+
+async function apagarFinanceiro(id){
+  const reg = (db.financeiro||[]).find(r=>r.id===id);
+  if(!reg){ showToast('⚠️ Registro não encontrado'); return; }
+  const [yy,mm,dd] = (reg.data||'').split('-');
+  const dataFmt = yy ? `${dd}/${mm}/${yy}` : reg.data;
+  const conf = window.confirm(`Apagar este registro financeiro?\n\n${nomeLoja(Number(reg.loja))} — ${dataFmt}\nFaturado: R$ ${_fmtBRL(reg.totalFaturado)}\n\nEsta ação não pode ser desfeita. Os dados de Importar (db.relatorios) NÃO são afetados.`);
+  if(!conf) return;
+
+  db.financeiro = (db.financeiro||[]).filter(r=>r.id!==id);
+  delete finExpandidos[id];
+  const ok = await saveCloud('financeiro');
+  if(ok){
+    showToast('🗑️ Registro financeiro apagado');
+    renderFinanceiro();
   } else {
     showToast('⚠️ Erro ao apagar');
   }
