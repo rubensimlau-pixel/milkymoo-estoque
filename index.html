@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.0.6</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.0.7</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -389,9 +389,15 @@
               <input type="checkbox" id="rst-tudo" style="width:18px;height:18px;accent-color:#ef476f;cursor:pointer"> 🔴 Apagar tudo acima
             </label>
           </div>
-          <div style="display:flex;gap:10px">
+          <!-- Confirmação inline (evita confirm() do browser que pode ser bloqueado) -->
+          <div id="rst-confirm-msg" style="display:none;background:#fff5f5;border:2px solid #fecaca;border-radius:12px;padding:12px 14px;font-size:.82rem;color:#991b1b;margin-bottom:12px;text-align:center"></div>
+          <div id="rst-btns-normal" style="display:flex;gap:10px">
             <button onclick="fecharModalReset()" style="flex:1;padding:12px;border:2px solid #e5e7eb;border-radius:12px;background:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:700;cursor:pointer;color:#6b7280">Cancelar</button>
             <button onclick="confirmarReset()" style="flex:1;padding:12px;border:none;border-radius:12px;background:#ef476f;color:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(239,71,111,.35)">🗑️ Apagar</button>
+          </div>
+          <div id="rst-btns-confirm" style="display:none;gap:10px">
+            <button onclick="cancelarResetFinal()" style="flex:1;padding:12px;border:2px solid #e5e7eb;border-radius:12px;background:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:700;cursor:pointer;color:#6b7280">Não, cancelar</button>
+            <button onclick="confirmarResetFinal()" style="flex:1;padding:12px;border:none;border-radius:12px;background:#991b1b;color:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:700;cursor:pointer">✅ Sim, apagar!</button>
           </div>
         </div>
       </div>
@@ -1696,6 +1702,14 @@ function abrirModalReset(){
   atualizarRadioLoja();
   // Reset border colors nos checkboxes
   document.querySelectorAll('#modal-reset label').forEach(l=>{l.style.borderColor='';l.style.background='';});
+  // Reseta estado de confirmação
+  const msgEl=document.getElementById('rst-confirm-msg');
+  if(msgEl) msgEl.style.display='none';
+  const btnsN=document.getElementById('rst-btns-normal');
+  const btnsC=document.getElementById('rst-btns-confirm');
+  if(btnsN) btnsN.style.display='flex';
+  if(btnsC) btnsC.style.display='none';
+  window._resetPendente=null;
   // Estilo inicial do radio
   document.querySelectorAll('input[name="rst-loja"]').forEach(r=>{
     r.addEventListener('change', atualizarRadioLoja);
@@ -1771,8 +1785,21 @@ async function confirmarReset(){
 
   const lojaLabel = lojaVal===0 ? 'TODAS AS LOJAS' : nomeLoja(lojaVal);
 
-  if(!confirm(`Confirma a exclusão de:\n\n• ${itens.join('\n• ')}\n\nLoja: ${lojaLabel}\n\nEsta ação é irreversível!`)){return;}
+  // Mostra confirmação inline sem usar confirm() do browser (bloqueado em alguns contextos)
+  const msgEl = document.getElementById('rst-confirm-msg');
+  if(msgEl){
+    msgEl.innerHTML = `⚠️ Apagar <strong>${itens.join(', ')}</strong> de <strong>${lojaLabel}</strong>?<br><small>Esta ação é irreversível.</small>`;
+    msgEl.style.display = '';
+    document.getElementById('rst-btns-normal').style.display = 'none';
+    document.getElementById('rst-btns-confirm').style.display = 'flex';
+    window._resetPendente = {itens,lojaVal,apagaConsumo,apagaInv,apagaEntradas,apagaHist,apagaRelatorios,lojaLabel};
+    return;
+  }
+  // Fallback: executa direto
+  await _executarReset({itens,lojaVal,apagaConsumo,apagaInv,apagaEntradas,apagaHist,apagaRelatorios,lojaLabel});
+}
 
+async function _executarReset({itens,lojaVal,apagaConsumo,apagaInv,apagaEntradas,apagaHist,apagaRelatorios,lojaLabel}){
   if(lojaVal===0){
     if(apagaConsumo) db.consumos=[];
     if(apagaInv) db.inventarios=[];
@@ -1786,15 +1813,25 @@ async function confirmarReset(){
     if(apagaHist) db.historico=db.historico.filter(h=>h.loja!=lojaVal);
     if(apagaRelatorios) db.relatorios=db.relatorios.filter(r=>r.loja!=lojaVal);
   }
-
   const ok=await cloudSet(db);
   fecharModalReset();
-  if(ok){
-    renderHistorico();
-    showToast(`🗑️ ${itens.join(', ')} de ${lojaLabel} apagado(s)!`);
-  } else {
-    showToast('⚠️ Erro ao apagar. Tente novamente.');
-  }
+  if(ok){ renderHistorico(); showToast(`🗑️ ${itens.join(', ')} de ${lojaLabel} apagado(s)!`); }
+  else showToast('⚠️ Erro ao apagar. Tente novamente.');
+}
+
+async function confirmarResetFinal(){
+  const p = window._resetPendente;
+  if(!p) return;
+  window._resetPendente = null;
+  await _executarReset(p);
+}
+
+function cancelarResetFinal(){
+  window._resetPendente = null;
+  const msgEl = document.getElementById('rst-confirm-msg');
+  if(msgEl) msgEl.style.display = 'none';
+  document.getElementById('rst-btns-normal').style.display = 'flex';
+  document.getElementById('rst-btns-confirm').style.display = 'none';
 }
 
 function abrirResetSenha(){
