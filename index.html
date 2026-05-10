@@ -149,7 +149,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.7.2</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.7.3</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -362,6 +362,11 @@
 
       <button class="btn btn-pink" onclick="processarRelatorio()" style="margin-bottom:10px">🔍 Processar Relatório</button>
 
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+        <button class="btn btn-pink" id="btn-confirmar-importar" onclick="confirmarImportacao()" style="display:none;background:#16a34a;box-shadow:0 4px 14px rgba(22,163,74,.35);flex:1;margin-bottom:0;">✅ Salvar Relatório</button>
+        <button class="btn btn-outline" id="btn-pular-fila" onclick="pularArquivoFila()" style="display:none;width:auto;padding:14px 16px;margin-bottom:0;border-color:var(--gray);color:var(--gray);">⏭️ Pular</button>
+      </div>
+
       <!-- Preview do resultado -->
       <div id="importar-preview"></div>
 
@@ -374,11 +379,6 @@
           <input type="date" id="data-confronto" style="border:2px solid var(--border);border-radius:8px;padding:8px;font-family:Nunito,sans-serif;font-size:.88rem">
           <button onclick="mostrarConfronto(document.getElementById('data-confronto').value)" class="btn btn-outline" style="margin:0;padding:8px 16px;width:auto">🔍 Confrontar</button>
         </div>
-      </div>
-
-      <div style="display:flex;gap:8px;align-items:center;">
-        <button class="btn btn-pink" id="btn-confirmar-importar" onclick="confirmarImportacao()" style="display:none;background:#16a34a;box-shadow:0 4px 14px rgba(22,163,74,.35);flex:1;margin-bottom:0;">✅ Salvar Relatório para Confronto</button>
-        <button class="btn btn-outline" id="btn-pular-fila" onclick="pularArquivoFila()" style="display:none;width:auto;padding:14px 16px;margin-bottom:0;border-color:var(--gray);color:var(--gray);">⏭️ Pular</button>
       </div>
     </div>
 
@@ -1810,10 +1810,10 @@ function processarProximoDaFila(){
   document.getElementById('txt-relatorio').value = prox.conteudo;
   atualizarBarraFila();
   processarRelatorio();
-  // Rola a tela pro preview
+  // Rola a tela pro botão Salvar
   setTimeout(()=>{
-    const prev = document.getElementById('importar-preview');
-    if(prev) prev.scrollIntoView({behavior:'smooth', block:'start'});
+    const btn = document.getElementById('btn-confirmar-importar');
+    if(btn && btn.style.display !== 'none') btn.scrollIntoView({behavior:'smooth', block:'center'});
   }, 100);
 }
 
