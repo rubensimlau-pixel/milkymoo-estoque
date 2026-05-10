@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.0.9</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.1.0</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -343,8 +343,38 @@
       <div id="hist-lista"></div>
       <button class="btn" onclick="abrirModalReset()" style="background:#ef476f;color:white;margin-top:8px;box-shadow:0 4px 14px rgba(239,71,111,.35)">🗑️ Apagar Lançamentos</button>
 
-      <!-- MODAL RESET -->
-      <div id="modal-reset" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
+
+    </div>
+
+    <div id="sec-config" class="section">
+      <div class="card">
+        <div class="card-title"><span>🏪</span>Unidades Cadastradas</div>
+        <p style="font-size:.78rem;color:var(--gray);margin-bottom:12px">Gerencie os nomes e dias de cobertura de cada unidade.</p>
+        <button class="btn btn-teal" onclick="abrirGerenciarUnidades()" style="margin-bottom:0">🏪 Gerenciar Unidades</button>
+      </div>
+      <div class="card">
+        <div class="card-title"><span>📦</span>Itens e Estoque Mínimo</div>
+        <p style="font-size:.78rem;color:var(--gray);margin-bottom:12px">Gerencie os itens do estoque, mínimos e unidades.</p>
+        <button class="btn btn-teal" onclick="abrirGerenciarItens()" style="margin-bottom:0">📦 Gerenciar Itens</button>
+      </div>
+      <div class="card">
+        <div class="card-title"><span>👥</span>Usuários</div>
+        <p style="font-size:.78rem;color:var(--gray);margin-bottom:12px">Gerencie os acessos ao sistema.</p>
+        <button class="btn btn-teal" onclick="abrirGerenciarUsuarios()" style="margin-bottom:0">👥 Gerenciar Usuários</button>
+      </div>
+      <div class="card">
+        <div class="card-title"><span>🍦</span>Sabores de Milky Shake</div>
+        <p style="font-size:.78rem;color:var(--gray);margin-bottom:12px">Gerencie os sabores cadastrados usados para calcular insumos a partir dos relatórios.</p>
+        <button onclick="abrirGerenciarSabores()" style="margin-bottom:0;width:100%;padding:11px;background:#1f2937;color:white;border:none;border-radius:12px;font-family:'Baloo 2',cursive;font-size:.9rem;font-weight:700;cursor:pointer">🍦 Gerenciar Sabores</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button onclick="gerarPDFInsumos()" style="flex:1;padding:10px;border:1.5px solid #d1d5db;border-radius:12px;background:white;color:#6b7280;font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer">📄 PDF Insumos</button>
+        <button onclick="gerarPDFSabores()" style="flex:1;padding:10px;border:1.5px solid #d1d5db;border-radius:12px;background:white;color:#6b7280;font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer">📄 PDF Sabores</button>
+      </div>
+    </div>
+
+    <!-- MODAL RESET -->
+    <div id="modal-reset" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
         <div style="background:white;border-radius:20px;padding:24px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
           <div style="font-size:2rem;text-align:center;margin-bottom:8px">🗑️</div>
           <div style="font-family:'Baloo 2',cursive;font-size:1.2rem;font-weight:800;color:#c9345a;text-align:center;margin-bottom:6px">Apagar Lançamentos</div>
@@ -404,35 +434,6 @@
           </div>
         </div>
       </div>
-    </div>
-
-    <div id="sec-config" class="section">
-      <div class="card">
-        <div class="card-title"><span>🏪</span>Unidades Cadastradas</div>
-        <p style="font-size:.78rem;color:var(--gray);margin-bottom:12px">Gerencie os nomes e dias de cobertura de cada unidade.</p>
-        <button class="btn btn-teal" onclick="abrirGerenciarUnidades()" style="margin-bottom:0">🏪 Gerenciar Unidades</button>
-      </div>
-      <div class="card">
-        <div class="card-title"><span>📦</span>Itens e Estoque Mínimo</div>
-        <p style="font-size:.78rem;color:var(--gray);margin-bottom:12px">Gerencie os itens do estoque, mínimos e unidades.</p>
-        <button class="btn btn-teal" onclick="abrirGerenciarItens()" style="margin-bottom:0">📦 Gerenciar Itens</button>
-      </div>
-      <div class="card">
-        <div class="card-title"><span>👥</span>Usuários</div>
-        <p style="font-size:.78rem;color:var(--gray);margin-bottom:12px">Gerencie os acessos ao sistema.</p>
-        <button class="btn btn-teal" onclick="abrirGerenciarUsuarios()" style="margin-bottom:0">👥 Gerenciar Usuários</button>
-      </div>
-      <div class="card">
-        <div class="card-title"><span>🍦</span>Sabores de Milky Shake</div>
-        <p style="font-size:.78rem;color:var(--gray);margin-bottom:12px">Gerencie os sabores cadastrados usados para calcular insumos a partir dos relatórios.</p>
-        <button onclick="abrirGerenciarSabores()" style="margin-bottom:0;width:100%;padding:11px;background:#1f2937;color:white;border:none;border-radius:12px;font-family:'Baloo 2',cursive;font-size:.9rem;font-weight:700;cursor:pointer">🍦 Gerenciar Sabores</button>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:4px">
-        <button onclick="gerarPDFInsumos()" style="flex:1;padding:10px;border:1.5px solid #d1d5db;border-radius:12px;background:white;color:#6b7280;font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer">📄 PDF Insumos</button>
-        <button onclick="gerarPDFSabores()" style="flex:1;padding:10px;border:1.5px solid #d1d5db;border-radius:12px;background:white;color:#6b7280;font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer">📄 PDF Sabores</button>
-      </div>
-    </div>
-
     <!-- MODAL GERENCIAR UNIDADES -->
     <div id="modal-unidades" style="display:none;position:fixed;inset:0;background:white;z-index:600;flex-direction:column;overflow:hidden">
       <div style="background:linear-gradient(135deg,#0d9488,#0891b2);color:white;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
@@ -1752,10 +1753,6 @@ function toggleResetTudo(){
 }
 
 async function confirmarReset(){
-  console.log('confirmarReset chamada');
-  console.log('consumo:', document.getElementById('rst-consumo')?.checked);
-  console.log('inv:', document.getElementById('rst-inv')?.checked);
-  console.log('hist:', document.getElementById('rst-hist')?.checked);
   const apagaConsumo=document.getElementById('rst-consumo').checked;
   const apagaPerdas=document.getElementById('rst-perdas')?.checked||false;
   const apagaInv=document.getElementById('rst-inv').checked;
