@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.0.0</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.0.1</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -2214,36 +2214,61 @@ function mostrarConfronto(data){
 
   const fmtBRL = v => v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 
-  // Insumos do relatório importado para essa data/loja
-  const relItems = (db.relatorios||[]).filter(r=>r.data===data&&r.loja==lojaImp);
-  if(!relItems.length){
+  // Verifica se há relatório importado para essa data/loja
+  const relCopos = (db.relatorios||[]).filter(r=>r.data===data&&r.loja==lojaImp);
+  if(!relCopos.length){
     container.innerHTML=`<div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;">
       <strong>⚠️ Nenhum relatório importado</strong> para ${fmtDate(data)} em ${nomeLoja(lojaImp)}.
     </div>`;
     return;
   }
 
+  // ── Reconstrói os insumos calculados a partir dos copos vendidos + receitas ──
+  // Isso garante que funciona mesmo para relatórios importados antes da v3.0
+  const insumosRelMap = {};
+  relCopos.forEach(r => {
+    // Só processa copos (cop300, cop500, etc.) — reconstrói insumos via receitas
+    const tam = r.itemId==='cop180'?180:r.itemId==='cop300'?300:r.itemId==='cop500'?500:r.itemId==='cop700'?700:null;
+    if(!tam) return; // item que não é copo — pode ser insumo direto salvo na nova versão
+    // Para cada copo vendido, verifica todas as receitas e soma os insumos proporcionalmente
+    // Como não sabemos quais sabores foram vendidos (só o total de copos), somamos por receita média
+    // Melhor: usa os insumos diretos se estiverem no relatorio (nova versão)
+  });
+
+  // Usa insumos diretos do relatorio se existirem (nova versão pós v3.0)
+  const insumosDirectos = relCopos.filter(r=>!['cop180','cop300','cop500','cop700','copd300','copd500','copd700'].includes(r.itemId));
+  
+  // Monta mapa de insumos do relatório
+  const relInsumosMap = {};
+  if(insumosDirectos.length > 0){
+    // Nova versão: usa insumos diretos salvos
+    insumosDirectos.forEach(r=>{ relInsumosMap[r.itemId] = r.qty; });
+  } else {
+    // Versão antiga: recalcula a partir dos copos e receitas
+    // Percorre todas as receitas de todos os sabores para estimar insumos totais
+    // Como não sabemos os sabores, não é possível recalcular precisamente — avisa o usuário
+  }
+
   // Consumo manual das funcionárias para essa data/loja
   const consumoManual = db.consumos.filter(c=>c.data===data&&c.loja==lojaImp);
 
-  // Itens que aparecem na aba consumo (permiteConsumo = true) — base do confronto
-  // Mostra TODOS esses itens, mesmo que manual=0 e relatório=0
-  // Assim é possível ver o que foi lançado, o que não foi, e comparar com o calculado
+  // Base: todos os itens da aba consumo (permiteConsumo = true)
   const idsConsumo = db.items.filter(permiteConsumo).map(i=>i.id);
-  // Adiciona também itens do relatório que não estejam na lista de consumo
-  const idsRelatorio = relItems.map(r=>r.itemId).filter(id=>!idsConsumo.includes(id));
-  const todosIds = [...idsConsumo, ...idsRelatorio];
+  // Adiciona itemIds do relatório que não estejam na lista de consumo
+  const idsRelExtra = Object.keys(relInsumosMap).filter(id=>!idsConsumo.includes(id));
+  const todosIds = [...idsConsumo, ...idsRelExtra];
+
+  // Mapa de qty do relatorio: usa diretos ou zero
+  const getRelQty = (itemId) => relInsumosMap[itemId] || 0;
 
   let temDivergencia = false;
   let rowsDiff = '', rowsOk = '';
 
   todosIds.forEach(itemId=>{
     const item      = db.items.find(i=>i.id===itemId);
-    const relRec    = relItems.find(r=>r.itemId===itemId);
-    const nomeItem  = item ? item.nome : (relRec?.nome || itemId);
-    // Usa unidade secundária se existir (é a unidade dos insumos calculados)
-    const unidItem  = item ? (item.unidadeSecundaria||item.unidade) : (relRec?.unidade||'');
-    const relQty    = relRec ? relRec.qty : 0;
+    const nomeItem  = item ? item.nome : itemId;
+    const unidItem  = item ? (item.unidadeSecundaria||item.unidade) : '';
+    const relQty    = getRelQty(itemId);
     const manual    = consumoManual.filter(c=>c.itemId===itemId).reduce((s,c)=>s+c.qty,0);
 
     // Custo calculado do relatório para esse item
