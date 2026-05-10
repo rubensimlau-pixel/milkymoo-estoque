@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.1.0</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.1.1</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -374,66 +374,63 @@
     </div>
 
     <!-- MODAL RESET -->
-    <div id="modal-reset" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
-        <div style="background:white;border-radius:20px;padding:24px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
-          <div style="font-size:2rem;text-align:center;margin-bottom:8px">🗑️</div>
-          <div style="font-family:'Baloo 2',cursive;font-size:1.2rem;font-weight:800;color:#c9345a;text-align:center;margin-bottom:6px">Apagar Lançamentos</div>
-          <div style="font-size:.82rem;color:#6b7280;text-align:center;margin-bottom:20px">Selecione o que deseja apagar. Esta ação é <strong>irreversível</strong>.</div>
-          <!-- Seleção de Loja -->
-          <div style="margin-bottom:14px">
-            <div style="font-size:.75rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Loja</div>
-            <div style="display:flex;gap:8px">
-              <label style="flex:1;text-align:center;padding:8px 4px;border:2px solid #e5e7eb;border-radius:10px;cursor:pointer;font-size:.78rem;font-weight:700;transition:all .2s" id="lbl-rst-loja0">
-                <input type="radio" name="rst-loja" id="rst-loja0" value="0" checked style="display:none"> 🏪🏬🏗️<br>Todas
-              </label>
-              <label style="flex:1;text-align:center;padding:8px 4px;border:2px solid #e5e7eb;border-radius:10px;cursor:pointer;font-size:.78rem;font-weight:700;transition:all .2s" id="lbl-rst-loja1">
-                <input type="radio" name="rst-loja" id="rst-loja1" value="1" style="display:none"> 🏪<br><span id="rst-nome-loja1">Cajamar</span>
-              </label>
-              <label style="flex:1;text-align:center;padding:8px 4px;border:2px solid #e5e7eb;border-radius:10px;cursor:pointer;font-size:.78rem;font-weight:700;transition:all .2s" id="lbl-rst-loja2">
-                <input type="radio" name="rst-loja" id="rst-loja2" value="2" style="display:none"> 🏬<br><span id="rst-nome-loja2">Iguatemi</span>
-              </label>
-              <label style="flex:1;text-align:center;padding:8px 4px;border:2px solid #e5e7eb;border-radius:10px;cursor:pointer;font-size:.78rem;font-weight:700;transition:all .2s" id="lbl-rst-loja3">
-                <input type="radio" name="rst-loja" id="rst-loja3" value="3" style="display:none"> 🏗️<br><span id="rst-nome-loja3">Carapicuíba</span>
-              </label>
-            </div>
-          </div>
-          <!-- Seleção do que apagar -->
-          <div style="font-size:.75rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">O que apagar</div>
-          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
-            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
-              <input type="checkbox" id="rst-consumo" style="width:20px;height:20px;accent-color:var(--pink);cursor:pointer;flex-shrink:0"> 📦 Consumos diários
-            </label>
-            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
-              <input type="checkbox" id="rst-perdas" style="width:20px;height:20px;accent-color:var(--pink);cursor:pointer;flex-shrink:0"> 💔 Perdas
-            </label>
-            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
-              <input type="checkbox" id="rst-inv" style="width:20px;height:20px;accent-color:var(--pink);cursor:pointer;flex-shrink:0"> 📋 Inventários
-            </label>
-            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
-              <input type="checkbox" id="rst-entradas" style="width:20px;height:20px;accent-color:var(--pink);cursor:pointer;flex-shrink:0"> 🛍️ Entradas de compra
-            </label>
-            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
-              <input type="checkbox" id="rst-hist" style="width:20px;height:20px;accent-color:var(--pink);cursor:pointer;flex-shrink:0"> 📜 Histórico
-            </label>
-            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
-              <input type="checkbox" id="rst-relatorios" style="width:20px;height:20px;accent-color:var(--pink);cursor:pointer;flex-shrink:0"> 📥 Relatórios importados
-            </label>
-            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:2px solid #fee2e2;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:700;color:#991b1b;background:#fff5f5">
-              <input type="checkbox" id="rst-tudo" style="width:20px;height:20px;accent-color:#ef476f;cursor:pointer;flex-shrink:0"> 🔴 Apagar tudo acima
-            </label>
-          </div>
-          <!-- Confirmação inline (evita confirm() do browser que pode ser bloqueado) -->
-          <div id="rst-confirm-msg" style="display:none;background:#fff5f5;border:2px solid #fecaca;border-radius:12px;padding:12px 14px;font-size:.82rem;color:#991b1b;margin-bottom:12px;text-align:center"></div>
-          <div id="rst-btns-normal" style="display:flex;gap:10px">
-            <button onclick="fecharModalReset()" style="flex:1;padding:12px;border:2px solid #e5e7eb;border-radius:12px;background:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:700;cursor:pointer;color:#6b7280">Cancelar</button>
-            <button onclick="confirmarReset()" style="flex:1;padding:12px;border:none;border-radius:12px;background:#ef476f;color:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(239,71,111,.35)">🗑️ Apagar</button>
-          </div>
-          <div id="rst-btns-confirm" style="display:none;gap:10px">
-            <button onclick="cancelarResetFinal()" style="flex:1;padding:12px;border:2px solid #e5e7eb;border-radius:12px;background:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:700;cursor:pointer;color:#6b7280">Não, cancelar</button>
-            <button onclick="confirmarResetFinal()" style="flex:1;padding:12px;border:none;border-radius:12px;background:#991b1b;color:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:700;cursor:pointer">✅ Sim, apagar!</button>
-          </div>
+    <div id="modal-reset" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;align-items:flex-end;justify-content:center;padding:0">
+      <div style="background:white;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
+        <div style="font-size:2rem;text-align:center;margin-bottom:6px">🗑️</div>
+        <div style="font-family:'Baloo 2',cursive;font-size:1.15rem;font-weight:800;color:#c9345a;text-align:center;margin-bottom:4px">Apagar Lançamentos</div>
+        <div style="font-size:.8rem;color:#6b7280;text-align:center;margin-bottom:18px">Selecione o que deseja apagar. Irreversível.</div>
+
+        <!-- Loja -->
+        <div style="font-size:.72rem;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Loja</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
+          <button onclick="selecionarLojaReset(0)" id="rst-loja-btn-0" style="padding:8px 4px;border:2px solid #ef476f;background:#fff0f3;border-radius:10px;font-size:.75rem;font-weight:700;cursor:pointer;color:#c9345a">🏪🏬🏗️<br>Todas</button>
+          <button onclick="selecionarLojaReset(1)" id="rst-loja-btn-1" style="padding:8px 4px;border:2px solid #e5e7eb;background:white;border-radius:10px;font-size:.75rem;font-weight:700;cursor:pointer;color:#6b7280"><span id="rst-btn-loja1">Loja 1</span></button>
+          <button onclick="selecionarLojaReset(2)" id="rst-loja-btn-2" style="padding:8px 4px;border:2px solid #e5e7eb;background:white;border-radius:10px;font-size:.75rem;font-weight:700;cursor:pointer;color:#6b7280"><span id="rst-btn-loja2">Loja 2</span></button>
+          <button onclick="selecionarLojaReset(3)" id="rst-loja-btn-3" style="padding:8px 4px;border:2px solid #e5e7eb;background:white;border-radius:10px;font-size:.75rem;font-weight:700;cursor:pointer;color:#6b7280"><span id="rst-btn-loja3">Loja 3</span></button>
+        </div>
+
+        <!-- O que apagar -->
+        <div style="font-size:.72rem;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">O que apagar</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px" id="rst-opcoes">
+          <button onclick="toggleOpcaoReset(this,'consumo')" data-selecionado="0" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:2px solid #e5e7eb;background:white;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600;text-align:left;width:100%">
+            <span style="font-size:1.1rem">📦</span> Consumos diários
+          </button>
+          <button onclick="toggleOpcaoReset(this,'perdas')" data-selecionado="0" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:2px solid #e5e7eb;background:white;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600;text-align:left;width:100%">
+            <span style="font-size:1.1rem">💔</span> Perdas
+          </button>
+          <button onclick="toggleOpcaoReset(this,'inventarios')" data-selecionado="0" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:2px solid #e5e7eb;background:white;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600;text-align:left;width:100%">
+            <span style="font-size:1.1rem">📋</span> Inventários
+          </button>
+          <button onclick="toggleOpcaoReset(this,'entradas')" data-selecionado="0" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:2px solid #e5e7eb;background:white;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600;text-align:left;width:100%">
+            <span style="font-size:1.1rem">🛍️</span> Entradas de compra
+          </button>
+          <button onclick="toggleOpcaoReset(this,'historico')" data-selecionado="0" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:2px solid #e5e7eb;background:white;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600;text-align:left;width:100%">
+            <span style="font-size:1.1rem">📜</span> Histórico
+          </button>
+          <button onclick="toggleOpcaoReset(this,'relatorios')" data-selecionado="0" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:2px solid #e5e7eb;background:white;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600;text-align:left;width:100%">
+            <span style="font-size:1.1rem">📥</span> Relatórios importados
+          </button>
+          <button onclick="selecionarTudoReset()" id="rst-btn-tudo" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:2px solid #fee2e2;background:#fff5f5;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:700;text-align:left;width:100%;color:#991b1b">
+            <span style="font-size:1.1rem">🔴</span> Apagar tudo acima
+          </button>
+        </div>
+
+        <!-- Mensagem de confirmação -->
+        <div id="rst-confirm-msg2" style="display:none;background:#fff5f5;border:2px solid #fecaca;border-radius:12px;padding:12px;font-size:.82rem;color:#991b1b;text-align:center;margin-bottom:12px"></div>
+
+        <!-- Botões -->
+        <div style="display:flex;gap:10px" id="rst-btns-1">
+          <button onclick="fecharModalReset()" style="flex:1;padding:13px;border:2px solid #e5e7eb;border-radius:12px;background:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:700;cursor:pointer;color:#6b7280">Cancelar</button>
+          <button onclick="executarApagar()" style="flex:1;padding:13px;border:none;border-radius:12px;background:#ef476f;color:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:700;cursor:pointer">🗑️ Apagar</button>
+        </div>
+        <div style="display:none;gap:10px" id="rst-btns-2">
+          <button onclick="cancelarApagar()" style="flex:1;padding:13px;border:2px solid #e5e7eb;border-radius:12px;background:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:700;cursor:pointer;color:#6b7280">Não</button>
+          <button onclick="confirmarApagar()" style="flex:1;padding:13px;border:none;border-radius:12px;background:#991b1b;color:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:700;cursor:pointer">✅ Sim, apagar!</button>
         </div>
       </div>
+    </div>
+
+
     <!-- MODAL GERENCIAR UNIDADES -->
     <div id="modal-unidades" style="display:none;position:fixed;inset:0;background:white;z-index:600;flex-direction:column;overflow:hidden">
       <div style="background:linear-gradient(135deg,#0d9488,#0891b2);color:white;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
@@ -1692,104 +1689,11 @@ function baixarRelatorioCompras(){
   showToast('📄 Relatório gerado! Abra o arquivo para imprimir.');
 }
 
-function abrirModalReset(){
-  // Atualiza nomes das lojas
-  document.getElementById('rst-nome-loja1').textContent=nomeLoja(1);
-  document.getElementById('rst-nome-loja2').textContent=nomeLoja(2);
-  document.getElementById('rst-nome-loja3').textContent=nomeLoja(3);
-  // Reset checkboxes
-  ['rst-consumo','rst-perdas','rst-inv','rst-entradas','rst-hist','rst-relatorios','rst-tudo'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) el.checked=false;
-  });
-  // Reset loja para "Todas"
-  document.getElementById('rst-loja0').checked=true;
-  atualizarRadioLoja();
-  // Reset border colors nos checkboxes
-  // checkboxes sem estilo customizado — nada a resetar
-  // Reseta estado de confirmação
-  const msgEl=document.getElementById('rst-confirm-msg');
-  if(msgEl) msgEl.style.display='none';
-  const btnsN=document.getElementById('rst-btns-normal');
-  const btnsC=document.getElementById('rst-btns-confirm');
-  if(btnsN) btnsN.style.display='flex';
-  if(btnsC) btnsC.style.display='none';
-  window._resetPendente=null;
-  // Estilo inicial do radio
-  document.querySelectorAll('input[name="rst-loja"]').forEach(r=>{
-    r.addEventListener('change', atualizarRadioLoja);
-  });
-  const modal=document.getElementById('modal-reset');
-  modal.style.display='flex';
-}
 
-function atualizarRadioLoja(){
-  [0,1,2,3].forEach(n=>{
-    const lbl=document.getElementById('lbl-rst-loja'+n);
-    const inp=document.getElementById('rst-loja'+n);
-    if(!lbl||!inp)return;
-    if(inp.checked){
-      lbl.style.borderColor='var(--red)';
-      lbl.style.background='#fff5f5';
-      lbl.style.color='#991b1b';
-    } else {
-      lbl.style.borderColor='#e5e7eb';
-      lbl.style.background='';
-      lbl.style.color='';
-    }
-  });
-}
 
-function fecharModalReset(){
-  document.getElementById('modal-reset').style.display='none';
-}
 
-function toggleResetTudo(){
-  const checked = document.getElementById('rst-tudo').checked;
-  ['rst-consumo','rst-perdas','rst-inv','rst-entradas','rst-hist','rst-relatorios'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) el.checked=checked;
-  });
-}
 
-async function confirmarReset(){
-  const apagaConsumo=document.getElementById('rst-consumo').checked;
-  const apagaPerdas=document.getElementById('rst-perdas')?.checked||false;
-  const apagaInv=document.getElementById('rst-inv').checked;
-  const apagaEntradas=document.getElementById('rst-entradas').checked;
-  const apagaHist=document.getElementById('rst-hist').checked;
-  const apagaRelatorios=document.getElementById('rst-relatorios')?.checked||false;
-  const lojaVal=parseInt(document.querySelector('input[name="rst-loja"]:checked').value);
-
-  if(!apagaConsumo&&!apagaPerdas&&!apagaInv&&!apagaEntradas&&!apagaHist&&!apagaRelatorios){
-    showToast('⚠️ Selecione ao menos uma opção!');return;
-  }
-
-  const itens=[];
-  if(apagaConsumo)itens.push('Consumos');
-  if(apagaPerdas)itens.push('Perdas');
-  if(apagaInv)itens.push('Inventários');
-  if(apagaEntradas)itens.push('Entradas');
-  if(apagaHist)itens.push('Histórico');
-  if(apagaRelatorios)itens.push('Relatórios importados');
-
-  const lojaLabel = lojaVal===0 ? 'TODAS AS LOJAS' : nomeLoja(lojaVal);
-
-  // Mostra confirmação inline sem usar confirm() do browser (bloqueado em alguns contextos)
-  const msgEl = document.getElementById('rst-confirm-msg');
-  if(msgEl){
-    msgEl.innerHTML = `⚠️ Apagar <strong>${itens.join(', ')}</strong> de <strong>${lojaLabel}</strong>?<br><small>Esta ação é irreversível.</small>`;
-    msgEl.style.display = '';
-    document.getElementById('rst-btns-normal').style.display = 'none';
-    document.getElementById('rst-btns-confirm').style.display = 'flex';
-    window._resetPendente = {itens,lojaVal,apagaConsumo,apagaPerdas,apagaInv,apagaEntradas,apagaHist,apagaRelatorios,lojaLabel};
-    return;
-  }
-  // Fallback: executa direto
-  await _executarReset({itens,lojaVal,apagaConsumo,apagaInv,apagaEntradas,apagaHist,apagaRelatorios,lojaLabel});
-}
-
-async function _executarReset({itens,lojaVal,apagaConsumo,apagaPerdas,apagaInv,apagaEntradas,apagaHist,apagaRelatorios,lojaLabel}){
+){
   if(lojaVal===0){
     if(apagaConsumo) db.consumos=[];
     if(apagaPerdas) db.perdas=[];
@@ -1811,20 +1715,7 @@ async function _executarReset({itens,lojaVal,apagaConsumo,apagaPerdas,apagaInv,a
   else showToast('⚠️ Erro ao apagar. Tente novamente.');
 }
 
-async function confirmarResetFinal(){
-  const p = window._resetPendente;
-  if(!p) return;
-  window._resetPendente = null;
-  await _executarReset(p);
-}
 
-function cancelarResetFinal(){
-  window._resetPendente = null;
-  const msgEl = document.getElementById('rst-confirm-msg');
-  if(msgEl) msgEl.style.display = 'none';
-  document.getElementById('rst-btns-normal').style.display = 'flex';
-  document.getElementById('rst-btns-confirm').style.display = 'none';
-}
 
 function abrirResetSenha(){
   document.getElementById('rst-login-user').value='';
@@ -3119,6 +3010,136 @@ async function salvarUnidades(){
     showToast('✅ Unidades salvas!');
   } else {
     showToast('⚠️ Erro ao salvar!');
+  }
+}
+
+
+// ════════════════════════════════════════════════════════════
+//  MODAL DE APAGAR LANÇAMENTOS — versão simplificada
+// ════════════════════════════════════════════════════════════
+
+let _resetLoja = 0; // 0=todas
+
+function abrirModalReset(){
+  _resetLoja = 0;
+  // Reseta botões de opção
+  document.querySelectorAll('#rst-opcoes button[data-selecionado]').forEach(b=>{
+    b.dataset.selecionado = '0';
+    b.style.borderColor = '#e5e7eb';
+    b.style.background = 'white';
+    b.style.color = '';
+  });
+  // Reseta seleção de loja
+  selecionarLojaReset(0);
+  // Atualiza nomes das lojas
+  document.getElementById('rst-btn-loja1').textContent = nomeLoja(1);
+  document.getElementById('rst-btn-loja2').textContent = nomeLoja(2);
+  document.getElementById('rst-btn-loja3').textContent = nomeLoja(3);
+  // Esconde confirmação
+  document.getElementById('rst-confirm-msg2').style.display = 'none';
+  document.getElementById('rst-btns-1').style.display = 'flex';
+  document.getElementById('rst-btns-2').style.display = 'none';
+  document.getElementById('modal-reset').style.display = 'flex';
+}
+
+function fecharModalReset(){
+  document.getElementById('modal-reset').style.display = 'none';
+}
+
+function selecionarLojaReset(loja){
+  _resetLoja = loja;
+  [0,1,2,3].forEach(n => {
+    const btn = document.getElementById('rst-loja-btn-'+n);
+    if(!btn) return;
+    const ativo = n === loja;
+    btn.style.borderColor = ativo ? '#ef476f' : '#e5e7eb';
+    btn.style.background  = ativo ? '#fff0f3' : 'white';
+    btn.style.color       = ativo ? '#c9345a' : '#6b7280';
+    btn.style.fontWeight  = ativo ? '800' : '700';
+  });
+}
+
+function toggleOpcaoReset(btn, tipo){
+  const sel = btn.dataset.selecionado === '1';
+  btn.dataset.selecionado = sel ? '0' : '1';
+  btn.style.borderColor = sel ? '#e5e7eb' : '#ef476f';
+  btn.style.background  = sel ? 'white'   : '#fff0f3';
+  btn.style.color       = sel ? ''         : '#c9345a';
+}
+
+function selecionarTudoReset(){
+  const todos = document.querySelectorAll('#rst-opcoes button[data-selecionado]');
+  // Verifica se todos já estão selecionados
+  const todosOn = [...todos].every(b => b.dataset.selecionado === '1');
+  todos.forEach(b => {
+    b.dataset.selecionado = todosOn ? '0' : '1';
+    b.style.borderColor   = todosOn ? '#e5e7eb' : '#ef476f';
+    b.style.background    = todosOn ? 'white'   : '#fff0f3';
+    b.style.color         = todosOn ? ''         : '#c9345a';
+  });
+}
+
+function executarApagar(){
+  // Lê quais opções estão selecionadas pelo atributo data-selecionado
+  const selecionados = [];
+  document.querySelectorAll('#rst-opcoes button[data-selecionado="1"]').forEach(b=>{
+    selecionados.push(b.getAttribute('onclick').match(/'([^']+)'/)[1]);
+  });
+
+  if(!selecionados.length){
+    showToast('⚠️ Selecione ao menos uma opção!');
+    return;
+  }
+
+  const lojaLabel = _resetLoja === 0 ? 'TODAS AS LOJAS' : nomeLoja(_resetLoja);
+  const nomes = {consumo:'Consumos',perdas:'Perdas',inventarios:'Inventários',entradas:'Entradas',historico:'Histórico',relatorios:'Relatórios importados'};
+  const label = selecionados.map(s=>nomes[s]||s).join(', ');
+
+  const msg = document.getElementById('rst-confirm-msg2');
+  msg.innerHTML = `⚠️ Apagar <strong>${label}</strong> de <strong>${lojaLabel}</strong>?<br><small>Esta ação é irreversível.</small>`;
+  msg.style.display = '';
+  document.getElementById('rst-btns-1').style.display = 'none';
+  document.getElementById('rst-btns-2').style.display = 'flex';
+}
+
+function cancelarApagar(){
+  document.getElementById('rst-confirm-msg2').style.display = 'none';
+  document.getElementById('rst-btns-1').style.display = 'flex';
+  document.getElementById('rst-btns-2').style.display = 'none';
+}
+
+async function confirmarApagar(){
+  const selecionados = [];
+  document.querySelectorAll('#rst-opcoes button[data-selecionado="1"]').forEach(b=>{
+    selecionados.push(b.getAttribute('onclick').match(/'([^']+)'/)[1]);
+  });
+
+  const loja = _resetLoja;
+
+  if(loja === 0){
+    if(selecionados.includes('consumo'))    db.consumos    = [];
+    if(selecionados.includes('perdas'))     db.perdas      = [];
+    if(selecionados.includes('inventarios'))db.inventarios = [];
+    if(selecionados.includes('entradas'))   db.entradas    = [];
+    if(selecionados.includes('historico'))  db.historico   = [];
+    if(selecionados.includes('relatorios')) db.relatorios  = [];
+  } else {
+    if(selecionados.includes('consumo'))    db.consumos    = db.consumos.filter(x=>x.loja!=loja);
+    if(selecionados.includes('perdas'))     db.perdas      = db.perdas.filter(x=>x.loja!=loja);
+    if(selecionados.includes('inventarios'))db.inventarios = db.inventarios.filter(x=>x.loja!=loja);
+    if(selecionados.includes('entradas'))   db.entradas    = db.entradas.filter(x=>x.loja!=loja);
+    if(selecionados.includes('historico'))  db.historico   = db.historico.filter(x=>x.loja!=loja);
+    if(selecionados.includes('relatorios')) db.relatorios  = db.relatorios.filter(x=>x.loja!=loja);
+  }
+
+  const ok = await cloudSet(db);
+  fecharModalReset();
+  if(ok){
+    renderHistorico();
+    const nomes = {consumo:'Consumos',perdas:'Perdas',inventarios:'Inventários',entradas:'Entradas',historico:'Histórico',relatorios:'Relatórios importados'};
+    showToast('🗑️ ' + selecionados.map(s=>nomes[s]||s).join(', ') + ' apagado(s)!');
+  } else {
+    showToast('⚠️ Erro ao apagar!');
   }
 }
 
