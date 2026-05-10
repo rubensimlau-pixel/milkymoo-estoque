@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.0.8</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.0.9</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -370,26 +370,26 @@
           <!-- Seleção do que apagar -->
           <div style="font-size:.75rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">O que apagar</div>
           <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
-            <label id="lbl-rst-consumo" style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
-              <input type="checkbox" id="rst-consumo" onchange="toggleReset('rst-consumo')" style="width:18px;height:18px;accent-color:var(--pink);cursor:pointer"> 📦 Consumos diários
+            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
+              <input type="checkbox" id="rst-consumo" style="width:20px;height:20px;accent-color:var(--pink);cursor:pointer;flex-shrink:0"> 📦 Consumos diários
             </label>
-            <label id="lbl-rst-perdas" style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
-              <input type="checkbox" id="rst-perdas" onchange="toggleReset('rst-perdas')" style="width:18px;height:18px;accent-color:var(--pink);cursor:pointer"> 💔 Perdas
+            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
+              <input type="checkbox" id="rst-perdas" style="width:20px;height:20px;accent-color:var(--pink);cursor:pointer;flex-shrink:0"> 💔 Perdas
             </label>
-            <label id="lbl-rst-inv" style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
-              <input type="checkbox" id="rst-inv" onchange="toggleReset('rst-inv')" style="width:18px;height:18px;accent-color:var(--pink);cursor:pointer"> 📋 Inventários
+            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
+              <input type="checkbox" id="rst-inv" style="width:20px;height:20px;accent-color:var(--pink);cursor:pointer;flex-shrink:0"> 📋 Inventários
             </label>
-            <label id="lbl-rst-entradas" style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
-              <input type="checkbox" id="rst-entradas" onchange="toggleReset('rst-entradas')" style="width:18px;height:18px;accent-color:var(--pink);cursor:pointer"> 🛍️ Entradas de compra
+            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
+              <input type="checkbox" id="rst-entradas" style="width:20px;height:20px;accent-color:var(--pink);cursor:pointer;flex-shrink:0"> 🛍️ Entradas de compra
             </label>
-            <label id="lbl-rst-hist" style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
-              <input type="checkbox" id="rst-hist" onchange="toggleReset('rst-hist')" style="width:18px;height:18px;accent-color:var(--pink);cursor:pointer"> 📜 Histórico
+            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
+              <input type="checkbox" id="rst-hist" style="width:20px;height:20px;accent-color:var(--pink);cursor:pointer;flex-shrink:0"> 📜 Histórico
             </label>
-            <label id="lbl-rst-relatorios" style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
-              <input type="checkbox" id="rst-relatorios" onchange="toggleReset('rst-relatorios')" style="width:18px;height:18px;accent-color:var(--pink);cursor:pointer"> 📥 Relatórios importados
+            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600">
+              <input type="checkbox" id="rst-relatorios" style="width:20px;height:20px;accent-color:var(--pink);cursor:pointer;flex-shrink:0"> 📥 Relatórios importados
             </label>
-            <label id="lbl-rst-tudo" style="display:flex;align-items:center;gap:10px;padding:12px;border:2px solid #fee2e2;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:700;color:#991b1b;background:#fff5f5">
-              <input type="checkbox" id="rst-tudo" onchange="toggleResetTudo()" style="width:18px;height:18px;accent-color:#ef476f;cursor:pointer"> 🔴 Apagar tudo acima
+            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:2px solid #fee2e2;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:700;color:#991b1b;background:#fff5f5">
+              <input type="checkbox" id="rst-tudo" style="width:20px;height:20px;accent-color:#ef476f;cursor:pointer;flex-shrink:0"> 🔴 Apagar tudo acima
             </label>
           </div>
           <!-- Confirmação inline (evita confirm() do browser que pode ser bloqueado) -->
@@ -1698,16 +1698,14 @@ function abrirModalReset(){
   document.getElementById('rst-nome-loja3').textContent=nomeLoja(3);
   // Reset checkboxes
   ['rst-consumo','rst-perdas','rst-inv','rst-entradas','rst-hist','rst-relatorios','rst-tudo'].forEach(id=>{
-    const el=document.getElementById(id); if(el) el.checked=false;
+    const el=document.getElementById(id);
+    if(el) el.checked=false;
   });
   // Reset loja para "Todas"
   document.getElementById('rst-loja0').checked=true;
   atualizarRadioLoja();
   // Reset border colors nos checkboxes
-  ['rst-consumo','rst-perdas','rst-inv','rst-entradas','rst-hist','rst-relatorios'].forEach(id=>{
-    const lbl=document.getElementById('lbl-'+id);
-    if(lbl){lbl.style.borderColor='';lbl.style.background='';}
-  });
+  // checkboxes sem estilo customizado — nada a resetar
   // Reseta estado de confirmação
   const msgEl=document.getElementById('rst-confirm-msg');
   if(msgEl) msgEl.style.display='none';
@@ -1745,26 +1743,11 @@ function fecharModalReset(){
   document.getElementById('modal-reset').style.display='none';
 }
 
-function toggleReset(id){
-  const checked = document.getElementById(id).checked;
-  const lbl = document.getElementById('lbl-'+id);
-  if(lbl){ lbl.style.borderColor=checked?'var(--red)':'#e5e7eb'; lbl.style.background=checked?'#fff5f5':''; }
-  // Se algum individual desmarcado, desmarca "tudo"
-  const todos=['rst-consumo','rst-perdas','rst-inv','rst-entradas','rst-hist','rst-relatorios'];
-  const todosCheck = todos.every(id=>document.getElementById(id)?.checked);
-  document.getElementById('rst-tudo').checked = todosCheck;
-}
-
 function toggleResetTudo(){
   const checked = document.getElementById('rst-tudo').checked;
-  const lblTudo = document.getElementById('lbl-rst-tudo');
-  if(lblTudo){ lblTudo.style.borderColor=checked?'var(--red)':'#fee2e2'; }
   ['rst-consumo','rst-perdas','rst-inv','rst-entradas','rst-hist','rst-relatorios'].forEach(id=>{
     const el=document.getElementById(id);
-    if(!el) return;
-    el.checked=checked;
-    const lbl=document.getElementById('lbl-'+id);
-    if(lbl){ lbl.style.borderColor=checked?'var(--red)':'#e5e7eb'; lbl.style.background=checked?'#fff5f5':''; }
+    if(el) el.checked=checked;
   });
 }
 
