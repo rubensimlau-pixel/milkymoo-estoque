@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.3.3</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.3.4</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -629,7 +629,9 @@ window.firebaseSet = async (d) => {
   try {
     // Separa usuarios do payload principal para não exceder limite
     const {usuarios, ...resto} = d;
-    await setDoc(REF, {payload: resto});
+    // Remove undefined/funções (Firebase não aceita)
+    const clean = JSON.parse(JSON.stringify(resto));
+    await setDoc(REF, {payload: clean});
     return true;
   } catch(e){ console.error('firebaseSet error:',e); return false; }
 };
@@ -791,8 +793,13 @@ async function doLogin(){
   const r=await cloudGet();
   if(r){
     db={...db,...r};
-    if(!db.entradas)db.entradas=[];
-    if(!db.historico)db.historico=[];
+    if(!Array.isArray(db.consumos))    db.consumos=[];
+    if(!Array.isArray(db.perdas))      db.perdas=[];
+    if(!Array.isArray(db.inventarios)) db.inventarios=[];
+    if(!Array.isArray(db.entradas))    db.entradas=[];
+    if(!Array.isArray(db.historico))   db.historico=[];
+    if(!Array.isArray(db.relatorios))  db.relatorios=[];
+    if(!Array.isArray(db.items))       db.items=[];
     if(!db.receitas)db.receitas=null;
   }
   const usersDoc=await window.firebaseGetUsers().catch(()=>null);
@@ -891,8 +898,12 @@ async function carregarDados(){
   if(r){
     const usuariosSalvos = r.usuarios; // preserva antes do spread
     db={...db,...r};
-    if(!db.entradas)db.entradas=[];
-    if(!db.historico)db.historico=[];
+    if(!Array.isArray(db.consumos))    db.consumos=[];
+    if(!Array.isArray(db.perdas))      db.perdas=[];
+    if(!Array.isArray(db.inventarios)) db.inventarios=[];
+    if(!Array.isArray(db.entradas))    db.entradas=[];
+    if(!Array.isArray(db.historico))   db.historico=[];
+    if(!Array.isArray(db.relatorios))  db.relatorios=[];
     // Firebase tem prioridade — DEFAULT só preenche usuários ausentes
     if(usuariosSalvos){
       db.usuarios = {...DEFAULT_USERS};
@@ -916,7 +927,17 @@ async function atualizarDados(forcado=false){
   const btn=document.getElementById('btn-refresh');
   if(btn){btn.textContent='⏳';btn.disabled=true;}
   const r=await cloudGet();
-  if(r){ db={...db,...r}; if(!db.entradas)db.entradas=[]; if(!db.historico)db.historico=[]; }
+  if(r){
+    db={...db,...r};
+    // Garante que todas as listas sejam arrays válidos (Firebase pode retornar undefined p/ arrays vazios)
+    if(!Array.isArray(db.consumos))    db.consumos=[];
+    if(!Array.isArray(db.perdas))      db.perdas=[];
+    if(!Array.isArray(db.inventarios)) db.inventarios=[];
+    if(!Array.isArray(db.entradas))    db.entradas=[];
+    if(!Array.isArray(db.historico))   db.historico=[];
+    if(!Array.isArray(db.relatorios))  db.relatorios=[];
+    if(!Array.isArray(db.items))       db.items=[];
+  }
   const ud=await window.firebaseGetUsers();
   if(ud){ db.usuarios={...DEFAULT_USERS}; Object.entries(ud).forEach(([k,v])=>{ db.usuarios[k]={...v}; }); }
   aplicarNomes();
