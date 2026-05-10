@@ -142,7 +142,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.7.0</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.7.1</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1752,6 +1752,13 @@ function processarRelatorio(){
     ? `${dataMatch[3]}-${dataMatch[2]}-${dataMatch[1]}`
     : document.getElementById('data-importar').value;
 
+  // Extrai PDV e número de abertura (identificam unicamente um fechamento)
+  // Ex: "PDV: 001 PDV01" → "001"; "No. Abertura.....: 01" → "01"
+  const pdvMatch = txt.match(/PDV[\s.]*[:\s]*(\d+)/i);
+  const aberturaMatch = txt.match(/N[oº°][\s.]*Abertura[\s.]*[:\s]*(\d+)/i);
+  const pdvNum = pdvMatch ? pdvMatch[1] : '?';
+  const aberturaNum = aberturaMatch ? aberturaMatch[1] : '?';
+
   // ── NOVA LÓGICA DE PARSING ──────────────────────────────────────────────────
   // Percorre o relatório linha a linha detectando seções de milkshakes.
   // Conta cada linha de produto individualmente e detecta o tamanho pelo
@@ -2008,12 +2015,15 @@ function processarRelatorio(){
   }).join('');
 
   // ── Preview final ─────────────────────────────────────────────────────────
+  const pdvLabel = (pdvNum !== '?' || aberturaNum !== '?')
+    ? ` &nbsp;|&nbsp; 🖥️ PDV: <strong style="color:#166534">${pdvNum}</strong> · Abertura <strong style="color:#166534">${aberturaNum}</strong>`
+    : ` &nbsp;|&nbsp; <span style="color:#9a3412">⚠️ PDV não identificado</span>`;
   let previewHtml = `
     <div class="card">
       <div class="card-title"><span>🔍</span>Preview da Importação</div>
       <div style="font-size:.78rem;margin-bottom:12px;background:#f0fdf4;border-radius:8px;padding:8px 12px;border:1px solid #bbf7d0">
         📅 Data detectada: <strong style="color:#166534">${fmtDate(dataRelatorio)}</strong> &nbsp;|&nbsp;
-        ${lojaIcon(lojaDetectada)} Loja detectada: <strong style="color:#166534">${nomeLoja(lojaDetectada)}</strong>
+        ${lojaIcon(lojaDetectada)} Loja detectada: <strong style="color:#166534">${nomeLoja(lojaDetectada)}</strong>${pdvLabel}
         ${lojaInfo ? `<br><span style="font-size:.72rem;color:var(--gray)">📋 ${lojaInfo}</span>` : ''}
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">${resumoVendas}</div>
@@ -2029,6 +2039,7 @@ function processarRelatorio(){
     saboresList, totalFaturado, totalCustoSabores,
     totaisPorTamanho, totalGastoGeral,
     lojaImp,
+    pdvNum, aberturaNum,
   };
 }
 
@@ -2038,91 +2049,224 @@ async function confirmarImportacao(){
     resultado, dataRelatorio, insumosList,
     saboresList, totalFaturado, totalCustoSabores,
     totaisPorTamanho, totalGastoGeral,
+    pdvNum, aberturaNum,
   } = importacaoPendente;
 
-  if(!confirm(`Confirma o lançamento do relatório de ${nomeLoja(lojaImp)} em ${fmtDate(dataRelatorio)}?`)) return;
+  if(!Array.isArray(db.financeiro)) db.financeiro=[];
+  if(!Array.isArray(db.relatorios)) db.relatorios=[];
+
+  // Identificador do fechamento (PDV + abertura). Se não tiver, gera um id local.
+  const pdvId = (pdvNum && pdvNum !== '?') ? pdvNum : '?';
+  const aberId = (aberturaNum && aberturaNum !== '?') ? aberturaNum : '?';
+
+  // Procura registro consolidado já existente pra essa data+loja
+  const finExistente = db.financeiro.find(x => x.data===dataRelatorio && x.loja==lojaImp);
+
+  // Verifica se esse PDV/abertura específico já foi importado pra essa data+loja
+  if(finExistente && Array.isArray(finExistente.pdvs)){
+    const pdvJaImportado = finExistente.pdvs.find(p => String(p.pdv)===String(pdvId) && String(p.abertura)===String(aberId));
+    if(pdvJaImportado && pdvId !== '?' && aberId !== '?'){
+      const conf = window.confirm(
+        `⚠️ Já existe um lançamento desse mesmo PDV/abertura:\n\n`+
+        `Loja: ${nomeLoja(Number(lojaImp))}\n`+
+        `Data: ${fmtDate(dataRelatorio)}\n`+
+        `PDV: ${pdvId} · Abertura: ${aberId}\n\n`+
+        `Deseja SUBSTITUIR o lançamento anterior desse PDV?\n\n`+
+        `(OK = substituir, Cancelar = não fazer nada)`
+      );
+      if(!conf) return;
+      // Substitui: remove o PDV antigo do consolidado antes de seguir
+      _removerPdvDoConsolidado(finExistente, pdvId, aberId);
+    }
+  }
+
+  // Confirmação geral
+  const isAdicao = !!finExistente && pdvId !== '?';
+  const msg = isAdicao
+    ? `Adicionar este fechamento aos lançamentos já existentes de ${nomeLoja(Number(lojaImp))} em ${fmtDate(dataRelatorio)}?\n\nPDV ${pdvId} · Abertura ${aberId}`
+    : `Confirma o lançamento do relatório de ${nomeLoja(Number(lojaImp))} em ${fmtDate(dataRelatorio)}?`;
+  if(!confirm(msg)) return;
 
   const btn = document.getElementById('btn-confirmar-importar');
   btn.disabled = true;
 
-  // Salva dados do relatório em db.relatorios (NÃO altera consumos)
-  // Agora salva TODOS os insumos calculados (copos, canudos, tampas, xaropes etc.)
-  if(!db.relatorios) db.relatorios=[];
-
-  // Remove entradas anteriores dessa data/loja para evitar duplicação em reimportação
-  db.relatorios = db.relatorios.filter(x=>!(x.data===dataRelatorio&&x.loja==lojaImp));
-
   const respImp = (currentUser?.label||currentUser?.login||'—');
   const tsImp = new Date().toISOString();
 
-  // Salva cada insumo consolidado
+  // ── DB.RELATORIOS — SOMA por itemId (data+loja) ──────────────────────────
+  // Estratégia: em vez de remover/recriar, somamos ao registro existente do mesmo
+  // itemId. Isso preserva totais consolidados de múltiplos PDVs.
   (insumosList||[]).forEach(ing=>{
     if(!ing.itemId) return;
-    db.relatorios.push({
-      data:     dataRelatorio,
-      loja:     lojaImp,
-      itemId:   ing.itemId,
-      qty:      ing.qty,
-      unidade:  ing.unidade,
-      nome:     ing.nome,
-      usuario:  respImp,
-      ts:       tsImp,
-    });
-  });
-
-  // Também salva os copos (resultado) para compatibilidade
-  resultado.forEach(r=>{
-    const jaExiste = db.relatorios.find(x=>x.data===dataRelatorio&&x.loja==lojaImp&&x.itemId===r.itemId);
-    if(!jaExiste){
-      db.relatorios.push({data:dataRelatorio, loja:lojaImp, itemId:r.itemId, qty:r.qtd, unidade:'unidades', nome:r.nome, usuario:respImp, ts:tsImp});
+    const existente = db.relatorios.find(x => x.data===dataRelatorio && x.loja==lojaImp && x.itemId===ing.itemId);
+    if(existente){
+      existente.qty = (existente.qty||0) + (ing.qty||0);
+      existente.usuario = respImp;
+      existente.ts = tsImp;
+    } else {
+      db.relatorios.push({
+        data: dataRelatorio, loja: lojaImp, itemId: ing.itemId,
+        qty: ing.qty, unidade: ing.unidade, nome: ing.nome,
+        usuario: respImp, ts: tsImp,
+      });
     }
   });
 
-  // ── FINANCEIRO: salva snapshot completo do preview ────────────────────────
-  if(!Array.isArray(db.financeiro)) db.financeiro=[];
-  // Remove registro anterior dessa data/loja para evitar duplicação em reimportação
-  db.financeiro = db.financeiro.filter(x=>!(x.data===dataRelatorio&&x.loja==lojaImp));
-  db.financeiro.push({
-    id: `fin_${dataRelatorio}_${lojaImp}`,
-    data: dataRelatorio,
-    loja: lojaImp,
+  // Copos (resultado) — também soma se já existir
+  resultado.forEach(r=>{
+    const existente = db.relatorios.find(x => x.data===dataRelatorio && x.loja==lojaImp && x.itemId===r.itemId);
+    if(existente){
+      // só soma se não foi já contado como insumo (insumosList pode ter sobreposição com resultado)
+      const jaContadoComoInsumo = (insumosList||[]).some(i => i.itemId === r.itemId);
+      if(!jaContadoComoInsumo){
+        existente.qty = (existente.qty||0) + (r.qtd||0);
+        existente.usuario = respImp;
+        existente.ts = tsImp;
+      }
+    } else {
+      db.relatorios.push({
+        data:dataRelatorio, loja:lojaImp, itemId:r.itemId,
+        qty:r.qtd, unidade:'unidades', nome:r.nome,
+        usuario:respImp, ts:tsImp,
+      });
+    }
+  });
+
+  // ── DB.FINANCEIRO — SOMA por (data, loja), guardando lista de PDVs ───────
+  // PDV info pra registro
+  const pdvInfo = {
+    pdv: pdvId,
+    abertura: aberId,
     ts: tsImp,
     usuario: respImp,
-    porTamanho: {...totaisPorTamanho},
-    sabores: (saboresList||[]).map(s=>({
-      nomeProd: s.nomeProd,
-      tamanho: s.tamanho,
-      qtd: s.qtd,
-      subtotal: s.subtotal,
-      custoInsumos: s.custoInsumos||0,
-    })),
-    insumos: (insumosList||[]).map(ing=>({
-      itemId: ing.itemId,
-      nome: ing.nome,
-      qty: ing.qty,
-      unidade: ing.unidade||'',
-      unidadePrim: ing.unidadePrim||'',
-      valorEmbalagem: ing.valorEmbalagem||0,
-      qtdPorUnidade: ing.qtdPorUnidade||0,
-      temFracao: !!ing.temFracao,
-      custoPorUnit: ing.custoPorUnit||0,
-    })),
     totalFaturado: totalFaturado||0,
-    totalCustoSabores: totalCustoSabores||0,
     totalGastoInsumos: totalGastoGeral||0,
-    custosExtras: [],  // futuro: impostos, aluguel, água, luz, funcionários...
-  });
+    totalCustoSabores: totalCustoSabores||0,
+    qtdCopos: Object.values(totaisPorTamanho||{}).reduce((a,b)=>a+(b||0),0),
+  };
+
+  if(finExistente){
+    // SOMA aos totais existentes
+    _somarFinanceiro(finExistente, {
+      saboresList, insumosList, totaisPorTamanho,
+      totalFaturado, totalCustoSabores, totalGastoGeral,
+    });
+    // Anexa info do PDV
+    if(!Array.isArray(finExistente.pdvs)) finExistente.pdvs = [];
+    finExistente.pdvs.push(pdvInfo);
+    // Atualiza ts/usuario pro último import
+    finExistente.ts = tsImp;
+    finExistente.usuario = respImp;
+  } else {
+    // Cria novo registro consolidado
+    db.financeiro.push({
+      id: `fin_${dataRelatorio}_${lojaImp}`,
+      data: dataRelatorio,
+      loja: lojaImp,
+      ts: tsImp,
+      usuario: respImp,
+      porTamanho: {...totaisPorTamanho},
+      sabores: (saboresList||[]).map(s=>({
+        nomeProd: s.nomeProd, tamanho: s.tamanho, qtd: s.qtd,
+        subtotal: s.subtotal, custoInsumos: s.custoInsumos||0,
+      })),
+      insumos: (insumosList||[]).map(ing=>({
+        itemId: ing.itemId, nome: ing.nome, qty: ing.qty,
+        unidade: ing.unidade||'', unidadePrim: ing.unidadePrim||'',
+        valorEmbalagem: ing.valorEmbalagem||0, qtdPorUnidade: ing.qtdPorUnidade||0,
+        temFracao: !!ing.temFracao, custoPorUnit: ing.custoPorUnit||0,
+      })),
+      totalFaturado: totalFaturado||0,
+      totalCustoSabores: totalCustoSabores||0,
+      totalGastoInsumos: totalGastoGeral||0,
+      custosExtras: [],
+      pdvs: [pdvInfo],
+    });
+  }
 
   const ok = await saveCloud('consumo');
   if(ok){
     document.getElementById('txt-relatorio').value='';
     importacaoPendente=null;
+    document.getElementById('importar-preview').innerHTML='';
+    document.getElementById('btn-confirmar-importar').style.display='none';
     mostrarConfronto(dataRelatorio);
-    showToast('✅ Relatório salvo! Veja o confronto abaixo.');
+    showToast(isAdicao ? `✅ Fechamento somado! PDV ${pdvId} adicionado ao dia.` : '✅ Relatório salvo! Veja o confronto abaixo.');
   } else {
     showToast('⚠️ Erro ao salvar!');
   }
   btn.disabled=false;
+}
+
+// Soma os dados de uma nova importação a um registro financeiro existente
+function _somarFinanceiro(reg, novo){
+  const {saboresList, insumosList, totaisPorTamanho, totalFaturado, totalCustoSabores, totalGastoGeral} = novo;
+
+  // porTamanho — soma chave por chave
+  if(!reg.porTamanho) reg.porTamanho = {};
+  Object.entries(totaisPorTamanho||{}).forEach(([t,q])=>{
+    reg.porTamanho[t] = (reg.porTamanho[t]||0) + (q||0);
+  });
+
+  // sabores — soma por (nomeProd, tamanho)
+  if(!Array.isArray(reg.sabores)) reg.sabores = [];
+  (saboresList||[]).forEach(s=>{
+    const ex = reg.sabores.find(x => x.nomeProd===s.nomeProd && Number(x.tamanho)===Number(s.tamanho));
+    if(ex){
+      ex.qtd = (ex.qtd||0) + (s.qtd||0);
+      ex.subtotal = (ex.subtotal||0) + (s.subtotal||0);
+      ex.custoInsumos = (ex.custoInsumos||0) + (s.custoInsumos||0);
+    } else {
+      reg.sabores.push({
+        nomeProd: s.nomeProd, tamanho: s.tamanho, qtd: s.qtd,
+        subtotal: s.subtotal, custoInsumos: s.custoInsumos||0,
+      });
+    }
+  });
+
+  // insumos — soma qty por itemId; mantém custos do existente (ou pega do novo se faltar)
+  if(!Array.isArray(reg.insumos)) reg.insumos = [];
+  (insumosList||[]).forEach(ing=>{
+    if(!ing.itemId) return;
+    const ex = reg.insumos.find(x => x.itemId === ing.itemId);
+    if(ex){
+      ex.qty = (ex.qty||0) + (ing.qty||0);
+      // custo unitário/embalagem — atualiza só se não tinha (preserva o original)
+      if(!ex.custoPorUnit && ing.custoPorUnit) ex.custoPorUnit = ing.custoPorUnit;
+      if(!ex.valorEmbalagem && ing.valorEmbalagem) ex.valorEmbalagem = ing.valorEmbalagem;
+      if(!ex.qtdPorUnidade && ing.qtdPorUnidade) ex.qtdPorUnidade = ing.qtdPorUnidade;
+      if(!ex.unidade && ing.unidade) ex.unidade = ing.unidade;
+      if(!ex.unidadePrim && ing.unidadePrim) ex.unidadePrim = ing.unidadePrim;
+      if(typeof ex.temFracao !== 'boolean') ex.temFracao = !!ing.temFracao;
+    } else {
+      reg.insumos.push({
+        itemId: ing.itemId, nome: ing.nome, qty: ing.qty,
+        unidade: ing.unidade||'', unidadePrim: ing.unidadePrim||'',
+        valorEmbalagem: ing.valorEmbalagem||0, qtdPorUnidade: ing.qtdPorUnidade||0,
+        temFracao: !!ing.temFracao, custoPorUnit: ing.custoPorUnit||0,
+      });
+    }
+  });
+
+  // Totais
+  reg.totalFaturado = (reg.totalFaturado||0) + (totalFaturado||0);
+  reg.totalCustoSabores = (reg.totalCustoSabores||0) + (totalCustoSabores||0);
+  reg.totalGastoInsumos = (reg.totalGastoInsumos||0) + (totalGastoGeral||0);
+}
+
+// Remove um PDV do registro consolidado (subtraindo os totais que ele aportou)
+function _removerPdvDoConsolidado(reg, pdv, abertura){
+  if(!reg || !Array.isArray(reg.pdvs)) return;
+  const idx = reg.pdvs.findIndex(p => String(p.pdv)===String(pdv) && String(p.abertura)===String(abertura));
+  if(idx === -1) return;
+  const pdvRem = reg.pdvs[idx];
+  reg.totalFaturado = Math.max(0, (reg.totalFaturado||0) - (pdvRem.totalFaturado||0));
+  reg.totalCustoSabores = Math.max(0, (reg.totalCustoSabores||0) - (pdvRem.totalCustoSabores||0));
+  reg.totalGastoInsumos = Math.max(0, (reg.totalGastoInsumos||0) - (pdvRem.totalGastoInsumos||0));
+  reg.pdvs.splice(idx, 1);
+  // Se ficou sem nenhum PDV, mantém o registro mas zerado (será sobrescrito pela próxima importação)
+  // Sabores/insumos NÃO são subtraídos linha-a-linha aqui porque não temos breakdown por PDV;
+  // ficam como histórico cumulativo. A próxima importação some normalmente.
 }
 
 function mostrarConfronto(data){
@@ -3498,11 +3642,13 @@ function renderFinanceiro(){
     html += `<div class="card" style="padding:10px 12px;margin-bottom:10px;">`;
 
     // Header clicável
+    const numPdvs = Array.isArray(r.pdvs) ? r.pdvs.length : 0;
+    const pdvLabel = numPdvs > 0 ? ` · 🖥️ ${numPdvs} PDV${numPdvs===1?'':'s'}` : '';
     html += `<div onclick="toggleFinDetalhe('${r.id}')" style="cursor:pointer;display:flex;align-items:center;gap:8px;">`;
     html += `<div style="font-size:1.1rem;flex-shrink:0;">${lojaIcon(Number(r.loja))}</div>`;
     html += `<div style="flex:1;min-width:0;">`;
     html += `<div style="font-size:.86rem;font-weight:800;color:#222;">${nomeLoja(Number(r.loja))} · ${dataFmt}</div>`;
-    html += `<div style="font-size:.72rem;color:var(--gray);margin-top:2px;">${totalCopos} copo${totalCopos===1?'':'s'} · 👤 ${r.usuario||'—'}</div>`;
+    html += `<div style="font-size:.72rem;color:var(--gray);margin-top:2px;">${totalCopos} copo${totalCopos===1?'':'s'}${pdvLabel} · 👤 ${r.usuario||'—'}</div>`;
     html += `</div>`;
     html += `<div style="font-size:1rem;color:var(--gray);flex-shrink:0;">${expandido?'▾':'▸'}</div>`;
     html += `</div>`;
@@ -3527,6 +3673,31 @@ function renderFinanceiro(){
 
 function _renderFinDetalhe(r){
   let html = `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);">`;
+
+  // Lista de PDVs que compõem este registro consolidado
+  if(Array.isArray(r.pdvs) && r.pdvs.length > 0){
+    html += `<div style="margin-bottom:14px;">`;
+    html += `<div style="font-size:.74rem;font-weight:800;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">🖥️ PDVs deste dia</div>`;
+    html += `<div style="background:white;border-radius:10px;border:1px solid var(--border);overflow:hidden;">`;
+    r.pdvs.forEach((p,idx)=>{
+      const bg = idx%2===0 ? 'white' : '#fafafa';
+      let horaImp = '';
+      if(p.ts){
+        try{
+          const dt = new Date(p.ts);
+          horaImp = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+        }catch(e){}
+      }
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:${bg};border-bottom:1px solid #f3f4f6;font-size:.76rem;">`;
+      html += `<div style="flex:1;min-width:0;">`;
+      html += `<div style="font-weight:700;color:#222;">PDV ${p.pdv} · Abertura ${p.abertura}</div>`;
+      html += `<div style="font-size:.68rem;color:var(--gray);margin-top:1px;">💰 R$ ${_fmtBRL(p.totalFaturado)} · 🥤 ${p.qtdCopos||0} · 👤 ${p.usuario||'—'}${horaImp?` · 🕐 ${horaImp}`:''}</div>`;
+      html += `</div>`;
+      html += `<button onclick="apagarPdvFinanceiro('${r.id}','${p.pdv}','${p.abertura}')" style="background:#fee2e2;color:#991b1b;border:none;border-radius:8px;padding:5px 10px;font-size:.7rem;font-weight:700;cursor:pointer;flex-shrink:0;">🗑️</button>`;
+      html += `</div>`;
+    });
+    html += `</div></div>`;
+  }
 
   // Chips de resumo por tamanho
   const chips = Object.entries(r.porTamanho||{})
@@ -3647,6 +3818,37 @@ async function apagarFinanceiro(id){
   const ok = await saveCloud('financeiro');
   if(ok){
     showToast('🗑️ Registro financeiro apagado');
+    renderFinanceiro();
+  } else {
+    showToast('⚠️ Erro ao apagar');
+  }
+}
+
+async function apagarPdvFinanceiro(id, pdv, abertura){
+  const reg = (db.financeiro||[]).find(r=>r.id===id);
+  if(!reg){ showToast('⚠️ Registro não encontrado'); return; }
+  if(!Array.isArray(reg.pdvs)){ showToast('⚠️ Sem lista de PDVs'); return; }
+  const pdvObj = reg.pdvs.find(p => String(p.pdv)===String(pdv) && String(p.abertura)===String(abertura));
+  if(!pdvObj){ showToast('⚠️ PDV não encontrado'); return; }
+
+  const conf = window.confirm(
+    `Apagar este PDV do registro?\n\n`+
+    `PDV ${pdv} · Abertura ${abertura}\n`+
+    `Faturado: R$ ${_fmtBRL(pdvObj.totalFaturado)}\n\n`+
+    `⚠️ ATENÇÃO: como não guardamos sabores/insumos por PDV, apagar um PDV ajusta os totais financeiros, mas as tabelas detalhadas (sabores e insumos) permanecem com a soma cumulativa. Para limpar 100%, apague o registro inteiro e reimporte os PDVs restantes.\n\n`+
+    `Continuar?`
+  );
+  if(!conf) return;
+
+  _removerPdvDoConsolidado(reg, pdv, abertura);
+  // Se não sobrou nenhum PDV, apaga o registro inteiro
+  if(!reg.pdvs || reg.pdvs.length === 0){
+    db.financeiro = (db.financeiro||[]).filter(r=>r.id!==id);
+    delete finExpandidos[id];
+  }
+  const ok = await saveCloud('financeiro');
+  if(ok){
+    showToast('🗑️ PDV removido do registro');
     renderFinanceiro();
   } else {
     showToast('⚠️ Erro ao apagar');
