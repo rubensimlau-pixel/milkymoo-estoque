@@ -127,6 +127,13 @@
   .filtro-bar .filtro-clear{border:2px solid var(--border);border-radius:10px;background:white;color:var(--gray);font-size:.95rem;font-weight:700;padding:0 12px;cursor:pointer;}
   .filtro-bar .filtro-clear:hover{background:var(--gray-light);}
   .filtro-vazio{text-align:center;padding:24px 12px;color:var(--gray);font-size:.85rem;font-weight:600;}
+  .drop-zone{border:2px dashed var(--border);border-radius:12px;padding:20px 14px;text-align:center;background:var(--gray-light);cursor:pointer;transition:all .2s;margin-bottom:10px;}
+  .drop-zone:hover{border-color:var(--pink);background:#fff0f5;}
+  .drop-zone.dragover{border-color:var(--pink);background:#fff0f5;border-style:solid;transform:scale(1.01);}
+  .drop-zone-icon{font-size:1.8rem;margin-bottom:6px;}
+  .drop-zone-text{font-size:.85rem;font-weight:700;color:#444;}
+  .drop-zone-sub{font-size:.72rem;color:var(--gray);margin-top:3px;}
+  .fila-info{background:#dbeafe;border:1px solid #93c5fd;color:#1e40af;border-radius:10px;padding:10px 14px;font-size:.82rem;font-weight:700;margin-bottom:10px;text-align:center;}
 </style>
 </head>
 <body>
@@ -142,7 +149,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.7.1</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.7.2</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -331,8 +338,24 @@
 
       <div class="date-bar"><label>📅 Data do relatório:</label><input type="date" id="data-importar"></div>
 
+      <div id="fila-info" class="fila-info" style="display:none;"></div>
+
       <div class="card">
         <div class="card-title"><span>📋</span>Texto do Relatório</div>
+
+        <div class="drop-zone" id="drop-zone-importar"
+             onclick="document.getElementById('file-importar').click()"
+             ondragover="event.preventDefault();this.classList.add('dragover');"
+             ondragleave="this.classList.remove('dragover');"
+             ondrop="event.preventDefault();this.classList.remove('dragover');tratarArquivosImportar(event.dataTransfer.files);">
+          <div class="drop-zone-icon">📄</div>
+          <div class="drop-zone-text">Arraste o(s) arquivo(s) TXT aqui</div>
+          <div class="drop-zone-sub">ou toque para selecionar — pode escolher vários de uma vez</div>
+        </div>
+        <input type="file" id="file-importar" multiple accept=".txt,text/plain" style="display:none" onchange="tratarArquivosImportar(this.files);this.value='';">
+
+        <div style="font-size:.72rem;color:var(--gray);text-align:center;margin:6px 0;">— ou cole o texto manualmente abaixo —</div>
+
         <textarea id="txt-relatorio" placeholder="Cole aqui o conteúdo do arquivo TXT de fechamento de caixa do Degust..."
           style="width:100%;height:200px;border:2px solid var(--border);border-radius:10px;padding:10px;font-family:monospace;font-size:.78rem;resize:vertical;background:var(--gray-light)"></textarea>
       </div>
@@ -353,7 +376,10 @@
         </div>
       </div>
 
-      <button class="btn btn-pink" id="btn-confirmar-importar" onclick="confirmarImportacao()" style="display:none;background:#16a34a;box-shadow:0 4px 14px rgba(22,163,74,.35)">✅ Salvar Relatório para Confronto</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-pink" id="btn-confirmar-importar" onclick="confirmarImportacao()" style="display:none;background:#16a34a;box-shadow:0 4px 14px rgba(22,163,74,.35);flex:1;margin-bottom:0;">✅ Salvar Relatório para Confronto</button>
+        <button class="btn btn-outline" id="btn-pular-fila" onclick="pularArquivoFila()" style="display:none;width:auto;padding:14px 16px;margin-bottom:0;border-color:var(--gray);color:var(--gray);">⏭️ Pular</button>
+      </div>
     </div>
 
     <div id="sec-divergencia" class="section">
@@ -1740,6 +1766,96 @@ function renderImportar(){
   document.getElementById('btn-confirmar-importar').style.display='none';
 }
 
+// ── FILA DE ARQUIVOS PARA IMPORTAÇÃO ──────────────────────────────────────
+// Cada item: { nome: 'arquivo.txt', conteudo: '...' }
+let filaImportar = [];
+let arquivoAtualNome = null;
+
+function tratarArquivosImportar(files){
+  if(!files || !files.length) return;
+  // Filtra só TXT (ou sem extensão / text/plain)
+  const validos = Array.from(files).filter(f => {
+    const nome = (f.name||'').toLowerCase();
+    const tipo = (f.type||'').toLowerCase();
+    return nome.endsWith('.txt') || tipo === 'text/plain' || tipo === '';
+  });
+  if(!validos.length){
+    showToast('⚠️ Selecione arquivos TXT');
+    return;
+  }
+  // Lê todos os arquivos em paralelo
+  Promise.all(validos.map(f => f.text().then(conteudo => ({nome:f.name, conteudo}))))
+    .then(arquivos => {
+      filaImportar = filaImportar.concat(arquivos);
+      atualizarBarraFila();
+      // Se nada está sendo processado agora, processa o primeiro
+      if(!importacaoPendente){
+        processarProximoDaFila();
+      }
+    })
+    .catch(err => {
+      console.error('Erro ao ler arquivo:', err);
+      showToast('⚠️ Erro ao ler arquivo');
+    });
+}
+
+function processarProximoDaFila(){
+  if(filaImportar.length === 0){
+    arquivoAtualNome = null;
+    atualizarBarraFila();
+    return;
+  }
+  const prox = filaImportar.shift();
+  arquivoAtualNome = prox.nome;
+  document.getElementById('txt-relatorio').value = prox.conteudo;
+  atualizarBarraFila();
+  processarRelatorio();
+  // Rola a tela pro preview
+  setTimeout(()=>{
+    const prev = document.getElementById('importar-preview');
+    if(prev) prev.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 100);
+}
+
+function pularArquivoFila(){
+  showToast('⏭️ Arquivo pulado');
+  importacaoPendente = null;
+  document.getElementById('txt-relatorio').value = '';
+  document.getElementById('importar-preview').innerHTML = '';
+  document.getElementById('btn-confirmar-importar').style.display = 'none';
+  document.getElementById('btn-pular-fila').style.display = 'none';
+  arquivoAtualNome = null;
+  if(filaImportar.length > 0){
+    processarProximoDaFila();
+  } else {
+    atualizarBarraFila();
+  }
+}
+
+function atualizarBarraFila(){
+  const bar = document.getElementById('fila-info');
+  const btnPular = document.getElementById('btn-pular-fila');
+  if(!bar) return;
+  const restantes = filaImportar.length;
+  const temAtual = !!arquivoAtualNome;
+  if(temAtual && restantes > 0){
+    bar.style.display = '';
+    bar.innerHTML = `📦 Processando <strong>${arquivoAtualNome}</strong> · ${restantes} arquivo${restantes===1?'':'s'} restante${restantes===1?'':'s'} na fila`;
+    if(btnPular) btnPular.style.display = '';
+  } else if(temAtual){
+    bar.style.display = '';
+    bar.innerHTML = `📦 Processando <strong>${arquivoAtualNome}</strong>`;
+    if(btnPular) btnPular.style.display = 'none';
+  } else if(restantes > 0){
+    bar.style.display = '';
+    bar.innerHTML = `📦 ${restantes} arquivo${restantes===1?'':'s'} aguardando processamento`;
+    if(btnPular) btnPular.style.display = 'none';
+  } else {
+    bar.style.display = 'none';
+    if(btnPular) btnPular.style.display = 'none';
+  }
+}
+
 function processarRelatorio(){
   const txt = document.getElementById('txt-relatorio').value;
   if(!txt.trim()){ showToast('⚠️ Cole o texto do relatório primeiro!'); return; }
@@ -2190,8 +2306,16 @@ async function confirmarImportacao(){
     importacaoPendente=null;
     document.getElementById('importar-preview').innerHTML='';
     document.getElementById('btn-confirmar-importar').style.display='none';
+    document.getElementById('btn-pular-fila').style.display='none';
+    arquivoAtualNome = null;
     mostrarConfronto(dataRelatorio);
     showToast(isAdicao ? `✅ Fechamento somado! PDV ${pdvId} adicionado ao dia.` : '✅ Relatório salvo! Veja o confronto abaixo.');
+    // Próximo arquivo da fila (se houver)
+    if(filaImportar.length > 0){
+      setTimeout(()=> processarProximoDaFila(), 600);
+    } else {
+      atualizarBarraFila();
+    }
   } else {
     showToast('⚠️ Erro ao salvar!');
   }
