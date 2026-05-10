@@ -1752,6 +1752,10 @@ function toggleResetTudo(){
 }
 
 async function confirmarReset(){
+  console.log('confirmarReset chamada');
+  console.log('consumo:', document.getElementById('rst-consumo')?.checked);
+  console.log('inv:', document.getElementById('rst-inv')?.checked);
+  console.log('hist:', document.getElementById('rst-hist')?.checked);
   const apagaConsumo=document.getElementById('rst-consumo').checked;
   const apagaPerdas=document.getElementById('rst-perdas')?.checked||false;
   const apagaInv=document.getElementById('rst-inv').checked;
