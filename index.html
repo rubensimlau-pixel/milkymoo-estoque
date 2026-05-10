@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.0.3</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.0.6</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -820,7 +820,7 @@ const DEFAULT_ITEMS=[
   {id:'bob-maq',nome:'Bobina Maquininha',cat:'mimos',unidade:'unidades'},
 ];
 
-let db={items:[...DEFAULT_ITEMS],inventarios:[],consumos:[],entradas:[],perdas:[],relatorios:[],historico:[],minimos:{},receitas:null,usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7,diasLoja1:7,diasLoja2:7,diasLoja3:7}};
+let db={items:[],inventarios:[],consumos:[],entradas:[],perdas:[],relatorios:[],historico:[],minimos:{},receitas:null,usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7,diasLoja1:7,diasLoja2:7,diasLoja3:7}};
 let lojaC=1,lojaI=1,lojaP=1,lojaD=1,lojaE=1,lojaPr=1,lojaImp=1;
 let autoRefreshInterval=null;
 
@@ -945,11 +945,7 @@ async function carregarDados(){
       Object.entries(usuariosSalvos).forEach(([k,v])=>{ db.usuarios[k]={...v}; });
     } else { db.usuarios = null; }
   }
-  // Garante itens novos que podem não estar no Firebase
-  const idsExistentes = db.items.map(i=>i.id);
-  DEFAULT_ITEMS.forEach(item=>{
-    if(!idsExistentes.includes(item.id)) db.items.push(item);
-  });
+  // Itens vêm exclusivamente do Firebase — sem fallback local
   aplicarNomes();renderConsumo();renderInv();renderProjetado();renderConfig();
   setLoad(false);
 }
@@ -1116,11 +1112,13 @@ async function salvarConsumo(){
     if(!isNaN(val)&&val>0)db.consumos.push({data:dt,loja:lojaC,itemId:item.id,qty:val});
   });
   // Captura os itens lançados para o histórico
-  const itensLancados=[];
-  db.items.filter(permiteConsumo).forEach(item=>{
-    const r=db.consumos.find(c=>c.data===dt&&c.loja==lojaC&&c.itemId===item.id);
-    if(r&&r.qty>0) itensLancados.push({nome:item.nome,qty:r.qty,unidade:item.unidade});
-  });
+  // Usa db.consumos diretamente para pegar TODOS os itens (inclusive copos deletados de db.items)
+  const itensLancados = db.consumos
+    .filter(c=>c.data===dt&&c.loja==lojaC&&c.qty>0)
+    .map(c=>{
+      const item = db.items.find(i=>i.id===c.itemId);
+      return {nome: item ? item.nome : c.itemId, qty: c.qty, unidade: item ? item.unidade : ''};
+    });
   db.historico.push({tipo:'consumo',data:dt,loja:lojaC,responsavel:resp,timestamp:new Date().toISOString(),itens:itensLancados});
   await saveCloud('consumo'); showToast('✅ Consumo salvo!');
 }
@@ -1760,7 +1758,7 @@ async function confirmarReset(){
   const apagaRelatorios=document.getElementById('rst-relatorios')?.checked||false;
   const lojaVal=parseInt(document.querySelector('input[name="rst-loja"]:checked').value);
 
-  if(!apagaConsumo&&!apagaInv&&!apagaEntradas&&!apagaHist){
+  if(!apagaConsumo&&!apagaInv&&!apagaEntradas&&!apagaHist&&!apagaRelatorios){
     showToast('⚠️ Selecione ao menos uma opção!');return;
   }
 
