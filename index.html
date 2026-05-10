@@ -149,7 +149,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.7.3</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.7.5</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -354,7 +354,9 @@
         </div>
         <input type="file" id="file-importar" multiple accept=".txt,text/plain" style="display:none" onchange="tratarArquivosImportar(this.files);this.value='';">
 
-        <div style="font-size:.72rem;color:var(--gray);text-align:center;margin:6px 0;">— ou cole o texto manualmente abaixo —</div>
+        <button class="btn btn-outline" onclick="colarDoClipboard()" style="margin-top:6px;margin-bottom:0;border-color:var(--purple);color:var(--purple);font-size:.88rem;padding:10px;">📋 Colar texto copiado</button>
+
+        <div style="font-size:.72rem;color:var(--gray);text-align:center;margin:8px 0 6px;">— ou cole manualmente abaixo —</div>
 
         <textarea id="txt-relatorio" placeholder="Cole aqui o conteúdo do arquivo TXT de fechamento de caixa do Degust..."
           style="width:100%;height:200px;border:2px solid var(--border);border-radius:10px;padding:10px;font-family:monospace;font-size:.78rem;resize:vertical;background:var(--gray-light)"></textarea>
@@ -727,7 +729,8 @@
             <button class="fin-per-btn" data-per="hoje" onclick="setFinPeriodo('hoje',this)" style="flex:1;min-width:64px;border:2px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">Hoje</button>
             <button class="fin-per-btn" data-per="7" onclick="setFinPeriodo('7',this)" style="flex:1;min-width:64px;border:2px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">7 dias</button>
             <button class="fin-per-btn" data-per="30" onclick="setFinPeriodo('30',this)" style="flex:1;min-width:64px;border:2px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">30 dias</button>
-            <button class="fin-per-btn active" data-per="tudo" onclick="setFinPeriodo('tudo',this)" style="flex:1;min-width:64px;border:2px solid var(--pink);background:var(--pink);color:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">Tudo</button>
+            <input type="date" id="fin-filtro-data" onchange="setFinDataFiltro(this.value)" style="flex:1.4;min-width:120px;border:2px solid var(--border);background:white;border-radius:10px;padding:7px 8px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;color:#333;">
+            <button class="fin-per-btn fin-btn-tudo active" onclick="setFinPeriodo('tudo',this)" style="flex:0 0 auto;border:2px solid var(--pink);background:var(--pink);color:white;border-radius:10px;padding:8px 12px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;" title="Limpar filtros e mostrar tudo">✕</button>
           </div>
         </div>
       </div>
@@ -1853,6 +1856,43 @@ function atualizarBarraFila(){
   } else {
     bar.style.display = 'none';
     if(btnPular) btnPular.style.display = 'none';
+  }
+}
+
+async function colarDoClipboard(){
+  // Tenta ler texto do clipboard. Em iOS/Safari pode pedir permissão.
+  try{
+    if(!navigator.clipboard || !navigator.clipboard.readText){
+      // Fallback: foca no textarea pro usuário colar manualmente (Ctrl+V / segurar)
+      const ta = document.getElementById('txt-relatorio');
+      ta.focus();
+      showToast('📋 Cole no campo abaixo (Ctrl+V ou segure pra colar)');
+      return;
+    }
+    const texto = await navigator.clipboard.readText();
+    if(!texto || !texto.trim()){
+      showToast('⚠️ Clipboard vazio. Copie o texto primeiro.');
+      return;
+    }
+    // Detecção rápida: o texto parece um relatório do Degust?
+    if(!/FECHAMENTO|MILKSHAKES|MOVIMENTACAO|PDV/i.test(texto)){
+      const ok = window.confirm('⚠️ O texto copiado não parece um relatório do Degust.\n\nProcessar mesmo assim?');
+      if(!ok) return;
+    }
+    document.getElementById('txt-relatorio').value = texto;
+    arquivoAtualNome = '(colado da área de transferência)';
+    atualizarBarraFila();
+    processarRelatorio();
+    setTimeout(()=>{
+      const btn = document.getElementById('btn-confirmar-importar');
+      if(btn && btn.style.display !== 'none') btn.scrollIntoView({behavior:'smooth', block:'center'});
+    }, 100);
+  } catch(err){
+    console.error('Erro ao colar:', err);
+    // Permissão negada ou navegador antigo: fallback
+    const ta = document.getElementById('txt-relatorio');
+    ta.focus();
+    showToast('⚠️ Não consegui acessar a área de transferência. Cole manualmente no campo abaixo.');
   }
 }
 
@@ -3658,11 +3698,17 @@ async function apagarLancamento(tipo, idx){
 //  FINANCEIRO
 // ════════════════════════════════════════════════════════════
 
-let finPeriodo = 'tudo'; // hoje | 7 | 30 | tudo
+let finPeriodo = 'tudo'; // hoje | 7 | 30 | tudo | data
+let finDataEspecifica = ''; // YYYY-MM-DD quando filtra por dia específico
 let finExpandidos = {};  // {id: true} controla quais cards estão abertos
 
 function setFinPeriodo(p, btn){
   finPeriodo = p;
+  finDataEspecifica = '';
+  // Limpa o input de data
+  const inp = document.getElementById('fin-filtro-data');
+  if(inp) inp.value = '';
+  // Desativa todos, ativa só o clicado
   document.querySelectorAll('.fin-per-btn').forEach(b=>{
     b.classList.remove('active');
     b.style.background = 'white';
@@ -3678,8 +3724,35 @@ function setFinPeriodo(p, btn){
   renderFinanceiro();
 }
 
+function setFinDataFiltro(data){
+  if(!data){
+    // Input limpado manualmente: volta pra "tudo"
+    finPeriodo = 'tudo';
+    finDataEspecifica = '';
+    const btnTudo = document.querySelector('.fin-btn-tudo');
+    if(btnTudo) setFinPeriodo('tudo', btnTudo);
+    return;
+  }
+  finPeriodo = 'data';
+  finDataEspecifica = data;
+  // Desativa todos os botões
+  document.querySelectorAll('.fin-per-btn').forEach(b=>{
+    b.classList.remove('active');
+    b.style.background = 'white';
+    b.style.color = '#333';
+    b.style.borderColor = 'var(--border)';
+  });
+  renderFinanceiro();
+}
+
 function _finDataLimite(){
+  // Retorna null = sem filtro (tudo)
+  // Retorna {tipo:'desde', data:'YYYY-MM-DD'} = filtra >= data
+  // Retorna {tipo:'igual', data:'YYYY-MM-DD'} = filtra == data
   if(finPeriodo === 'tudo') return null;
+  if(finPeriodo === 'data' && finDataEspecifica){
+    return {tipo:'igual', data: finDataEspecifica};
+  }
   const hj = new Date();
   hj.setHours(0,0,0,0);
   let dias = 0;
@@ -3690,7 +3763,7 @@ function _finDataLimite(){
   const y = hj.getFullYear();
   const m = String(hj.getMonth()+1).padStart(2,'0');
   const d = String(hj.getDate()).padStart(2,'0');
-  return `${y}-${m}-${d}`;
+  return {tipo:'desde', data:`${y}-${m}-${d}`};
 }
 
 function _fmtBRL(v){
@@ -3710,7 +3783,13 @@ function renderFinanceiro(){
 
   // Filtro de período usa a data do relatório (r.data) — pra Financeiro faz mais
   // sentido olhar pelo dia do faturamento, não pelo dia em que foi importado
-  if(limite) registros = registros.filter(r => (r.data||'') >= limite);
+  if(limite){
+    if(limite.tipo === 'igual'){
+      registros = registros.filter(r => (r.data||'') === limite.data);
+    } else {
+      registros = registros.filter(r => (r.data||'') >= limite.data);
+    }
+  }
   if(filtroLoja) registros = registros.filter(r => String(r.loja) === String(filtroLoja));
 
   // Ordena: data desc (mais recente no topo); se mesma data, ordena por loja
