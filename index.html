@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.5.0</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.5.1</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1035,8 +1035,16 @@ function aplicarNomes(){[1,2,3].forEach(n=>{const nm=nomeLoja(n);['lnc','lni','l
 
 function ultimoInventario(loja,ateData){
   const refs=db.inventarios.filter(r=>r.loja==loja&&r.data<=ateData);if(!refs.length)return null;
-  const dataInv=[...new Set(refs.map(r=>r.data))].sort().reverse()[0];
-  const inv={};refs.filter(r=>r.data===dataInv).forEach(r=>inv[r.itemId]=r.qty);
+  // Spec: se um item não for preenchido num inventário, mantém o valor do inventário anterior.
+  // Estratégia: percorrer datas em ordem cronológica, sobrescrevendo por item.
+  // Resultado final: pra cada item, o valor é do inventário mais recente em que ele FOI contado.
+  const datasOrdenadas=[...new Set(refs.map(r=>r.data))].sort();
+  const inv={};
+  datasOrdenadas.forEach(d=>{
+    refs.filter(r=>r.data===d).forEach(r=>{ inv[r.itemId]=r.qty; });
+  });
+  // Data base = data do inventário mais recente (pra calcular o que conta como "depois")
+  const dataInv=datasOrdenadas[datasOrdenadas.length-1];
   return{data:dataInv,inv};
 }
 
@@ -1045,17 +1053,17 @@ function calcProjetado(loja,ateData){
   const proj={};db.items.forEach(item=>{proj[item.id]=base.inv[item.id]??null;});
   // Inclui consumos do mesmo dia do inventário e posteriores (>=)
   db.consumos.filter(c=>c.loja==loja&&c.data>=base.data&&c.data<=ateData).forEach(c=>{
-    if(proj[c.itemId]===undefined) proj[c.itemId]=0;
-    if(proj[c.itemId]!==null) proj[c.itemId]=(proj[c.itemId]||0)-c.qty;
+    if(proj[c.itemId]==null) proj[c.itemId]=0;
+    proj[c.itemId]=(proj[c.itemId]||0)-c.qty;
   });
   // Soma entradas de compra posteriores ao inventário
   (db.entradas||[]).filter(e=>e.loja==loja&&e.data>=base.data&&e.data<=ateData).forEach(e=>{
-    if(proj[e.itemId]!==undefined) proj[e.itemId]=(proj[e.itemId]||0)+e.qty;
-    else proj[e.itemId]=e.qty;
+    if(proj[e.itemId]==null) proj[e.itemId]=0;
+    proj[e.itemId]=(proj[e.itemId]||0)+e.qty;
   });
   // Desconta perdas/erros (mesmo que item não esteja no inventário base)
   (db.perdas||[]).filter(p=>p.loja==loja&&p.data>=base.data&&p.data<=ateData).forEach(p=>{
-    if(proj[p.itemId]===undefined) proj[p.itemId]=0; // item novo, parte do zero
+    if(proj[p.itemId]==null) proj[p.itemId]=0;
     proj[p.itemId]=(proj[p.itemId]||0)-p.qty;
   });
   return{dataBase:base.data,proj};
