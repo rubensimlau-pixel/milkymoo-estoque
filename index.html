@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.2.0</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.3.3</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -323,9 +323,31 @@
       <div id="h-filtros-tipo" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px"></div>
       <!-- lista -->
       <div id="hist-lista"></div>
-      <!-- botão apagar -->
-      <div id="h-btn-apagar" style="display:none;margin-top:12px">
-        <button onclick="abrirApagar()" style="width:100%;padding:13px;border:none;border-radius:14px;background:#ef476f;color:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;cursor:pointer">🗑️ Apagar Lançamentos</button>
+      <!-- botões de apagar diretos -->
+      <div id="h-btn-apagar" style="display:none;margin-top:14px">
+        <div style="background:#fff5f5;border:2px solid #fecaca;border-radius:14px;padding:14px">
+          <div style="font-size:.78rem;font-weight:800;color:#991b1b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;text-align:center">🗑️ Apagar Lançamentos</div>
+
+          <!-- Seletor de loja -->
+          <div style="font-size:.7rem;font-weight:700;color:#6b7280;margin-bottom:6px">Apagar de qual loja?</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">
+            <button onclick="setLojaApagar(0)" id="ap-loja-btn-0" style="padding:8px 4px;border:2px solid #ef476f;background:#fff0f3;border-radius:10px;font-size:.7rem;font-weight:700;cursor:pointer;color:#c9345a">Todas</button>
+            <button onclick="setLojaApagar(1)" id="ap-loja-btn-1" style="padding:8px 4px;border:2px solid #e5e7eb;background:white;border-radius:10px;font-size:.7rem;font-weight:700;cursor:pointer;color:#6b7280"><span id="ap-l-nome-1">Loja 1</span></button>
+            <button onclick="setLojaApagar(2)" id="ap-loja-btn-2" style="padding:8px 4px;border:2px solid #e5e7eb;background:white;border-radius:10px;font-size:.7rem;font-weight:700;cursor:pointer;color:#6b7280"><span id="ap-l-nome-2">Loja 2</span></button>
+            <button onclick="setLojaApagar(3)" id="ap-loja-btn-3" style="padding:8px 4px;border:2px solid #e5e7eb;background:white;border-radius:10px;font-size:.7rem;font-weight:700;cursor:pointer;color:#6b7280"><span id="ap-l-nome-3">Loja 3</span></button>
+          </div>
+
+          <!-- Botões de categoria -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button onclick="apagarDireto('consumos','Consumos')" style="padding:11px 8px;border:none;border-radius:10px;background:#ef476f;color:white;font-size:.82rem;font-weight:700;cursor:pointer">📦 Consumos</button>
+            <button onclick="apagarDireto('perdas','Perdas')" style="padding:11px 8px;border:none;border-radius:10px;background:#ef476f;color:white;font-size:.82rem;font-weight:700;cursor:pointer">💔 Perdas</button>
+            <button onclick="apagarDireto('inventarios','Inventários')" style="padding:11px 8px;border:none;border-radius:10px;background:#ef476f;color:white;font-size:.82rem;font-weight:700;cursor:pointer">📋 Inventários</button>
+            <button onclick="apagarDireto('entradas','Entradas')" style="padding:11px 8px;border:none;border-radius:10px;background:#ef476f;color:white;font-size:.82rem;font-weight:700;cursor:pointer">🛍️ Entradas</button>
+            <button onclick="apagarDireto('historico','Histórico')" style="padding:11px 8px;border:none;border-radius:10px;background:#ef476f;color:white;font-size:.82rem;font-weight:700;cursor:pointer">📜 Histórico</button>
+            <button onclick="apagarDireto('relatorios','Relatórios')" style="padding:11px 8px;border:none;border-radius:10px;background:#ef476f;color:white;font-size:.82rem;font-weight:700;cursor:pointer">📥 Relatórios</button>
+          </div>
+          <button onclick="apagarTudoDireto()" style="width:100%;margin-top:8px;padding:12px;border:none;border-radius:10px;background:#991b1b;color:white;font-size:.85rem;font-weight:800;cursor:pointer">🔴 Apagar TUDO</button>
+        </div>
       </div>
     </div>
 
@@ -355,26 +377,6 @@
         <button onclick="gerarPDFSabores()" style="flex:1;padding:10px;border:1.5px solid #d1d5db;border-radius:12px;background:white;color:#6b7280;font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer">📄 PDF Sabores</button>
       </div>
     </div>
-
-    <!-- MODAL APAGAR -->
-    <div id="modal-apagar" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);align-items:flex-end;justify-content:center">
-      <div style="background:#fff;border-radius:24px 24px 0 0;padding:24px 20px 36px;width:100%;max-width:500px;box-shadow:0 -8px 40px rgba(0,0,0,.2)">
-        <div style="text-align:center;font-size:2rem;margin-bottom:4px">🗑️</div>
-        <div style="font-family:'Baloo 2',cursive;font-size:1.15rem;font-weight:800;color:#c9345a;text-align:center;margin-bottom:20px">Apagar Lançamentos</div>
-        <!-- Loja -->
-        <div style="font-size:.72rem;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Loja</div>
-        <div id="ap-lojas" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px"></div>
-        <!-- Opções -->
-        <div style="font-size:.72rem;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">O que apagar</div>
-        <div id="ap-opcoes" style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px"></div>
-        <!-- Botões -->
-        <div style="display:flex;gap:10px">
-          <button onclick="document.getElementById('modal-apagar').style.display='none'" style="flex:1;padding:14px;border:2px solid #e5e7eb;border-radius:14px;background:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:700;cursor:pointer;color:#6b7280">Cancelar</button>
-          <button onclick="executarApagar()" style="flex:1;padding:14px;border:none;border-radius:14px;background:#ef476f;color:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;cursor:pointer">🗑️ Apagar</button>
-        </div>
-      </div>
-    </div>
-
 
     <!-- MODAL GERENCIAR UNIDADES -->
     <div id="modal-unidades" style="display:none;position:fixed;inset:0;background:white;z-index:600;flex-direction:column;overflow:hidden">
@@ -933,9 +935,9 @@ async function atualizarDados(forcado=false){
   if(name==='importar')renderImportar();
   if(name==='divergencia')renderDivergencia();
     if(name==='historico'){
-    // Reseta filtros ao abrir a aba para garantir que tudo aparece
     _hLoja=0; _hTipo='';
     renderHistorico();
+    if(typeof setLojaApagar==='function') setLojaApagar(0);
   }
   }
   const t=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
@@ -964,9 +966,9 @@ function showTab(name,btn){
   if(name==='importar')renderImportar();
   if(name==='divergencia')renderDivergencia();
   if(name==='historico'){
-    // Reseta filtros ao abrir a aba para garantir que tudo aparece
     _hLoja=0; _hTipo='';
     renderHistorico();
+    if(typeof setLojaApagar==='function') setLojaApagar(0);
   }
   if(name==='entradas')renderEntradas();
   if(name==='config'){
@@ -2981,81 +2983,10 @@ function hFiltroLoja(loja){ _hLoja=loja; renderHistorico(); }
 function hFiltroTipo(tipo){ _hTipo=tipo; renderHistorico(); }
 
 // ════════════ MODAL APAGAR ════════════
-let _apLoja = 0;
-const _OPCOES_APAGAR = [
-  {id:'ap-consumo',     label:'📦 Consumos diários',    key:'consumos'},
-  {id:'ap-perdas',      label:'💔 Perdas',               key:'perdas'},
-  {id:'ap-inventarios', label:'📋 Inventários',          key:'inventarios'},
-  {id:'ap-entradas',    label:'🛍️ Entradas de compra',  key:'entradas'},
-  {id:'ap-historico',   label:'📜 Histórico',            key:'historico'},
-  {id:'ap-relatorios',  label:'📥 Relatórios importados',key:'relatorios'},
-];
 
-function abrirApagar(){
-  _apLoja = 0;
 
-  // Monta botões de loja
-  const lDiv = document.getElementById('ap-lojas');
-  lDiv.innerHTML = [{n:0,label:'Todas'},...[1,2,3].map(n=>({n,label:nomeLoja(n)}))].map(l=>`
-    <button onclick="apSelLoja(${l.n})" id="apl-${l.n}"
-      style="padding:9px 4px;border-radius:10px;font-size:.75rem;font-weight:700;cursor:pointer;
-             border:2px solid ${l.n===0?'#ef476f':'#e5e7eb'};
-             background:${l.n===0?'#fff0f3':'white'};
-             color:${l.n===0?'#c9345a':'#6b7280'}">
-      ${l.label}
-    </button>`).join('');
 
-  // Monta opções
-  const oDiv = document.getElementById('ap-opcoes');
-  oDiv.innerHTML = _OPCOES_APAGAR.map(o=>`
-    <button id="${o.id}" onclick="apSelOpcao('${o.id}')"
-      style="text-align:left;padding:12px 16px;border:2px solid #e5e7eb;background:white;
-             border-radius:12px;font-size:.88rem;font-weight:600;cursor:pointer;width:100%">
-      ${o.label}
-    </button>`).join('') + `
-    <button onclick="apTudo()"
-      style="text-align:left;padding:12px 16px;border:2px solid #fee2e2;background:#fff5f5;
-             border-radius:12px;font-size:.88rem;font-weight:700;cursor:pointer;width:100%;color:#991b1b">
-      🔴 Apagar tudo acima
-    </button>`;
 
-  document.getElementById('modal-apagar').style.display='flex';
-}
-
-function apSelLoja(n){
-  _apLoja = n;
-  [{n:0},...[1,2,3].map(n=>({n}))].forEach(l=>{
-    const b=document.getElementById('apl-'+l.n);
-    if(!b) return;
-    b.style.borderColor = l.n===n?'#ef476f':'#e5e7eb';
-    b.style.background  = l.n===n?'#fff0f3':'white';
-    b.style.color       = l.n===n?'#c9345a':'#6b7280';
-  });
-}
-
-function apSelOpcao(id){
-  const b=document.getElementById(id);
-  if(!b) return;
-  const on = b.dataset.on==='1';
-  b.dataset.on        = on?'0':'1';
-  b.style.borderColor = on?'#e5e7eb':'#ef476f';
-  b.style.background  = on?'white':'#fff0f3';
-  b.style.color       = on?'':'#c9345a';
-  b.style.fontWeight  = on?'600':'800';
-}
-
-function apTudo(){
-  const allOn = _OPCOES_APAGAR.every(o=>document.getElementById(o.id)?.dataset.on==='1');
-  _OPCOES_APAGAR.forEach(o=>{
-    const b=document.getElementById(o.id);
-    if(!b) return;
-    b.dataset.on        = allOn?'0':'1';
-    b.style.borderColor = allOn?'#e5e7eb':'#ef476f';
-    b.style.background  = allOn?'white':'#fff0f3';
-    b.style.color       = allOn?'':'#c9345a';
-    b.style.fontWeight  = allOn?'600':'800';
-  });
-}
 
 async function executarApagar(){
   const sel = _OPCOES_APAGAR.filter(o=>document.getElementById(o.id)?.dataset.on==='1');
@@ -3076,6 +3007,71 @@ async function executarApagar(){
   document.getElementById('modal-apagar').style.display='none';
   if(ok){ renderHistorico(); showToast('✅ '+nomes+' apagado(s)!'); }
   else   showToast('⚠️ Erro ao apagar!');
+}
+
+
+
+// ════════════ APAGAR DIRETO ════════════
+let _lojaApagar = 0; // 0 = todas
+
+function setLojaApagar(n){
+  _lojaApagar = n;
+  // Atualiza nomes das lojas
+  for(let i=1;i<=3;i++){
+    const el=document.getElementById('ap-l-nome-'+i);
+    if(el) el.textContent=nomeLoja(i);
+  }
+  // Atualiza visual dos botões
+  for(let i=0;i<=3;i++){
+    const btn=document.getElementById('ap-loja-btn-'+i);
+    if(!btn) continue;
+    if(i===n){
+      btn.style.borderColor='#ef476f';
+      btn.style.background='#fff0f3';
+      btn.style.color='#c9345a';
+    } else {
+      btn.style.borderColor='#e5e7eb';
+      btn.style.background='white';
+      btn.style.color='#6b7280';
+    }
+  }
+}
+
+async function apagarDireto(chave, label){
+  const lojaTxt = _lojaApagar===0 ? 'TODAS as lojas' : nomeLoja(_lojaApagar);
+  if(!window.confirm('Apagar TODOS os ' + label + ' de ' + lojaTxt + '?\n\nEsta ação é IRREVERSÍVEL!')) return;
+  showToast('⏳ Apagando...');
+  if(_lojaApagar===0){
+    db[chave] = [];
+  } else {
+    db[chave] = (db[chave]||[]).filter(x=>x.loja!=_lojaApagar);
+  }
+  const ok = await cloudSet(db);
+  if(ok){
+    renderHistorico();
+    showToast('✅ ' + label + ' de ' + lojaTxt + ' apagado(s)!');
+  } else {
+    showToast('⚠️ Erro ao apagar!');
+  }
+}
+
+async function apagarTudoDireto(){
+  const lojaTxt = _lojaApagar===0 ? 'TODAS as lojas' : nomeLoja(_lojaApagar);
+  if(!window.confirm('Apagar TUDO de ' + lojaTxt + '?\n\n• Consumos\n• Perdas\n• Inventários\n• Entradas\n• Histórico\n• Relatórios\n\nESTA AÇÃO É IRREVERSÍVEL!')) return;
+  showToast('⏳ Apagando tudo...');
+  const chaves = ['consumos','perdas','inventarios','entradas','historico','relatorios'];
+  if(_lojaApagar===0){
+    chaves.forEach(k=>db[k]=[]);
+  } else {
+    chaves.forEach(k=>{ db[k] = (db[k]||[]).filter(x=>x.loja!=_lojaApagar); });
+  }
+  const ok = await cloudSet(db);
+  if(ok){
+    renderHistorico();
+    showToast('✅ Tudo apagado de ' + lojaTxt + '!');
+  } else {
+    showToast('⚠️ Erro ao apagar!');
+  }
 }
 
 window.addEventListener('firebaseReady',()=>{document.getElementById('btn-login').disabled=false;});
