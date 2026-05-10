@@ -134,7 +134,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.1.3</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.2.0</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -317,24 +317,16 @@
     </div>
 
     <div id="sec-historico" class="section">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-        <button id="fh-0" onclick="filtrarHistorico(0)" style="padding:7px 14px;border-radius:50px;border:2px solid var(--pink);background:var(--pink);color:white;font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">Todas</button>
-        <button id="fh-1" onclick="filtrarHistorico(1)" style="padding:7px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer"><span id="filt-nome1">Loja 1</span></button>
-        <button id="fh-2" onclick="filtrarHistorico(2)" style="padding:7px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer"><span id="filt-nome2">Loja 2</span></button>
-        <button id="fh-3" onclick="filtrarHistorico(3)" style="padding:7px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer"><span id="filt-nome3">Loja 3</span></button>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-        <button id="ft-" onclick="filtrarHistoricoTipo('')" style="padding:7px 14px;border-radius:50px;border:2px solid var(--pink);background:var(--pink);color:white;font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">Todos</button>
-        <button id="ft-consumo" onclick="filtrarHistoricoTipo('consumo')" style="padding:7px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">📦 Consumo</button>
-        <button id="ft-inventario" onclick="filtrarHistoricoTipo('inventario')" style="padding:7px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">📋 Inventário</button>
-        <button id="ft-entrada" onclick="filtrarHistoricoTipo('entrada')" style="padding:7px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">🛍️ Entradas</button>
-        <button id="ft-perda" onclick="filtrarHistoricoTipo('perda')" style="padding:7px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">💔 Perdas</button>
-        <button id="ft-importacao" onclick="filtrarHistoricoTipo('importacao')" style="padding:7px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--gray);font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">📥 Importações</button>
-      </div>
+      <!-- filtros loja -->
+      <div id="h-filtros-loja" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>
+      <!-- filtros tipo -->
+      <div id="h-filtros-tipo" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px"></div>
+      <!-- lista -->
       <div id="hist-lista"></div>
-      <button onclick="abrirApagar()" style="width:100%;margin-top:12px;padding:13px;border:none;border-radius:14px;background:#ef476f;color:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(239,71,111,.35)">🗑️ Apagar Lançamentos</button>
-    </div>
-
+      <!-- botão apagar -->
+      <div id="h-btn-apagar" style="display:none;margin-top:12px">
+        <button onclick="abrirApagar()" style="width:100%;padding:13px;border:none;border-radius:14px;background:#ef476f;color:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;cursor:pointer">🗑️ Apagar Lançamentos</button>
+      </div>
     </div>
 
     <div id="sec-config" class="section">
@@ -365,33 +357,20 @@
     </div>
 
     <!-- MODAL APAGAR -->
-    <div id="modal-apagar" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.55);align-items:flex-end;justify-content:center">
-      <div style="background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px">
-        <div style="font-size:1.5rem;text-align:center;margin-bottom:4px">🗑️</div>
-        <div style="font-family:'Baloo 2',cursive;font-size:1.1rem;font-weight:800;color:#c9345a;text-align:center;margin-bottom:16px">Apagar Lançamentos</div>
-
+    <div id="modal-apagar" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);align-items:flex-end;justify-content:center">
+      <div style="background:#fff;border-radius:24px 24px 0 0;padding:24px 20px 36px;width:100%;max-width:500px;box-shadow:0 -8px 40px rgba(0,0,0,.2)">
+        <div style="text-align:center;font-size:2rem;margin-bottom:4px">🗑️</div>
+        <div style="font-family:'Baloo 2',cursive;font-size:1.15rem;font-weight:800;color:#c9345a;text-align:center;margin-bottom:20px">Apagar Lançamentos</div>
+        <!-- Loja -->
         <div style="font-size:.72rem;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Loja</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:16px">
-          <button id="ap-loja-0" onclick="apLoja(0)" style="padding:8px 2px;border:2px solid #ef476f;background:#fff0f3;border-radius:10px;font-size:.72rem;font-weight:700;cursor:pointer;color:#c9345a">Todas</button>
-          <button id="ap-loja-1" onclick="apLoja(1)" style="padding:8px 2px;border:2px solid #e5e7eb;background:white;border-radius:10px;font-size:.72rem;font-weight:700;cursor:pointer;color:#6b7280" id="ap-l1-btn"><span id="ap-l1">Loja 1</span></button>
-          <button id="ap-loja-2" onclick="apLoja(2)" style="padding:8px 2px;border:2px solid #e5e7eb;background:white;border-radius:10px;font-size:.72rem;font-weight:700;cursor:pointer;color:#6b7280"><span id="ap-l2">Loja 2</span></button>
-          <button id="ap-loja-3" onclick="apLoja(3)" style="padding:8px 2px;border:2px solid #e5e7eb;background:white;border-radius:10px;font-size:.72rem;font-weight:700;cursor:pointer;color:#6b7280"><span id="ap-l3">Loja 3</span></button>
-        </div>
-
+        <div id="ap-lojas" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px"></div>
+        <!-- Opções -->
         <div style="font-size:.72rem;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">O que apagar</div>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
-          <button id="ap-consumo"    onclick="apToggle('ap-consumo')"    style="text-align:left;padding:11px 14px;border:2px solid #e5e7eb;background:white;border-radius:12px;font-size:.88rem;font-weight:600;cursor:pointer">📦 Consumos diários</button>
-          <button id="ap-perdas"     onclick="apToggle('ap-perdas')"     style="text-align:left;padding:11px 14px;border:2px solid #e5e7eb;background:white;border-radius:12px;font-size:.88rem;font-weight:600;cursor:pointer">💔 Perdas</button>
-          <button id="ap-inventarios" onclick="apToggle('ap-inventarios')" style="text-align:left;padding:11px 14px;border:2px solid #e5e7eb;background:white;border-radius:12px;font-size:.88rem;font-weight:600;cursor:pointer">📋 Inventários</button>
-          <button id="ap-entradas"   onclick="apToggle('ap-entradas')"   style="text-align:left;padding:11px 14px;border:2px solid #e5e7eb;background:white;border-radius:12px;font-size:.88rem;font-weight:600;cursor:pointer">🛍️ Entradas de compra</button>
-          <button id="ap-historico"  onclick="apToggle('ap-historico')"  style="text-align:left;padding:11px 14px;border:2px solid #e5e7eb;background:white;border-radius:12px;font-size:.88rem;font-weight:600;cursor:pointer">📜 Histórico</button>
-          <button id="ap-relatorios" onclick="apToggle('ap-relatorios')" style="text-align:left;padding:11px 14px;border:2px solid #e5e7eb;background:white;border-radius:12px;font-size:.88rem;font-weight:600;cursor:pointer">📥 Relatórios importados</button>
-          <button onclick="apTudo()" style="text-align:left;padding:11px 14px;border:2px solid #fee2e2;background:#fff5f5;border-radius:12px;font-size:.88rem;font-weight:700;cursor:pointer;color:#991b1b">🔴 Apagar tudo acima</button>
-        </div>
-
+        <div id="ap-opcoes" style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px"></div>
+        <!-- Botões -->
         <div style="display:flex;gap:10px">
-          <button onclick="fecharApagar()" style="flex:1;padding:13px;border:2px solid #e5e7eb;border-radius:12px;background:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:700;cursor:pointer;color:#6b7280">Cancelar</button>
-          <button onclick="confirmarApagar()" style="flex:1;padding:13px;border:none;border-radius:12px;background:#ef476f;color:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;cursor:pointer">🗑️ Apagar</button>
+          <button onclick="document.getElementById('modal-apagar').style.display='none'" style="flex:1;padding:14px;border:2px solid #e5e7eb;border-radius:14px;background:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:700;cursor:pointer;color:#6b7280">Cancelar</button>
+          <button onclick="executarApagar()" style="flex:1;padding:14px;border:none;border-radius:14px;background:#ef476f;color:white;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;cursor:pointer">🗑️ Apagar</button>
         </div>
       </div>
     </div>
@@ -955,9 +934,7 @@ async function atualizarDados(forcado=false){
   if(name==='divergencia')renderDivergencia();
     if(name==='historico'){
     // Reseta filtros ao abrir a aba para garantir que tudo aparece
-    _hFiltroLoja=0; _hFiltroTipo='';
-    filtrarHistorico(0);
-    filtrarHistoricoTipo('');
+    _hLoja=0; _hTipo='';
     renderHistorico();
   }
   }
@@ -988,9 +965,7 @@ function showTab(name,btn){
   if(name==='divergencia')renderDivergencia();
   if(name==='historico'){
     // Reseta filtros ao abrir a aba para garantir que tudo aparece
-    _hFiltroLoja=0; _hFiltroTipo='';
-    filtrarHistorico(0);
-    filtrarHistoricoTipo('');
+    _hLoja=0; _hTipo='';
     renderHistorico();
   }
   if(name==='entradas')renderEntradas();
@@ -2881,147 +2856,16 @@ let _resetLoja = 0; // 0=todas
 // ════════════════════════════════════════════════════════════
 //  HISTÓRICO
 // ════════════════════════════════════════════════════════════
-let _hFiltroLoja = 0, _hFiltroTipo = '';
 
-function filtrarHistorico(loja){
-  _hFiltroLoja = loja;
-  [0,1,2,3].forEach(n=>{
-    const b = document.getElementById('fh-'+n);
-    if(!b) return;
-    b.style.background  = n===loja ? 'var(--pink)' : 'white';
-    b.style.color       = n===loja ? 'white' : 'var(--gray)';
-    b.style.borderColor = n===loja ? 'var(--pink)' : 'var(--border)';
-  });
-  renderHistorico();
-}
 
-function filtrarHistoricoTipo(tipo){
-  _hFiltroTipo = tipo;
-  ['','consumo','inventario','entrada','perda','importacao'].forEach(t=>{
-    const b = document.getElementById('ft-'+t);
-    if(!b) return;
-    b.style.background  = t===tipo ? 'var(--pink)' : 'white';
-    b.style.color       = t===tipo ? 'white' : 'var(--gray)';
-    b.style.borderColor = t===tipo ? 'var(--pink)' : 'var(--border)';
-  });
-  renderHistorico();
-}
-
-function renderHistorico(){
-  const fn1=document.getElementById('filt-nome1');
-  const fn2=document.getElementById('filt-nome2');
-  const fn3=document.getElementById('filt-nome3');
-  if(fn1)fn1.textContent=nomeLoja(1);
-  if(fn2)fn2.textContent=nomeLoja(2);
-  if(fn3)fn3.textContent=nomeLoja(3);
-
-  const container = document.getElementById('hist-lista');
-  if(!container) return;
-
-  let hist = (db.historico||[]).slice().sort((a,b)=>b.timestamp.localeCompare(a.timestamp));
-  if(_hFiltroLoja > 0) hist = hist.filter(h=>h.loja==_hFiltroLoja);
-  if(_hFiltroTipo)     hist = hist.filter(h=>h.tipo===_hFiltroTipo);
-
-  if(!hist.length){
-    container.innerHTML = '<div class="empty"><span class="ej">📜</span><p>Nenhum registro encontrado.</p></div>';
-    return;
-  }
-
-  const icons  = {consumo:'📦',inventario:'📋',entrada:'🛍️',perda:'💔',importacao:'📥'};
-  const labels = {consumo:'Consumo Diário',inventario:'Inventário',entrada:'Entrada de Compra',perda:'Perda',importacao:'Importação'};
-  const colors = {consumo:'#1e40af',inventario:'#6b21a8',entrada:'#9a3412',perda:'#991b1b',importacao:'#166534'};
-  const bgs    = {consumo:'#eff6ff',inventario:'#fdf4ff',entrada:'#fff7ed',perda:'#fff0f0',importacao:'#f0fdf4'};
-
-  container.innerHTML = hist.map(h=>{
-    const d = new Date(h.timestamp);
-    const dataFmt = new Date(h.data+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
-    const hora    = d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    const itens   = (h.itens||[]);
-    const itensHtml = itens.length
-      ? '<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);display:flex;flex-wrap:wrap;gap:5px">'
-        + itens.map(i=>`<span style="background:var(--gray-light);border-radius:8px;padding:3px 8px;font-size:.72rem;font-weight:600">${i.nome}: <strong>${fmtQ(i.qty)} ${i.unidade||''}</strong></span>`).join('')
-        + '</div>'
-      : '';
-    return `<div class="card" style="margin-bottom:10px;border-left:4px solid ${colors[h.tipo]||'#e5e7eb'}">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="font-size:1.5rem">${icons[h.tipo]||'📝'}</div>
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap">
-            <span style="font-size:.82rem;font-weight:800;color:${colors[h.tipo]||'#333'};background:${bgs[h.tipo]||'#f3f4f6'};padding:2px 10px;border-radius:50px">${labels[h.tipo]||h.tipo}</span>
-            <span style="font-size:.75rem;color:var(--gray)">${lojaIcon(h.loja)} ${nomeLoja(h.loja)}</span>
-          </div>
-          <div style="font-size:.78rem;color:#444;margin-top:4px">✍️ ${h.responsavel} &nbsp;·&nbsp; 📅 ${dataFmt} ${hora}</div>
-          ${itensHtml}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
 
 // ════════════════════════════════════════════════════════════
 //  MODAL APAGAR — novo, simples, sem checkboxes
 // ════════════════════════════════════════════════════════════
-let _apLoja = 0;
 
-function abrirApagar(){
-  _apLoja = 0;
-  // Reset botões loja
-  [0,1,2,3].forEach(n=>{
-    const b=document.getElementById('ap-loja-'+n);
-    if(!b) return;
-    b.style.borderColor = n===0?'#ef476f':'#e5e7eb';
-    b.style.background  = n===0?'#fff0f3':'white';
-    b.style.color       = n===0?'#c9345a':'#6b7280';
-  });
-  // Atualiza nomes
-  const l1=document.getElementById('ap-l1'); if(l1) l1.textContent=nomeLoja(1);
-  const l2=document.getElementById('ap-l2'); if(l2) l2.textContent=nomeLoja(2);
-  const l3=document.getElementById('ap-l3'); if(l3) l3.textContent=nomeLoja(3);
-  // Reset opções
-  ['ap-consumo','ap-perdas','ap-inventarios','ap-entradas','ap-historico','ap-relatorios'].forEach(id=>{
-    const b=document.getElementById(id);
-    if(b){ b.style.borderColor='#e5e7eb'; b.style.background='white'; b.style.color=''; b.style.fontWeight='600'; }
-  });
-  document.getElementById('modal-apagar').style.display='flex';
-}
 
-function fecharApagar(){
-  document.getElementById('modal-apagar').style.display='none';
-}
 
-function apLoja(n){
-  _apLoja = n;
-  [0,1,2,3].forEach(i=>{
-    const b=document.getElementById('ap-loja-'+i);
-    if(!b) return;
-    b.style.borderColor = i===n?'#ef476f':'#e5e7eb';
-    b.style.background  = i===n?'#fff0f3':'white';
-    b.style.color       = i===n?'#c9345a':'#6b7280';
-  });
-}
 
-function apToggle(id){
-  const b = document.getElementById(id);
-  if(!b) return;
-  const on = b.dataset.on === '1';
-  b.dataset.on        = on ? '0' : '1';
-  b.style.borderColor = on ? '#e5e7eb' : '#ef476f';
-  b.style.background  = on ? 'white'   : '#fff0f3';
-  b.style.color       = on ? ''         : '#c9345a';
-  b.style.fontWeight  = on ? '600'      : '800';
-}
-
-function apTudo(){
-  const ids = ['ap-consumo','ap-perdas','ap-inventarios','ap-entradas','ap-historico','ap-relatorios'];
-  const allOn = ids.every(id=>document.getElementById(id)?.dataset.on==='1');
-  ids.forEach(id=>{ const b=document.getElementById(id); if(b){
-    b.dataset.on        = allOn?'0':'1';
-    b.style.borderColor = allOn?'#e5e7eb':'#ef476f';
-    b.style.background  = allOn?'white':'#fff0f3';
-    b.style.color       = allOn?'':'#c9345a';
-    b.style.fontWeight  = allOn?'600':'800';
-  }});
-}
 
 async function confirmarApagar(){
   const map = {
@@ -3052,6 +2896,186 @@ async function confirmarApagar(){
   fecharApagar();
   if(ok){ renderHistorico(); showToast('🗑️ ' + nomes + ' apagado(s)!'); }
   else showToast('⚠️ Erro ao apagar!');
+}
+
+
+// ════════════ HISTÓRICO ════════════
+let _hLoja = 0, _hTipo = '';
+
+function renderHistorico(){
+  // Atualiza nomes das lojas nos filtros
+  ['1','2','3'].forEach(n=>{
+    const el=document.getElementById('filt-nome'+n);
+    if(el) el.textContent=nomeLoja(parseInt(n));
+  });
+  const btn = document.getElementById('h-btn-apagar');
+  if(btn) btn.style.display = currentUser?.role==='admin' ? '' : 'none';
+
+  // Monta filtros de loja dinamicamente
+  const flDiv = document.getElementById('h-filtros-loja');
+  if(flDiv){
+    const lojas = [{n:0,label:'Todas'},...[1,2,3].map(n=>({n,label:nomeLoja(n)}))];
+    flDiv.innerHTML = lojas.map(l=>`
+      <button onclick="hFiltroLoja(${l.n})" id="hfl-${l.n}" style="padding:7px 14px;border-radius:50px;font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;border:2px solid ${l.n===_hLoja?'var(--pink)':'var(--border)'};background:${l.n===_hLoja?'var(--pink)':'white'};color:${l.n===_hLoja?'white':'var(--gray)'}">
+        ${l.n===0?'🏪 ':lojaIcon(l.n)+' '}${l.label}
+      </button>`).join('');
+  }
+
+  // Monta filtros de tipo
+  const ftDiv = document.getElementById('h-filtros-tipo');
+  if(ftDiv){
+    const tipos = [
+      {k:'',    label:'Todos'},
+      {k:'consumo',    label:'📦 Consumo'},
+      {k:'inventario', label:'📋 Inventário'},
+      {k:'entrada',    label:'🛍️ Entradas'},
+      {k:'perda',      label:'💔 Perdas'},
+      {k:'importacao', label:'📥 Importações'},
+    ];
+    ftDiv.innerHTML = tipos.map(t=>`
+      <button onclick="hFiltroTipo('${t.k}')" style="padding:7px 14px;border-radius:50px;font-family:Nunito,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;border:2px solid ${t.k===_hTipo?'var(--pink)':'var(--border)'};background:${t.k===_hTipo?'var(--pink)':'white'};color:${t.k===_hTipo?'white':'var(--gray)'}">
+        ${t.label}
+      </button>`).join('');
+  }
+
+  // Lista
+  const container = document.getElementById('hist-lista');
+  if(!container) return;
+
+  let hist = (db.historico||[]).slice().sort((a,b)=>b.timestamp.localeCompare(a.timestamp));
+  if(_hLoja > 0) hist = hist.filter(h=>h.loja==_hLoja);
+  if(_hTipo)     hist = hist.filter(h=>h.tipo===_hTipo);
+
+  if(!hist.length){
+    container.innerHTML='<div class="empty"><span class="ej">📜</span><p>Nenhum registro.</p></div>';
+    return;
+  }
+
+  const icons ={consumo:'📦',inventario:'📋',entrada:'🛍️',perda:'💔',importacao:'📥'};
+  const labels={consumo:'Consumo',inventario:'Inventário',entrada:'Entrada',perda:'Perda',importacao:'Importação'};
+  const cores ={consumo:'#1e40af',inventario:'#6b21a8',entrada:'#9a3412',perda:'#991b1b',importacao:'#166534'};
+  const bgs   ={consumo:'#eff6ff',inventario:'#fdf4ff',entrada:'#fff7ed',perda:'#fff0f0',importacao:'#f0fdf4'};
+
+  container.innerHTML = hist.map(h=>{
+    const hora = new Date(h.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const data = new Date(h.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    const itens = (h.itens||[]).map(i=>`<span style="background:var(--gray-light);border-radius:8px;padding:3px 9px;font-size:.72rem;font-weight:600;color:#333">${i.nome}: <strong>${fmtQ(i.qty)} ${i.unidade||''}</strong></span>`).join('');
+    return `<div class="card" style="margin-bottom:10px;border-left:4px solid ${cores[h.tipo]||'#e5e7eb'}">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="font-size:1.5rem;line-height:1">${icons[h.tipo]||'📝'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+            <span style="font-size:.8rem;font-weight:800;color:${cores[h.tipo]||'#333'};background:${bgs[h.tipo]||'#f3f4f6'};padding:2px 10px;border-radius:50px">${labels[h.tipo]||h.tipo}</span>
+            <span style="font-size:.74rem;color:var(--gray)">${lojaIcon(h.loja)} ${nomeLoja(h.loja)}</span>
+            <span style="font-size:.72rem;color:var(--gray);margin-left:auto">${data} ${hora}</span>
+          </div>
+          <div style="font-size:.76rem;color:#555;margin-bottom:${itens?'8px':'0'}">✍️ ${h.responsavel}</div>
+          ${itens?`<div style="display:flex;flex-wrap:wrap;gap:5px">${itens}</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function hFiltroLoja(loja){ _hLoja=loja; renderHistorico(); }
+function hFiltroTipo(tipo){ _hTipo=tipo; renderHistorico(); }
+
+// ════════════ MODAL APAGAR ════════════
+let _apLoja = 0;
+const _OPCOES_APAGAR = [
+  {id:'ap-consumo',     label:'📦 Consumos diários',    key:'consumos'},
+  {id:'ap-perdas',      label:'💔 Perdas',               key:'perdas'},
+  {id:'ap-inventarios', label:'📋 Inventários',          key:'inventarios'},
+  {id:'ap-entradas',    label:'🛍️ Entradas de compra',  key:'entradas'},
+  {id:'ap-historico',   label:'📜 Histórico',            key:'historico'},
+  {id:'ap-relatorios',  label:'📥 Relatórios importados',key:'relatorios'},
+];
+
+function abrirApagar(){
+  _apLoja = 0;
+
+  // Monta botões de loja
+  const lDiv = document.getElementById('ap-lojas');
+  lDiv.innerHTML = [{n:0,label:'Todas'},...[1,2,3].map(n=>({n,label:nomeLoja(n)}))].map(l=>`
+    <button onclick="apSelLoja(${l.n})" id="apl-${l.n}"
+      style="padding:9px 4px;border-radius:10px;font-size:.75rem;font-weight:700;cursor:pointer;
+             border:2px solid ${l.n===0?'#ef476f':'#e5e7eb'};
+             background:${l.n===0?'#fff0f3':'white'};
+             color:${l.n===0?'#c9345a':'#6b7280'}">
+      ${l.label}
+    </button>`).join('');
+
+  // Monta opções
+  const oDiv = document.getElementById('ap-opcoes');
+  oDiv.innerHTML = _OPCOES_APAGAR.map(o=>`
+    <button id="${o.id}" onclick="apSelOpcao('${o.id}')"
+      style="text-align:left;padding:12px 16px;border:2px solid #e5e7eb;background:white;
+             border-radius:12px;font-size:.88rem;font-weight:600;cursor:pointer;width:100%">
+      ${o.label}
+    </button>`).join('') + `
+    <button onclick="apTudo()"
+      style="text-align:left;padding:12px 16px;border:2px solid #fee2e2;background:#fff5f5;
+             border-radius:12px;font-size:.88rem;font-weight:700;cursor:pointer;width:100%;color:#991b1b">
+      🔴 Apagar tudo acima
+    </button>`;
+
+  document.getElementById('modal-apagar').style.display='flex';
+}
+
+function apSelLoja(n){
+  _apLoja = n;
+  [{n:0},...[1,2,3].map(n=>({n}))].forEach(l=>{
+    const b=document.getElementById('apl-'+l.n);
+    if(!b) return;
+    b.style.borderColor = l.n===n?'#ef476f':'#e5e7eb';
+    b.style.background  = l.n===n?'#fff0f3':'white';
+    b.style.color       = l.n===n?'#c9345a':'#6b7280';
+  });
+}
+
+function apSelOpcao(id){
+  const b=document.getElementById(id);
+  if(!b) return;
+  const on = b.dataset.on==='1';
+  b.dataset.on        = on?'0':'1';
+  b.style.borderColor = on?'#e5e7eb':'#ef476f';
+  b.style.background  = on?'white':'#fff0f3';
+  b.style.color       = on?'':'#c9345a';
+  b.style.fontWeight  = on?'600':'800';
+}
+
+function apTudo(){
+  const allOn = _OPCOES_APAGAR.every(o=>document.getElementById(o.id)?.dataset.on==='1');
+  _OPCOES_APAGAR.forEach(o=>{
+    const b=document.getElementById(o.id);
+    if(!b) return;
+    b.dataset.on        = allOn?'0':'1';
+    b.style.borderColor = allOn?'#e5e7eb':'#ef476f';
+    b.style.background  = allOn?'white':'#fff0f3';
+    b.style.color       = allOn?'':'#c9345a';
+    b.style.fontWeight  = allOn?'600':'800';
+  });
+}
+
+async function executarApagar(){
+  const sel = _OPCOES_APAGAR.filter(o=>document.getElementById(o.id)?.dataset.on==='1');
+  if(!sel.length){ showToast('⚠️ Selecione ao menos uma opção!'); return; }
+
+  const loja = _apLoja;
+  const lojaLabel = loja===0?'TODAS AS LOJAS':nomeLoja(loja);
+  const nomes = sel.map(o=>o.label.replace(/^[^\s]+ /,'')).join(', ');
+
+  showToast('⏳ Apagando...');
+
+  sel.forEach(o=>{
+    if(loja===0) db[o.key]=[];
+    else db[o.key]=(db[o.key]||[]).filter(x=>x.loja!=loja);
+  });
+
+  const ok = await cloudSet(db);
+  document.getElementById('modal-apagar').style.display='none';
+  if(ok){ renderHistorico(); showToast('✅ '+nomes+' apagado(s)!'); }
+  else   showToast('⚠️ Erro ao apagar!');
 }
 
 window.addEventListener('firebaseReady',()=>{document.getElementById('btn-login').disabled=false;});
