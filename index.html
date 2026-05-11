@@ -188,7 +188,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.20</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.23</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -507,7 +507,7 @@
       <div class="card">
         <div class="card-title"><span>🍦</span>Sabores de Milky Shake</div>
         <p style="font-size:.78rem;color:var(--gray);margin-bottom:12px">Gerencie os sabores cadastrados usados para calcular insumos a partir dos relatórios.</p>
-        <button onclick="abrirGerenciarSabores()" style="margin-bottom:0;width:100%;padding:11px;background:#1f2937;color:white;border:none;border-radius:12px;font-family:'Baloo 2',cursive;font-size:.9rem;font-weight:700;cursor:pointer">🍦 Gerenciar Sabores</button>
+        <button class="btn btn-teal" onclick="abrirGerenciarSabores()" style="margin-bottom:0">🍦 Gerenciar Sabores</button>
       </div>
       <div style="display:flex;gap:8px;margin-top:4px">
         <button onclick="gerarPDFInsumos()" style="flex:1;padding:10px;border:1.5px solid #d1d5db;border-radius:12px;background:white;color:#6b7280;font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer">📄 PDF Insumos</button>
@@ -859,9 +859,63 @@
         </div>
       </div>
 
+      <button onclick="abrirGerenciarCustos()" class="btn btn-pink" style="margin-top:10px;margin-bottom:0;background:linear-gradient(135deg,#92400e,#b45309);box-shadow:0 4px 14px rgba(180,83,9,.25);">💰 Custos Fixos</button>
+
       <div id="fin-totalizadores" style="margin:10px 0;"></div>
       <div id="fin-resumo" style="font-size:.78rem;color:var(--gray);text-align:center;margin:0 0 6px;font-weight:600;"></div>
       <div id="fin-lista"></div>
+    </div>
+
+    <!-- MODAL GERENCIAR CUSTOS FIXOS -->
+    <div id="modal-custos" style="display:none;position:fixed;inset:0;background:white;z-index:600;flex-direction:column;overflow:hidden">
+      <div style="background:linear-gradient(135deg,#92400e,#b45309);color:white;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <div>
+          <div style="font-family:'Baloo 2',cursive;font-size:1.15rem;font-weight:800">💰 Custos Fixos</div>
+          <div style="font-size:.75rem;opacity:.85" id="custos-subtitulo">—</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button onclick="abrirNovoCusto()" style="background:white;color:#92400e;border:none;border-radius:50px;padding:7px 14px;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">➕ Novo</button>
+          <button onclick="fecharGerenciarCustos()" style="background:rgba(255,255,255,.2);border:none;border-radius:50px;padding:7px 14px;color:white;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">✕ Fechar</button>
+        </div>
+      </div>
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border);flex-shrink:0;background:#fff7ed">
+        <div style="font-size:.78rem;color:#92400e;line-height:1.5">
+          <strong>Como funciona:</strong> o valor mensal é dividido pelos dias do mês e descontado do faturamento de cada dia. Se marcado <strong>recorrente</strong>, replica nos meses seguintes até nova alteração.
+        </div>
+      </div>
+      <div id="lista-custos-modal" style="flex:1;overflow-y:auto;padding:14px"></div>
+    </div>
+
+    <!-- MODAL ADICIONAR/EDITAR CUSTO -->
+    <div id="modal-editar-custo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:700;align-items:center;justify-content:center;padding:20px">
+      <div style="background:white;border-radius:20px;padding:24px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;">
+        <div style="font-family:'Baloo 2',cursive;font-size:1.2rem;font-weight:800;color:#92400e;margin-bottom:6px;text-align:center" id="edit-custo-titulo">➕ Novo Custo</div>
+        <div style="font-size:.75rem;color:var(--gray);text-align:center;margin-bottom:16px" id="edit-custo-loja-info">—</div>
+
+        <label class="field-label">Descrição</label>
+        <input id="edit-custo-desc" type="text" placeholder="Ex: Aluguel, Folha, Empréstimo..." class="field-input" style="margin-bottom:12px">
+
+        <label class="field-label">Valor mensal (R$)</label>
+        <input id="edit-custo-valor" type="number" min="0" step="0.01" placeholder="0,00" class="field-input" style="margin-bottom:12px">
+
+        <label class="field-label">Mês de referência</label>
+        <input id="edit-custo-mes" type="month" class="field-input" style="margin-bottom:12px">
+
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;background:#fff7ed;border:2px solid #fde68a;border-radius:10px;margin-bottom:16px">
+          <input id="edit-custo-recorrente" type="checkbox" style="width:18px;height:18px;cursor:pointer">
+          <div>
+            <div style="font-size:.85rem;font-weight:700;color:#92400e">Recorrente mensal</div>
+            <div style="font-size:.72rem;color:#9a3412;line-height:1.3">Replica nos meses seguintes até nova alteração</div>
+          </div>
+        </label>
+
+        <div id="edit-custo-aviso" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:10px;padding:10px 12px;font-size:.72rem;line-height:1.4;margin-bottom:16px"></div>
+
+        <div style="display:flex;gap:8px">
+          <button onclick="fecharEditarCusto()" style="flex:1;background:var(--gray-light);color:#333;border:none;border-radius:10px;padding:12px;font-family:'Baloo 2',cursive;font-weight:700;cursor:pointer">Cancelar</button>
+          <button onclick="salvarCusto()" style="flex:1;background:linear-gradient(135deg,#92400e,#b45309);color:white;border:none;border-radius:10px;padding:12px;font-family:'Baloo 2',cursive;font-weight:700;cursor:pointer">Salvar</button>
+        </div>
+      </div>
     </div>
 
     <!-- MODAL EDITAR LANÇAMENTO -->
@@ -1056,7 +1110,7 @@ const DEFAULT_ITEMS=[
   {id:'bob-maq',nome:'Bobina Maquininha',cat:'mimos',unidade:'unidades'},
 ];
 
-let db={items:[],inventarios:[],consumos:[],entradas:[],perdas:[],relatorios:[],financeiro:[],minimos:{},receitas:null,usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7,diasLoja1:7,diasLoja2:7,diasLoja3:7}};
+let db={items:[],inventarios:[],consumos:[],entradas:[],perdas:[],relatorios:[],financeiro:[],custosFixos:[],minimos:{},receitas:null,usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7,diasLoja1:7,diasLoja2:7,diasLoja3:7}};
 let lojaC=null,lojaI=null,lojaP=null,lojaD=null,lojaE=null,lojaPr=null,lojaImp=null;
 let projLojasFiltro = new Set(); // multi-select estoque (vazio por padrão)
 let divLojasFiltro = new Set();  // multi-select divergência (vazio por padrão)
@@ -1081,6 +1135,7 @@ async function doLogin(){
     if(!Array.isArray(db.entradas))    db.entradas=[];
     if(!Array.isArray(db.relatorios))  db.relatorios=[];
     if(!Array.isArray(db.financeiro))  db.financeiro=[];
+    if(!Array.isArray(db.custosFixos))  db.custosFixos=[];
     if(!Array.isArray(db.items))       db.items=[];
     if(!db.receitas)db.receitas=null;
   }
@@ -1199,6 +1254,7 @@ async function carregarDados(){
     if(!Array.isArray(db.entradas))    db.entradas=[];
     if(!Array.isArray(db.relatorios))  db.relatorios=[];
     if(!Array.isArray(db.financeiro))  db.financeiro=[];
+    if(!Array.isArray(db.custosFixos))  db.custosFixos=[];
     // Firebase tem prioridade — DEFAULT só preenche usuários ausentes
     if(usuariosSalvos){
       db.usuarios = {...DEFAULT_USERS};
@@ -1233,6 +1289,7 @@ async function atualizarDados(forcado=false){
     if(!Array.isArray(db.entradas))    db.entradas=[];
     if(!Array.isArray(db.relatorios))  db.relatorios=[];
     if(!Array.isArray(db.financeiro))  db.financeiro=[];
+    if(!Array.isArray(db.custosFixos))  db.custosFixos=[];
     if(!Array.isArray(db.items))       db.items=[];
   }
   const ud=await window.firebaseGetUsers();
@@ -2958,47 +3015,71 @@ function getReceitas(){
 }
 
 async function sincronizarReceitasPadrao(){
-  // Mescla as receitas hardcoded (RECEITAS) com as do Firebase (db.receitas)
-  // Estratégia: para cada sabor do padrão, SOBRESCREVE no db.receitas.
-  // Sabores customizados (que NÃO existem no padrão) são preservados.
+  // Merge inteligente: só ADICIONA o que falta, nunca sobrescreve o que você editou.
+  // Lógica:
+  //  • Sabor novo do padrão (não existe na sua versão) → adiciona inteiro
+  //  • Tamanho novo (ex: 180ml) num sabor existente → adiciona o tamanho inteiro
+  //  • Item dentro de um tamanho existente que você NÃO tem → adiciona
+  //  • Item que você JÁ tem (mesmo itemId, mesmo tamanho, mesmo sabor) → MANTÉM o seu
+  //  • Sabores customizados que NÃO existem no padrão → preservados intactos
   const padrao = RECEITAS;
-  const atuais = db.receitas || {};
+  const atuais = db.receitas ? JSON.parse(JSON.stringify(db.receitas)) : {};
 
-  // Conta diferenças pra dar feedback no toast
   let saboresAdicionados = 0;
-  let saboresAtualizados = 0;
-  let saboresCustomizados = 0;
+  let tamanhosAdicionados = 0;
+  let itensAdicionados = 0;
 
-  const novo = {};
-  // Primeiro, copia sabores customizados (que existem só em atuais)
-  Object.keys(atuais).forEach(nome => {
-    if(!padrao[nome]){
-      novo[nome] = atuais[nome];
-      saboresCustomizados++;
+  Object.keys(padrao).forEach(saborNome => {
+    if(!atuais[saborNome]){
+      // Sabor inteiro novo → adiciona inteiro
+      atuais[saborNome] = JSON.parse(JSON.stringify(padrao[saborNome]));
+      saboresAdicionados++;
+      return;
     }
+    // Sabor já existe: checa por tamanho
+    Object.keys(padrao[saborNome]).forEach(tam => {
+      if(!atuais[saborNome][tam] || !Array.isArray(atuais[saborNome][tam]) || atuais[saborNome][tam].length === 0){
+        // Tamanho inexistente ou vazio → adiciona inteiro do padrão
+        atuais[saborNome][tam] = JSON.parse(JSON.stringify(padrao[saborNome][tam]));
+        tamanhosAdicionados++;
+        return;
+      }
+      // Tamanho já existe: checa item a item
+      const idsExistentes = new Set(atuais[saborNome][tam].map(i => i.itemId));
+      padrao[saborNome][tam].forEach(itemPadrao => {
+        if(!idsExistentes.has(itemPadrao.itemId)){
+          // Item novo → adiciona
+          atuais[saborNome][tam].push(JSON.parse(JSON.stringify(itemPadrao)));
+          itensAdicionados++;
+        }
+        // Senão: já existe, MANTÉM a sua versão (não toca)
+      });
+    });
   });
-  // Agora aplica o padrão (sobrescreve)
-  Object.keys(padrao).forEach(nome => {
-    if(atuais[nome]) saboresAtualizados++;
-    else saboresAdicionados++;
-    novo[nome] = JSON.parse(JSON.stringify(padrao[nome]));
-  });
+
+  const totalAlteracoes = saboresAdicionados + tamanhosAdicionados + itensAdicionados;
+  if(totalAlteracoes === 0){
+    showToast('✅ Já está tudo sincronizado!');
+    return;
+  }
 
   const confirma = window.confirm(
-    `⚠️ Confirmação - Sincronizar Receitas Padrão\n\n` +
-    `Esta ação vai:\n` +
-    `• Adicionar ${saboresAdicionados} sabor(es) novo(s) do padrão\n` +
-    `• Sobrescrever ${saboresAtualizados} sabor(es) existente(s) com a versão padrão (180ml, copos, tampas, colher, saquinho serão atualizados)\n` +
-    `• Preservar ${saboresCustomizados} sabor(es) que você criou e não estão no padrão\n\n` +
-    `Sabores sobrescritos NÃO podem ser desfeitos. Confirma?`
+    `🔄 Sincronizar Receitas Padrão\n\n` +
+    `Esta ação vai ADICIONAR apenas o que falta:\n` +
+    (saboresAdicionados ? `• ${saboresAdicionados} sabor(es) novo(s)\n` : '') +
+    (tamanhosAdicionados ? `• ${tamanhosAdicionados} tamanho(s) novo(s) em sabores existentes\n` : '') +
+    (itensAdicionados ? `• ${itensAdicionados} ingrediente(s) novo(s) em receitas existentes\n` : '') +
+    `\n✅ Suas edições serão PRESERVADAS.\n` +
+    `Itens que você editou (mesmo itemId + tamanho + sabor) NÃO serão sobrescritos.\n\n` +
+    `Confirma?`
   );
   if(!confirma) return;
 
-  db.receitas = novo;
+  db.receitas = atuais;
   const ok = await saveCloud();
   if(ok){
     renderListaSabores();
-    showToast(`✅ Receitas sincronizadas! ${saboresAdicionados} novas + ${saboresAtualizados} atualizadas`);
+    showToast(`✅ Sincronizado! +${saboresAdicionados} sabores, +${tamanhosAdicionados} tamanhos, +${itensAdicionados} itens`);
   } else {
     showToast('❌ Erro ao salvar');
   }
@@ -4340,6 +4421,249 @@ function _fmtBRL(v){
   return (Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 
+// ════════════════════════════════════════════════════════════
+//  CUSTOS FIXOS (aluguel, folha, empréstimo, etc.)
+// ════════════════════════════════════════════════════════════
+
+function _diasNoMes(mesRef){
+  // mesRef no formato 'YYYY-MM' → retorna número de dias daquele mês
+  const [a,m] = mesRef.split('-').map(Number);
+  return new Date(a, m, 0).getDate();
+}
+
+function _mesDaData(dataStr){
+  // 'YYYY-MM-DD' → 'YYYY-MM'
+  return (dataStr||'').slice(0,7);
+}
+
+function custosFixosDoDia(data, loja){
+  // Retorna lista de { descricao, valor (rateado pelo dia) } pra uma loja num dia.
+  const mesAlvo = _mesDaData(data);
+  if(!mesAlvo) return [];
+  const custos = (db.custosFixos||[]).filter(c => {
+    if(c.loja != loja) return false;
+    if(c.mesRef > mesAlvo) return false; // ainda não começou
+    if(!c.recorrente && c.mesRef !== mesAlvo) return false; // único e não é o mês
+    return true;
+  });
+  // Pra recorrente: aplica a alteração mais recente até o mês alvo,
+  // agrupando por descricao (case-insensitive). Senão valores antigos somariam com novos.
+  const porDesc = {};
+  custos.forEach(c => {
+    const k = (c.descricao||'').trim().toLowerCase();
+    if(!porDesc[k] || c.mesRef > porDesc[k].mesRef){
+      porDesc[k] = c;
+    }
+  });
+  const dias = _diasNoMes(mesAlvo);
+  return Object.values(porDesc).map(c => ({
+    descricao: c.descricao,
+    valor: (Number(c.valor)||0) / dias,
+    valorMensal: Number(c.valor)||0,
+    recorrente: !!c.recorrente,
+    mesRef: c.mesRef,
+  }));
+}
+
+function totalCustoFixoDoDia(data, loja){
+  return custosFixosDoDia(data, loja).reduce((s,c)=>s+c.valor, 0);
+}
+
+function abrirGerenciarCustos(){
+  renderListaCustos();
+  document.getElementById('modal-custos').style.display = 'flex';
+}
+
+function fecharGerenciarCustos(){
+  document.getElementById('modal-custos').style.display = 'none';
+}
+
+function _lojaAtualFin(){
+  // Loja escolhida no filtro do Financeiro (ou null se 'Todas')
+  const v = document.getElementById('fin-filtro-loja')?.value;
+  return v ? Number(v) : null;
+}
+
+function renderListaCustos(){
+  const lojaFiltro = _lojaAtualFin();
+  const sub = document.getElementById('custos-subtitulo');
+  const cont = document.getElementById('lista-custos-modal');
+
+  if(!lojaFiltro){
+    sub.textContent = 'Selecione uma loja no filtro do Financeiro';
+    cont.innerHTML = `<div class="empty"><span class="ej">🏪</span><p>Escolha uma loja no filtro do Financeiro para gerenciar os custos fixos dela.</p></div>`;
+    return;
+  }
+  sub.textContent = `Loja: ${lojaIcon(lojaFiltro)} ${nomeLoja(lojaFiltro)}`;
+
+  const custos = (db.custosFixos||[])
+    .filter(c => c.loja == lojaFiltro)
+    .sort((a,b) => (b.mesRef||'').localeCompare(a.mesRef||'') || (a.descricao||'').localeCompare(b.descricao||''));
+
+  if(!custos.length){
+    cont.innerHTML = `<div class="empty"><span class="ej">💰</span><p>Nenhum custo fixo cadastrado para ${nomeLoja(lojaFiltro)}.<br>Clique em ➕ Novo para começar.</p></div>`;
+    return;
+  }
+
+  cont.innerHTML = custos.map(c => {
+    const dias = _diasNoMes(c.mesRef);
+    const diario = (Number(c.valor)||0) / dias;
+    const tag = c.recorrente
+      ? `<span style="background:#dcfce7;border:1px solid #86efac;color:#166534;border-radius:6px;padding:1px 7px;font-size:.65rem;font-weight:700">🔁 RECORRENTE</span>`
+      : `<span style="background:#fef3c7;border:1px solid #fde68a;color:#92400e;border-radius:6px;padding:1px 7px;font-size:.65rem;font-weight:700">📌 ÚNICO</span>`;
+    return `<div class="card" style="margin-bottom:10px;padding:12px 14px">
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Baloo 2',cursive;font-size:1rem;font-weight:800;color:#92400e">${c.descricao}</div>
+          <div style="font-size:.72rem;color:var(--gray);margin-top:2px">A partir de ${c.mesRef} · ${tag}</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button onclick="abrirEditarCusto('${c.id}')" style="background:var(--purple);color:white;border:none;border-radius:8px;padding:6px 12px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer">✏️</button>
+          <button onclick="excluirCusto('${c.id}')" style="background:var(--red);color:white;border:none;border-radius:8px;padding:6px 12px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer">🗑️</button>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;background:#fff7ed;border-radius:8px;padding:8px 12px;font-size:.78rem">
+        <div><strong style="color:#92400e">Mensal:</strong> R$ ${_fmtBRL(c.valor)}</div>
+        <div style="color:var(--gray);font-size:.72rem">÷ ${dias} dias =</div>
+        <div><strong style="color:#92400e">Diário:</strong> R$ ${_fmtBRL(diario)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Estado da edição do custo
+let _custoEditandoId = null;
+
+function abrirNovoCusto(){
+  const loja = _lojaAtualFin();
+  if(!loja){
+    showToast('⚠️ Selecione uma loja no filtro do Financeiro primeiro.');
+    return;
+  }
+  _custoEditandoId = null;
+  document.getElementById('edit-custo-titulo').textContent = '➕ Novo Custo';
+  document.getElementById('edit-custo-loja-info').textContent = `${lojaIcon(loja)} ${nomeLoja(loja)}`;
+  document.getElementById('edit-custo-desc').value = '';
+  document.getElementById('edit-custo-valor').value = '';
+  // Mês atual default
+  const hj = new Date();
+  document.getElementById('edit-custo-mes').value = `${hj.getFullYear()}-${String(hj.getMonth()+1).padStart(2,'0')}`;
+  document.getElementById('edit-custo-recorrente').checked = true;
+  const aviso = document.getElementById('edit-custo-aviso');
+  if(aviso) aviso.style.display = 'none';
+  document.getElementById('modal-editar-custo').style.display = 'flex';
+  setTimeout(()=>document.getElementById('edit-custo-desc').focus(), 100);
+}
+
+function abrirEditarCusto(id){
+  const c = (db.custosFixos||[]).find(x => x.id===id);
+  if(!c) return;
+  _custoEditandoId = id;
+  document.getElementById('edit-custo-titulo').textContent = '✏️ Editar Custo';
+  document.getElementById('edit-custo-loja-info').textContent = `${lojaIcon(c.loja)} ${nomeLoja(c.loja)} · Editando: ${c.descricao}`;
+  document.getElementById('edit-custo-desc').value = c.descricao || '';
+  document.getElementById('edit-custo-valor').value = c.valor || '';
+  document.getElementById('edit-custo-mes').value = c.mesRef || '';
+  document.getElementById('edit-custo-recorrente').checked = !!c.recorrente;
+  // Aviso de histórico
+  const aviso = document.getElementById('edit-custo-aviso');
+  if(aviso){
+    aviso.style.display = 'block';
+    aviso.innerHTML = `💡 <strong>Alterando valor ou mês:</strong> o valor antigo permanece nos meses anteriores e o novo valor passa a valer a partir do mês escolhido. (Histórico preservado.)`;
+  }
+  document.getElementById('modal-editar-custo').style.display = 'flex';
+}
+
+function fecharEditarCusto(){
+  _custoEditandoId = null;
+  document.getElementById('modal-editar-custo').style.display = 'none';
+}
+
+async function salvarCusto(){
+  const desc = document.getElementById('edit-custo-desc').value.trim();
+  const valor = parseFloat(document.getElementById('edit-custo-valor').value) || 0;
+  const mesRef = document.getElementById('edit-custo-mes').value;
+  const recorrente = document.getElementById('edit-custo-recorrente').checked;
+  const loja = _lojaAtualFin();
+
+  if(!desc){ showToast('⚠️ Informe a descrição'); return; }
+  if(valor <= 0){ showToast('⚠️ Informe um valor maior que zero'); return; }
+  if(!mesRef){ showToast('⚠️ Informe o mês de referência'); return; }
+  if(!loja){ showToast('⚠️ Loja não selecionada no Financeiro'); return; }
+
+  if(!Array.isArray(db.custosFixos)) db.custosFixos = [];
+
+  if(_custoEditandoId){
+    // Editando registro existente
+    const c = db.custosFixos.find(x => x.id === _custoEditandoId);
+    if(c){
+      const mudouValor = Number(c.valor) !== Number(valor);
+      const mudouMes = c.mesRef !== mesRef;
+
+      if(mudouValor || mudouMes){
+        // Cria novo registro mantendo o histórico do anterior
+        // Verifica se já existe outro com mesma descricao+loja+mesRef pra evitar duplicata
+        const descKey = desc.trim().toLowerCase();
+        const jaExiste = db.custosFixos.find(x =>
+          x.id !== c.id &&
+          x.loja == loja &&
+          (x.descricao||'').trim().toLowerCase() === descKey &&
+          x.mesRef === mesRef
+        );
+        if(jaExiste){
+          // Atualiza o existente em vez de criar duplicata
+          jaExiste.valor = valor;
+          jaExiste.recorrente = recorrente;
+          jaExiste.editadoEm = new Date().toISOString();
+        } else {
+          db.custosFixos.push({
+            id: `cst_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+            loja, descricao: desc, valor, mesRef, recorrente,
+            criadoEm: new Date().toISOString(),
+          });
+        }
+      } else {
+        // Só descrição/recorrência mudaram → atualiza no lugar
+        c.descricao = desc;
+        c.recorrente = recorrente;
+        c.editadoEm = new Date().toISOString();
+      }
+    }
+  } else {
+    // Novo registro
+    db.custosFixos.push({
+      id: `cst_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+      loja, descricao: desc, valor, mesRef, recorrente,
+      criadoEm: new Date().toISOString(),
+    });
+  }
+
+  const ok = await saveCloud();
+  if(ok){
+    fecharEditarCusto();
+    renderListaCustos();
+    renderFinanceiro();
+    showToast(_custoEditandoId ? '✅ Custo atualizado!' : '✅ Custo adicionado!');
+  } else {
+    showToast('❌ Erro ao salvar');
+  }
+}
+
+async function excluirCusto(id){
+  const c = (db.custosFixos||[]).find(x => x.id === id);
+  if(!c) return;
+  if(!window.confirm(`Excluir o custo "${c.descricao}" (R$ ${_fmtBRL(c.valor)}/mês)?\n\nIsso vai afetar todos os meses onde esse custo estava sendo aplicado.`)) return;
+  db.custosFixos = db.custosFixos.filter(x => x.id !== id);
+  const ok = await saveCloud();
+  if(ok){
+    renderListaCustos();
+    renderFinanceiro();
+    showToast('🗑️ Custo excluído');
+  } else {
+    showToast('❌ Erro ao excluir');
+  }
+}
+
 function renderFinanceiro(){
   const lista = document.getElementById('fin-lista');
   const resumo = document.getElementById('fin-resumo');
@@ -4369,7 +4693,8 @@ function renderFinanceiro(){
   // Totalizadores do período filtrado
   const totFat = registros.reduce((s,r)=> s + (r.totalFaturado||0), 0);
   const totCustoIns = registros.reduce((s,r)=> s + (r.totalGastoInsumos||0), 0);
-  const totDif = totFat - totCustoIns;
+  const totCustoFix = registros.reduce((s,r)=> s + totalCustoFixoDoDia(r.data, Number(r.loja)), 0);
+  const totDif = totFat - totCustoIns - totCustoFix;
   const totQtd = registros.reduce((s,r)=> s + Object.values(r.porTamanho||{}).reduce((a,b)=>a+(b||0),0), 0);
 
   if(registros.length === 0){
@@ -4390,11 +4715,15 @@ function renderFinanceiro(){
         <div style="font-size:.65rem;color:#9a3412;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">📦 Custo Insumos</div>
         <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#9a3412;margin-top:2px;">R$ ${_fmtBRL(totCustoIns)}</div>
       </div>
+      <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:12px;padding:10px;text-align:center;">
+        <div style="font-size:.65rem;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">💸 Custos Fixos</div>
+        <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#92400e;margin-top:2px;">R$ ${_fmtBRL(totCustoFix)}</div>
+      </div>
       <div style="background:${totDif>=0?'#eff6ff':'#fef2f2'};border:1px solid ${totDif>=0?'#bfdbfe':'#fecaca'};border-radius:12px;padding:10px;text-align:center;">
-        <div style="font-size:.65rem;color:${totDif>=0?'#1e40af':'#991b1b'};font-weight:700;text-transform:uppercase;letter-spacing:.5px;">📊 Diferença</div>
+        <div style="font-size:.65rem;color:${totDif>=0?'#1e40af':'#991b1b'};font-weight:700;text-transform:uppercase;letter-spacing:.5px;">📊 Lucro</div>
         <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:${totDif>=0?'#1e40af':'#991b1b'};margin-top:2px;">R$ ${_fmtBRL(totDif)}</div>
       </div>
-      <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:12px;padding:10px;text-align:center;">
+      <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:12px;padding:10px;text-align:center;grid-column:1/-1;">
         <div style="font-size:.65rem;color:#6b21a8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">🥤 Copos</div>
         <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#6b21a8;margin-top:2px;">${totQtd}</div>
       </div>
@@ -4403,11 +4732,22 @@ function renderFinanceiro(){
   // Lista de cards (um por importação)
   let html = '';
   registros.forEach(r => {
-    const dif = (r.totalFaturado||0) - (r.totalGastoInsumos||0);
+    // Custos fixos rateados pra esse dia/loja
+    const cfList = custosFixosDoDia(r.data, Number(r.loja));
+    const cfTotal = cfList.reduce((s,c)=>s+c.valor, 0);
+    const dif = (r.totalFaturado||0) - (r.totalGastoInsumos||0) - cfTotal;
     const expandido = !!finExpandidos[r.id];
     const [yy,mm,dd] = (r.data||'').split('-');
     const dataFmt = yy ? `${dd}/${mm}/${yy}` : (r.data||'—');
     const totalCopos = Object.values(r.porTamanho||{}).reduce((a,b)=>a+(b||0),0);
+
+    // Tooltip de custos fixos (passa o mouse / toca)
+    let cfTooltipAttr = '';
+    if(cfList.length){
+      const linhas = cfList.map(c=>`${c.descricao}: R$ ${_fmtBRL(c.valor)}`).join('\n');
+      const titulo = `Custos fixos rateados (mensal÷dias do mês):\n\n${linhas}\n─────\nTotal: R$ ${_fmtBRL(cfTotal)}`;
+      cfTooltipAttr = ` title="${titulo.replace(/"/g,'&quot;')}"`;
+    }
 
     html += `<div class="card" style="padding:10px 12px;margin-bottom:10px;">`;
 
@@ -4423,11 +4763,12 @@ function renderFinanceiro(){
     html += `<div style="font-size:1rem;color:var(--gray);flex-shrink:0;">${expandido?'▾':'▸'}</div>`;
     html += `</div>`;
 
-    // Resumo financeiro sempre visível
-    html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;font-size:.72rem;text-align:center;">`;
-    html += `<div><div style="color:var(--gray);font-weight:600;">Faturado</div><div style="font-weight:800;color:#166534;font-size:.84rem;">R$ ${_fmtBRL(r.totalFaturado)}</div></div>`;
-    html += `<div><div style="color:var(--gray);font-weight:600;">Custo Ins.</div><div style="font-weight:800;color:#9a3412;font-size:.84rem;">R$ ${_fmtBRL(r.totalGastoInsumos)}</div></div>`;
-    html += `<div><div style="color:var(--gray);font-weight:600;">Diferença</div><div style="font-weight:800;color:${dif>=0?'#1e40af':'#991b1b'};font-size:.84rem;">R$ ${_fmtBRL(dif)}</div></div>`;
+    // Resumo financeiro sempre visível (4 colunas com custos fixos)
+    html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:8px;font-size:.7rem;text-align:center;">`;
+    html += `<div><div style="color:var(--gray);font-weight:600;">Faturado</div><div style="font-weight:800;color:#166534;font-size:.8rem;">R$ ${_fmtBRL(r.totalFaturado)}</div></div>`;
+    html += `<div><div style="color:var(--gray);font-weight:600;">Custo Ins.</div><div style="font-weight:800;color:#9a3412;font-size:.8rem;">R$ ${_fmtBRL(r.totalGastoInsumos)}</div></div>`;
+    html += `<div${cfTooltipAttr} style="${cfList.length?'cursor:help;':''}"><div style="color:var(--gray);font-weight:600;">Custo Fixo${cfList.length?` ℹ️`:''}</div><div style="font-weight:800;color:#92400e;font-size:.8rem;">R$ ${_fmtBRL(cfTotal)}</div></div>`;
+    html += `<div><div style="color:var(--gray);font-weight:600;">Lucro</div><div style="font-weight:800;color:${dif>=0?'#1e40af':'#991b1b'};font-size:.8rem;">R$ ${_fmtBRL(dif)}</div></div>`;
     html += `</div>`;
 
     // Detalhamento (expansível)
