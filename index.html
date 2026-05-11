@@ -133,6 +133,15 @@
   .top-row .sync-bar span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:7px 11px;margin-bottom:10px;font-size:.76rem;color:#1e40af;line-height:1.4;}
   .info-box strong{display:inline;margin-right:6px;font-size:.78rem;}
+  /* Info popover (tooltip customizado pra mobile + desktop) */
+  .info-popover{position:fixed;background:#1f2937;color:white;padding:12px 14px;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.35);z-index:1000;max-width:320px;font-family:'Nunito',sans-serif;font-size:.78rem;line-height:1.5;white-space:pre-wrap;pointer-events:auto;}
+  .info-popover::after{content:'';position:absolute;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;}
+  .info-popover.arrow-up::after{top:-8px;left:50%;transform:translateX(-50%);border-bottom:8px solid #1f2937;}
+  .info-popover.arrow-down::after{bottom:-8px;left:50%;transform:translateX(-50%);border-top:8px solid #1f2937;}
+  .info-popover .ip-close{position:absolute;top:4px;right:8px;background:transparent;border:none;color:rgba(255,255,255,.65);cursor:pointer;font-size:1rem;font-weight:700;padding:2px 6px;}
+  .info-popover .ip-close:hover{color:white;}
+  .info-popover .ip-content{padding-right:14px;}
+  .has-info-tooltip{cursor:pointer;-webkit-tap-highlight-color:transparent;}
   .sec-div{font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:1px;padding:8px 0 5px;border-bottom:2px solid var(--border);margin-bottom:8px;}
   .rel-hdr{background:linear-gradient(135deg,var(--purple),#c084fc);color:white;border-radius:var(--radius);padding:16px;margin-bottom:14px;text-align:center;}
   .rel-hdr h2{font-family:'Baloo 2',cursive;font-size:1.3rem;}.rel-hdr p{font-size:.82rem;opacity:.85;margin-top:4px;}
@@ -207,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.39</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.42</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -849,7 +858,15 @@
 
     <!-- FINANCEIRO -->
     <div id="sec-financeiro" class="section">
-      <div id="sync-financeiro" class="sync-bar"><div class="sync-dot"></div><span>Sincronizado</span></div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;position:relative;">
+        <div id="sync-financeiro" class="sync-bar" style="flex:1;margin-bottom:0;"><div class="sync-dot"></div><span>Sincronizado</span></div>
+        <button onclick="toggleFinConfigMenu(event)" title="Configuração de custos e vendas extras" style="flex:0 0 auto;width:38px;height:38px;border:1px solid var(--border);background:white;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.05rem;color:#6b7280;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:all .15s;" onmouseover="this.style.borderColor='#92400e';this.style.color='#92400e';" onmouseout="this.style.borderColor='var(--border)';this.style.color='#6b7280';">⚙️</button>
+        <div id="fin-config-menu" style="display:none;position:absolute;top:46px;right:0;background:white;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:50;min-width:230px;overflow:hidden;">
+          <div style="padding:8px 12px;font-size:.7rem;color:var(--gray);font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #f3f4f6;background:#fafafa;">Configurações</div>
+          <button onclick="fecharFinConfigMenu();abrirGerenciarCustos();" style="width:100%;text-align:left;background:white;border:none;border-bottom:1px solid #f3f4f6;padding:11px 14px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:700;color:#92400e;display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='#fff7ed';" onmouseout="this.style.background='white';">💰 Custos Fixos</button>
+          <button onclick="fecharFinConfigMenu();abrirGerenciarVendas();" style="width:100%;text-align:left;background:white;border:none;padding:11px 14px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:700;color:#15803d;display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='#f0fdf4';" onmouseout="this.style.background='white';">💵 Vendas Externas</button>
+        </div>
+      </div>
       <div class="info-box" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
         <strong>💰 Financeiro</strong>
         Histórico financeiro de cada importação de relatório. Toque em um card pra ver o detalhamento completo (vendas, sabores, insumos).
@@ -881,11 +898,6 @@
             <input type="date" id="fin-filtro-ate" onchange="setFinFaixaData()" style="flex:1;min-width:0;border:2px solid var(--border);background:white;border-radius:10px;padding:7px 8px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;color:#333;">
           </div>
         </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
-        <button onclick="abrirGerenciarCustos()" class="btn" style="margin-bottom:0;background:linear-gradient(135deg,#92400e,#b45309);color:white;box-shadow:0 4px 14px rgba(180,83,9,.25);">💰 Custos Fixos</button>
-        <button onclick="abrirGerenciarVendas()" class="btn" style="margin-bottom:0;background:linear-gradient(135deg,#15803d,#16a34a);color:white;box-shadow:0 4px 14px rgba(22,163,74,.25);">💵 Vendas Externas</button>
       </div>
 
       <div id="fin-totalizadores" style="margin:10px 0;"></div>
@@ -1217,6 +1229,15 @@ let autoRefreshInterval=null;
 async function cloudGet(){try{return window.firebaseGet?await window.firebaseGet():null;}catch(e){return null;}}
 async function cloudSet(d){try{return window.firebaseSet?await window.firebaseSet(d):false;}catch(e){return false;}}
 
+// Wrapper protegido: bloqueia escrita de usuários se for viewer
+async function saveUsersCloud(usersObj){
+  if(isViewer()){
+    showToast('🔒 Sem permissão — usuário visualizador');
+    return false;
+  }
+  return await window.firebaseSetUsers(usersObj);
+}
+
 async function doLogin(){
   const u=document.getElementById('lu').value.trim().toLowerCase();
   const p=document.getElementById('lp').value;
@@ -1268,6 +1289,21 @@ async function doLogin(){
     projLojasFiltro = new Set([L]);
     divLojasFiltro = new Set([L]);
     comprasLojasFiltro = new Set([L]);
+  } else if(currentUser.role==='viewer'){
+    // Viewer: se só tem 1 loja, pré-seleciona ela; senão, deixa começar com "Todas"
+    const lojas = Array.isArray(currentUser.lojas) ? currentUser.lojas : [];
+    if(lojas.length === 1){
+      const L = lojas[0];
+      lojaC=lojaI=lojaPr=lojaE=lojaImp=L;
+      projLojasFiltro = new Set([L]);
+      divLojasFiltro = new Set([L]);
+      comprasLojasFiltro = new Set([L]);
+    } else {
+      // Viewer multi-lojas: começa com seleção de todas as lojas permitidas
+      projLojasFiltro = new Set(lojas);
+      divLojasFiltro = new Set(lojas);
+      comprasLojasFiltro = new Set(lojas);
+    }
   }
   document.getElementById('huser').textContent=currentUser.label;
   document.getElementById('screen-login').classList.remove('active');
@@ -1290,7 +1326,8 @@ function doLogout(){
 }
 
 function renderTabs(){
-  const isAdmin=currentUser.role==='admin';
+  const isAdmin = currentUser.role==='admin';
+  const isViewer = currentUser.role==='viewer';
   const allTabs=[
     {id:'consumo',    label:'📦 Consumo',       adminOnly:false},
     {id:'perdas',     label:'💔 Perdas',        adminOnly:false},
@@ -1302,9 +1339,14 @@ function renderTabs(){
     {id:'entradas',   label:'🛍️ Entradas',      adminOnly:true},
     {id:'historico',  label:'📜 Histórico',     adminOnly:true},
     {id:'financeiro', label:'💰 Financeiro',    adminOnly:true},
-    {id:'config',     label:'⚙️ Config',        adminOnly:true},
+    {id:'config',     label:'⚙️ Config',        adminOnly:true, hideViewer:true},
   ];
-  const visible=allTabs.filter(t=>isAdmin||!t.adminOnly);
+  // Viewer vê tudo, exceto abas marcadas como hideViewer (Config)
+  const visible = allTabs.filter(t => {
+    if(isAdmin) return true;
+    if(isViewer) return !t.hideViewer;
+    return !t.adminOnly;
+  });
   document.getElementById('tabs-container').innerHTML=visible.map((t,i)=>
     `<button class="tab${i===0?' active':''}" onclick="showTab('${t.id}',this)">${t.label}</button>`
   ).join('');
@@ -1355,21 +1397,28 @@ function scrollTabs(direction){
 
 function ajustarBotoesLoja(){
   const isAdmin = currentUser.role==='admin';
+  const isViewer = currentUser.role==='viewer';
+  const lojasViewer = isViewer ? (Array.isArray(currentUser.lojas)?currentUser.lojas:[]) : null;
+  const lojaUnicaViewer = isViewer && lojasViewer.length === 1 ? lojasViewer[0] : null;
   [1,2,3].forEach(n=>{
     // Prefixos de todos os seletores de loja
     ['blc','bli','blp','bld','ble','blpr','blimp'].forEach(p=>{
       const el=document.getElementById(p+n);
       if(!el) return;
       if(isAdmin){
-        el.style.display=''; // mostra todos para admin
+        el.style.display=''; // admin vê tudo
+      } else if(isViewer){
+        // Viewer: mostra só as lojas permitidas
+        el.style.display = lojasViewer.includes(n) ? '' : 'none';
       } else {
-        // para loja, mostra só o botão da própria loja (caso loja-sel esteja visível)
+        // Funcionária: mostra só a própria loja
         el.style.display = (n===currentUser.loja) ? '' : 'none';
       }
     });
   });
-  // Para funcionária: esconde TODOS os seletores de loja (já que ela só tem uma)
-  if(!isAdmin){
+  // Esconde o seletor inteiro quando o usuário tem apenas 1 loja (loja única funcionária ou viewer)
+  const usuarioLojaUnica = (!isAdmin && !isViewer) || lojaUnicaViewer != null;
+  if(usuarioLojaUnica){
     document.querySelectorAll('.loja-sel').forEach(sel=>{
       sel.style.display='none';
     });
@@ -1379,6 +1428,17 @@ function ajustarBotoesLoja(){
       sel.style.gridTemplateColumns='';
     });
   }
+  // Ajusta as <option> dos selects de filtro (Financeiro e Histórico) pra viewer
+  ['hist-filtro-loja', 'fin-filtro-loja'].forEach(id => {
+    const sel = document.getElementById(id);
+    if(!sel) return;
+    Array.from(sel.options).forEach(opt => {
+      if(opt.value === '') return; // mantém "Todas"
+      const lj = Number(opt.value);
+      if(isViewer) opt.style.display = lojasViewer.includes(lj) ? '' : 'none';
+      else opt.style.display = '';
+    });
+  });
 }
 
 async function carregarDados(){
@@ -1409,7 +1469,15 @@ async function carregarDados(){
   setLoad(false);
 }
 
+function isViewer(){
+  return currentUser && currentUser.role === 'viewer';
+}
+
 async function saveCloud(ctx){
+  if(isViewer()){
+    showToast('🔒 Sem permissão — usuário visualizador');
+    return false;
+  }
   if(ctx)setSS(ctx,'syncing','Salvando...');
   const ok=await cloudSet(db);
   const t=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
@@ -2276,7 +2344,7 @@ async function confirmarResetSenha(){
   const novaHash = '70ce94e36dbcaa6287506ea7204102304631c3a44a1e63c241327fafe76c7fc5';
   if(!db.usuarios) db.usuarios={...DEFAULT_USERS};
   db.usuarios[userToReset]={...USERS[userToReset],pass:novaHash};
-  const ok = await window.firebaseSetUsers(JSON.parse(JSON.stringify(db.usuarios)));
+  const ok = await saveUsersCloud(JSON.parse(JSON.stringify(db.usuarios)));
 
   if(ok){
     fecharResetSenha();
@@ -3771,11 +3839,22 @@ function renderListaUsuariosModal(){
   document.getElementById('usuarios-contador').textContent = `${Object.keys(users).length} usuários`;
 
   const html = Object.entries(users).map(([login, u])=>{
-    const roleLabel = u.role==='admin' ? '👑 Admin' : `👩 Funcionária – ${nomesLojas[(u.loja||1)-1]}`;
+    let roleLabel;
+    if(u.role==='admin') roleLabel = '👑 Admin';
+    else if(u.role==='viewer'){
+      const lojasViewer = Array.isArray(u.lojas) ? u.lojas : [];
+      const lojasFmt = lojasViewer.length===3 ? 'Todas as lojas' :
+        lojasViewer.length===0 ? 'Nenhuma loja' :
+        lojasViewer.map(l=>nomesLojas[l-1]).join(', ');
+      roleLabel = `👁️ Visualizador – ${lojasFmt}`;
+    } else roleLabel = `👩 Funcionária – ${nomesLojas[(u.loja||1)-1]}`;
     const isMe = login === currentUser?.name;
+    const ic = u.role==='admin'?'👑':(u.role==='viewer'?'👁️':'👩');
+    // Lojas marcadas do viewer (default: nenhuma)
+    const vlojas = Array.isArray(u.lojas) ? u.lojas : [];
     return `<div class="card" style="margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <div style="font-size:1.4rem">${u.role==='admin'?'👑':'👩'}</div>
+        <div style="font-size:1.4rem">${ic}</div>
         <div style="flex:1">
           <div style="font-weight:800;font-size:.92rem;color:#333">${login} ${isMe?'<span style="font-size:.7rem;color:var(--gray);font-weight:600">(você)</span>':''}</div>
           <div style="font-size:.72rem;color:var(--gray)">${roleLabel}</div>
@@ -3787,15 +3866,24 @@ function renderListaUsuariosModal(){
         <div style="display:flex;gap:8px">
           <select id="mp-role-${login}" onchange="toggleLojaSelectModal('${login}')"
             style="flex:1;border:2px solid var(--border);border-radius:8px;padding:8px;font-family:'Nunito',sans-serif;font-size:.82rem">
-            <option value="admin" ${u.role==='admin'?'selected':''}>👑 Admin</option>
-            <option value="loja"  ${u.role==='loja' ?'selected':''}>👩 Funcionária</option>
+            <option value="admin"  ${u.role==='admin' ?'selected':''}>👑 Admin</option>
+            <option value="loja"   ${u.role==='loja'  ?'selected':''}>👩 Funcionária</option>
+            <option value="viewer" ${u.role==='viewer'?'selected':''}>👁️ Visualizador</option>
           </select>
           <select id="mp-loja-${login}"
-            style="flex:1;border:2px solid var(--border);border-radius:8px;padding:8px;font-family:'Nunito',sans-serif;font-size:.82rem;${u.role==='admin'?'display:none':''}">
-            <option value="1" ${u.loja==1?'selected':''}>Loja 1</option>
-            <option value="2" ${u.loja==2?'selected':''}>Loja 2</option>
-            <option value="3" ${u.loja==3?'selected':''}>Loja 3</option>
+            style="flex:1;border:2px solid var(--border);border-radius:8px;padding:8px;font-family:'Nunito',sans-serif;font-size:.82rem;${u.role!=='loja'?'display:none':''}">
+            <option value="1" ${u.loja==1?'selected':''}>${nomesLojas[0]}</option>
+            <option value="2" ${u.loja==2?'selected':''}>${nomesLojas[1]}</option>
+            <option value="3" ${u.loja==3?'selected':''}>${nomesLojas[2]}</option>
           </select>
+        </div>
+        <div id="mp-lojas-viewer-${login}" style="${u.role!=='viewer'?'display:none;':''}background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;">
+          <div style="font-size:.7rem;color:#92400e;font-weight:700;margin-bottom:5px;">Lojas que pode visualizar:</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:4px;font-size:.78rem;cursor:pointer;"><input type="checkbox" id="mp-vloja1-${login}" value="1" ${vlojas.includes(1)?'checked':''}> ${nomesLojas[0]}</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:.78rem;cursor:pointer;"><input type="checkbox" id="mp-vloja2-${login}" value="2" ${vlojas.includes(2)?'checked':''}> ${nomesLojas[1]}</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:.78rem;cursor:pointer;"><input type="checkbox" id="mp-vloja3-${login}" value="3" ${vlojas.includes(3)?'checked':''}> ${nomesLojas[2]}</label>
+          </div>
         </div>
         <div style="display:flex;gap:8px">
           <button onclick="salvarUsuarioModal('${login}')"
@@ -3817,15 +3905,24 @@ function renderListaUsuariosModal(){
             style="flex:1;border:2px solid var(--border);border-radius:8px;padding:8px 10px;font-family:'Nunito',sans-serif;font-size:.85rem;background:var(--gray-light)">
         </div>
         <div style="display:flex;gap:8px">
-          <select id="mu-role" style="flex:1;border:2px solid var(--border);border-radius:8px;padding:8px;font-family:'Nunito',sans-serif;font-size:.85rem">
+          <select id="mu-role" onchange="toggleMuLojaSelector()" style="flex:1;border:2px solid var(--border);border-radius:8px;padding:8px;font-family:'Nunito',sans-serif;font-size:.85rem">
             <option value="admin">👑 Admin (acesso total)</option>
             <option value="loja">👩 Funcionária</option>
+            <option value="viewer">👁️ Visualizador (só leitura)</option>
           </select>
-          <select id="mu-loja" style="flex:1;border:2px solid var(--border);border-radius:8px;padding:8px;font-family:'Nunito',sans-serif;font-size:.85rem">
-            <option value="1">Loja 1</option>
-            <option value="2">Loja 2</option>
-            <option value="3">Loja 3</option>
+          <select id="mu-loja" style="flex:1;border:2px solid var(--border);border-radius:8px;padding:8px;font-family:'Nunito',sans-serif;font-size:.85rem;display:none;">
+            <option value="1">${nomesLojas[0]}</option>
+            <option value="2">${nomesLojas[1]}</option>
+            <option value="3">${nomesLojas[2]}</option>
           </select>
+        </div>
+        <div id="mu-lojas-viewer" style="display:none;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;">
+          <div style="font-size:.7rem;color:#92400e;font-weight:700;margin-bottom:5px;">Lojas que pode visualizar:</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:4px;font-size:.78rem;cursor:pointer;"><input type="checkbox" id="mu-vloja1" value="1" checked> ${nomesLojas[0]}</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:.78rem;cursor:pointer;"><input type="checkbox" id="mu-vloja2" value="2" checked> ${nomesLojas[1]}</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:.78rem;cursor:pointer;"><input type="checkbox" id="mu-vloja3" value="3" checked> ${nomesLojas[2]}</label>
+          </div>
         </div>
         <button onclick="adicionarUsuarioModal()"
           style="padding:10px;background:var(--teal);color:white;border:none;border-radius:10px;font-family:'Baloo 2',cursive;font-size:.9rem;font-weight:700;cursor:pointer">➕ Adicionar Usuário</button>
@@ -3838,7 +3935,17 @@ function renderListaUsuariosModal(){
 function toggleLojaSelectModal(login){
   const role = document.getElementById('mp-role-'+login).value;
   const sel  = document.getElementById('mp-loja-'+login);
-  if(sel) sel.style.display = role==='admin' ? 'none' : '';
+  const grpV = document.getElementById('mp-lojas-viewer-'+login);
+  if(sel)  sel.style.display = role==='loja' ? '' : 'none';
+  if(grpV) grpV.style.display = role==='viewer' ? '' : 'none';
+}
+
+function toggleMuLojaSelector(){
+  const role = document.getElementById('mu-role').value;
+  const sel  = document.getElementById('mu-loja');
+  const grpV = document.getElementById('mu-lojas-viewer');
+  if(sel)  sel.style.display = role==='loja' ? '' : 'none';
+  if(grpV) grpV.style.display = role==='viewer' ? '' : 'none';
 }
 
 async function salvarUsuarioModal(login){
@@ -3846,6 +3953,19 @@ async function salvarUsuarioModal(login){
   const role    = document.getElementById('mp-role-'+login).value;
   const lojaEl  = document.getElementById('mp-loja-'+login);
   const loja    = parseInt(lojaEl?.value||1);
+
+  // Para viewer: coleta lojas marcadas
+  let lojasViewer = [];
+  if(role==='viewer'){
+    [1,2,3].forEach(n => {
+      const cb = document.getElementById(`mp-vloja${n}-${login}`);
+      if(cb && cb.checked) lojasViewer.push(n);
+    });
+    if(lojasViewer.length === 0){
+      showToast('⚠️ Selecione pelo menos 1 loja para o visualizador!');
+      return;
+    }
+  }
 
   const udFresh = await window.firebaseGetUsers().catch(()=>null);
   if(udFresh) db.usuarios = {...DEFAULT_USERS,...udFresh};
@@ -3861,11 +3981,19 @@ async function salvarUsuarioModal(login){
   }
 
   const nomesLojas = [db.config.nomeLoja1||'Cajamar',db.config.nomeLoja2||'Iguatemi',db.config.nomeLoja3||'Carapicuíba'];
-  const userData = {pass,role,label:role==='admin'?`${login} – Acesso Total`:`Funcionária – ${nomesLojas[loja-1]}`};
+  let label;
+  if(role==='admin') label = `${login} – Acesso Total`;
+  else if(role==='viewer'){
+    const lojasFmt = lojasViewer.length===3 ? 'Todas as lojas' : lojasViewer.map(l=>nomesLojas[l-1]).join(', ');
+    label = `Visualizador – ${lojasFmt}`;
+  } else label = `Funcionária – ${nomesLojas[loja-1]}`;
+
+  const userData = {pass,role,label};
   if(role==='loja') userData.loja = loja;
+  if(role==='viewer') userData.lojas = lojasViewer;
   db.usuarios[login] = userData;
 
-  const ok = await window.firebaseSetUsers(JSON.parse(JSON.stringify(db.usuarios)));
+  const ok = await saveUsersCloud(JSON.parse(JSON.stringify(db.usuarios)));
   if(ok){ renderListaUsuariosModal(); showToast(`✅ Usuário "${login}" atualizado!`); }
   else showToast('⚠️ Erro ao salvar!');
 }
@@ -3874,7 +4002,7 @@ async function removerUsuarioModal(login){
   if(!confirm(`Remover "${login}"? Ação irreversível.`)) return;
   if(!db.usuarios) db.usuarios = {...DEFAULT_USERS};
   delete db.usuarios[login];
-  const ok = await window.firebaseSetUsers(db.usuarios);
+  const ok = await saveUsersCloud(db.usuarios);
   if(ok){ renderListaUsuariosModal(); showToast(`🗑️ "${login}" removido!`); }
   else showToast('⚠️ Erro ao salvar!');
 }
@@ -3888,12 +4016,34 @@ async function adicionarUsuarioModal(){
   if(!senha){ showToast('⚠️ Digite uma senha!'); return; }
   if(!db.usuarios) db.usuarios = {...DEFAULT_USERS};
   if(db.usuarios[login]){ showToast('⚠️ Este login já existe!'); return; }
+
+  // Para viewer: coleta lojas marcadas
+  let lojasViewer = [];
+  if(role==='viewer'){
+    [1,2,3].forEach(n => {
+      const cb = document.getElementById('mu-vloja'+n);
+      if(cb && cb.checked) lojasViewer.push(n);
+    });
+    if(lojasViewer.length === 0){
+      showToast('⚠️ Selecione pelo menos 1 loja para o visualizador!');
+      return;
+    }
+  }
+
   const senhaHash = await hashSenha(senha);
-  const nomesLojas = [db.config.nomeLoja1||'Loja 1',db.config.nomeLoja2||'Loja 2',db.config.nomeLoja3||'Loja 3'];
-  const newUser = {pass:senhaHash,role,label:role==='admin'?`${login} – Acesso Total`:`Funcionária – ${nomesLojas[loja-1]}`};
+  const nomesLojas = [db.config.nomeLoja1||'Cajamar',db.config.nomeLoja2||'Iguatemi',db.config.nomeLoja3||'Carapicuíba'];
+  let label;
+  if(role==='admin') label = `${login} – Acesso Total`;
+  else if(role==='viewer'){
+    const lojasFmt = lojasViewer.length===3 ? 'Todas as lojas' : lojasViewer.map(l=>nomesLojas[l-1]).join(', ');
+    label = `Visualizador – ${lojasFmt}`;
+  } else label = `Funcionária – ${nomesLojas[loja-1]}`;
+
+  const newUser = {pass:senhaHash,role,label};
   if(role==='loja') newUser.loja = loja;
+  if(role==='viewer') newUser.lojas = lojasViewer;
   db.usuarios[login] = newUser;
-  const ok = await window.firebaseSetUsers(JSON.parse(JSON.stringify(db.usuarios)));
+  const ok = await saveUsersCloud(JSON.parse(JSON.stringify(db.usuarios)));
   if(ok){ document.getElementById('mu-login').value=''; document.getElementById('mu-senha').value=''; renderListaUsuariosModal(); showToast(`✅ "${login}" criado!`); }
   else showToast('⚠️ Erro ao salvar!');
 }
@@ -4648,6 +4798,76 @@ function _fmtBRL(v){
   return (Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 
+// ── Popover customizado de info (substitui title nativo, melhor no mobile) ──
+let _infoPopoverEl = null;
+let _infoPopoverAnchor = null;
+
+function showInfoTooltip(anchor, ev){
+  if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+  if(!anchor) return;
+  // Se já tem popover aberto pra esse mesmo elemento, fecha (toggle)
+  if(_infoPopoverEl && _infoPopoverAnchor === anchor){
+    hideInfoTooltip();
+    return;
+  }
+  hideInfoTooltip(); // fecha qualquer outro aberto
+  const conteudo = anchor.getAttribute('data-tooltip');
+  if(!conteudo) return;
+
+  const pop = document.createElement('div');
+  pop.className = 'info-popover';
+  const btnClose = document.createElement('button');
+  btnClose.className = 'ip-close';
+  btnClose.textContent = '✕';
+  btnClose.onclick = (e)=>{ e.stopPropagation(); hideInfoTooltip(); };
+  const content = document.createElement('div');
+  content.className = 'ip-content';
+  content.textContent = conteudo;
+  pop.appendChild(btnClose);
+  pop.appendChild(content);
+  document.body.appendChild(pop);
+
+  // Posiciona: tenta acima do elemento; se não couber, abaixo
+  const rect = anchor.getBoundingClientRect();
+  const popRect = pop.getBoundingClientRect();
+  const margem = 12;
+  let left = rect.left + rect.width/2 - popRect.width/2;
+  // Limita às bordas da tela
+  if(left < 8) left = 8;
+  if(left + popRect.width > window.innerWidth - 8) left = window.innerWidth - popRect.width - 8;
+  let top = rect.top - popRect.height - margem;
+  let arrowClass = 'arrow-down';
+  if(top < 8){
+    // Não cabe acima → coloca abaixo
+    top = rect.bottom + margem;
+    arrowClass = 'arrow-up';
+  }
+  pop.style.left = `${left}px`;
+  pop.style.top = `${top}px`;
+  pop.classList.add(arrowClass);
+
+  _infoPopoverEl = pop;
+  _infoPopoverAnchor = anchor;
+}
+
+function hideInfoTooltip(){
+  if(_infoPopoverEl && _infoPopoverEl.parentNode){
+    _infoPopoverEl.parentNode.removeChild(_infoPopoverEl);
+  }
+  _infoPopoverEl = null;
+  _infoPopoverAnchor = null;
+}
+
+// Fecha popover ao clicar fora ou ao rolar/redimensionar
+document.addEventListener('click', function(e){
+  if(!_infoPopoverEl) return;
+  if(_infoPopoverEl.contains(e.target)) return; // clicou dentro do popover
+  if(_infoPopoverAnchor && _infoPopoverAnchor.contains(e.target)) return; // clicou no próprio anchor (toggle trata)
+  hideInfoTooltip();
+});
+window.addEventListener('scroll', hideInfoTooltip, true);
+window.addEventListener('resize', hideInfoTooltip);
+
 // ════════════════════════════════════════════════════════════
 //  CUSTOS FIXOS (aluguel, folha, empréstimo, etc.)
 // ════════════════════════════════════════════════════════════
@@ -4900,6 +5120,25 @@ function abrirGerenciarCustos(){
 function fecharGerenciarCustos(){
   document.getElementById('modal-custos').style.display = 'none';
 }
+
+function toggleFinConfigMenu(ev){
+  if(ev) ev.stopPropagation();
+  const m = document.getElementById('fin-config-menu');
+  if(!m) return;
+  m.style.display = m.style.display === 'block' ? 'none' : 'block';
+}
+
+function fecharFinConfigMenu(){
+  const m = document.getElementById('fin-config-menu');
+  if(m) m.style.display = 'none';
+}
+
+// Fecha o menu ao clicar fora dele
+document.addEventListener('click', function(e){
+  const m = document.getElementById('fin-config-menu');
+  if(!m || m.style.display !== 'block') return;
+  if(!m.contains(e.target)) fecharFinConfigMenu();
+});
 
 function abrirGerenciarVendas(){
   renderListaVendas();
@@ -5541,7 +5780,7 @@ function renderFinanceiro(){
       .map(([k,v])=>`${k}: R$ ${_fmtBRL(v)}`)
       .join('\n');
     const titulo = `Custos fixos do período (soma rateada):\n\n${linhas}\n─────\nTotal: R$ ${_fmtBRL(totCustoFix)}`;
-    cfTopTooltip = ` title="${titulo.replace(/"/g,'&quot;')}"`;
+    cfTopTooltip = ` data-tooltip="${titulo.replace(/"/g,'&quot;')}" onclick="showInfoTooltip(this,event)"`;
   }
   // Tooltip de Encargos no topo (impostos + fundo marketing + royalties + cartão)
   let impTopTooltip = '';
@@ -5556,7 +5795,7 @@ function renderFinanceiro(){
       return `${nomeLoja(Number(lj))} (faturado R$ ${_fmtBRL(v.faturado)}):\n${linhas.join('\n')}\n  Subtotal: R$ ${_fmtBRL(subt)}`;
     }).join('\n\n');
     const titulo = `Encargos do período (% sobre faturado do sistema):\n\n${blocos}\n─────\nTotal: R$ ${_fmtBRL(totImpostos)}`;
-    impTopTooltip = ` title="${titulo.replace(/"/g,'&quot;')}"`;
+    impTopTooltip = ` data-tooltip="${titulo.replace(/"/g,'&quot;')}" onclick="showInfoTooltip(this,event)"`;
   }
   // Tooltip de vendas externas no topo
   let vexTopTooltip = '';
@@ -5575,19 +5814,19 @@ function renderFinanceiro(){
       .map(([k,v]) => `${k} (CMV ${v.perc}%): ${v.dias} dia${v.dias===1?'':'s'} · R$ ${_fmtBRL(v.total)}`)
       .join('\n');
     const titulo = `Vendas externas do período (por canal):\n\n${linhas}\n─────\nTotal vendido: R$ ${_fmtBRL(totVendaExt)}\nCusto insumos: R$ ${_fmtBRL(totCustoVendaExt)}`;
-    vexTopTooltip = ` title="${titulo.replace(/"/g,'&quot;')}"`;
+    vexTopTooltip = ` data-tooltip="${titulo.replace(/"/g,'&quot;')}" onclick="showInfoTooltip(this,event)"`;
   }
   // Tooltip de Faturado (sistema + externas)
   let fatTopTooltip = '';
   if(totVendaExt > 0){
     const titulo = `Sistema: R$ ${_fmtBRL(totFatSistema)}\nVendas Externas: R$ ${_fmtBRL(totVendaExt)}\n─────\nTotal: R$ ${_fmtBRL(totFat)}`;
-    fatTopTooltip = ` title="${titulo.replace(/"/g,'&quot;')}"`;
+    fatTopTooltip = ` data-tooltip="${titulo.replace(/"/g,'&quot;')}" onclick="showInfoTooltip(this,event)"`;
   }
   // Tooltip de Insumos (sistema + custo das externas)
   let insTopTooltip = '';
   if(totCustoVendaExt > 0){
     const titulo = `Sistema: R$ ${_fmtBRL(totCustoInsSistema)}\nCusto Vendas Externas: R$ ${_fmtBRL(totCustoVendaExt)}\n─────\nTotal: R$ ${_fmtBRL(totCustoIns)}`;
-    insTopTooltip = ` title="${titulo.replace(/"/g,'&quot;')}"`;
+    insTopTooltip = ` data-tooltip="${titulo.replace(/"/g,'&quot;')}" onclick="showInfoTooltip(this,event)"`;
   }
 
   if(registros.length === 0 && vendasExtPeriodo.length === 0){
@@ -5604,23 +5843,23 @@ function renderFinanceiro(){
   resumo.textContent = `${registros.length} registro${registros.length===1?'':'s'} · período somado abaixo`;
   tots.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-      <div${fatTopTooltip} style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:10px;text-align:center;${totVendaExt>0?'cursor:help;':''}">
+      <div${fatTopTooltip}${totVendaExt>0?' class="has-info-tooltip"':''} style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:10px;text-align:center;">
         <div style="font-size:.65rem;color:#166534;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">💰 Faturado${totVendaExt>0?' ℹ️':''}</div>
         <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#166534;margin-top:2px;">R$ ${_fmtBRL(totFat)}</div>
       </div>
-      <div${vexTopTooltip} style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:12px;padding:10px;text-align:center;${totVendaExt>0?'cursor:help;':''}">
+      <div${vexTopTooltip}${totVendaExt>0?' class="has-info-tooltip"':''} style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:12px;padding:10px;text-align:center;">
         <div style="font-size:.65rem;color:#065f46;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">💵 Vendas Externas${totVendaExt>0?' ℹ️':''}</div>
         <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#065f46;margin-top:2px;">R$ ${_fmtBRL(totVendaExt)}</div>
       </div>
-      <div${insTopTooltip} style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px;text-align:center;${totCustoVendaExt>0?'cursor:help;':''}">
+      <div${insTopTooltip}${totCustoVendaExt>0?' class="has-info-tooltip"':''} style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px;text-align:center;">
         <div style="font-size:.65rem;color:#9a3412;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">📦 Custo Insumos${totCustoVendaExt>0?' ℹ️':''}</div>
         <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#9a3412;margin-top:2px;">R$ ${_fmtBRL(totCustoIns)}</div>
       </div>
-      <div${cfTopTooltip} style="background:#fef3c7;border:1px solid #fde68a;border-radius:12px;padding:10px;text-align:center;${totCustoFix>0?'cursor:help;':''}">
+      <div${cfTopTooltip}${totCustoFix>0?' class="has-info-tooltip"':''} style="background:#fef3c7;border:1px solid #fde68a;border-radius:12px;padding:10px;text-align:center;">
         <div style="font-size:.65rem;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">💸 Custos Fixos${totCustoFix>0?' ℹ️':''}</div>
         <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#92400e;margin-top:2px;">R$ ${_fmtBRL(totCustoFix)}</div>
       </div>
-      <div${impTopTooltip} style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:10px;text-align:center;${totImpostos>0?'cursor:help;':''}">
+      <div${impTopTooltip}${totImpostos>0?' class="has-info-tooltip"':''} style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:10px;text-align:center;">
         <div style="font-size:.65rem;color:#1e40af;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">🧾 Encargos${totImpostos>0?' ℹ️':''}</div>
         <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#1e40af;margin-top:2px;">R$ ${_fmtBRL(totImpostos)}</div>
       </div>
@@ -5665,7 +5904,7 @@ function renderFinanceiro(){
     if(cfList.length){
       const linhas = cfList.map(c=>`${c.descricao}: R$ ${_fmtBRL(c.valor)}`).join('\n');
       const titulo = `Custos fixos rateados (mensal÷dias do mês):\n\n${linhas}\n─────\nTotal: R$ ${_fmtBRL(cfTotal)}`;
-      cfTooltipAttr = ` title="${titulo.replace(/"/g,'&quot;')}"`;
+      cfTooltipAttr = ` data-tooltip="${titulo.replace(/"/g,'&quot;')}" onclick="showInfoTooltip(this,event)"`;
     }
     // Tooltip de encargos (impostos + fundo marketing + royalties + cartão)
     let impTooltipAttr = '';
@@ -5676,14 +5915,14 @@ function renderFinanceiro(){
       if(royTotal > 0) linhas.push(`👑 Royalties: ${royPerc}% = R$ ${_fmtBRL(royTotal)}`);
       if(cartTotal > 0) linhas.push(`💳 Taxa de Cartão: ${cartPerc}% = R$ ${_fmtBRL(cartTotal)}`);
       const titulo = `Encargos sobre R$ ${_fmtBRL(r.totalFaturado)} (faturado do sistema):\n\n${linhas.join('\n')}\n─────\nTotal: ${encargosPerc.toLocaleString('pt-BR',{maximumFractionDigits:2})}% = R$ ${_fmtBRL(encargosTotal)}\n\n(Vendas externas não pagam encargos)`;
-      impTooltipAttr = ` title="${titulo.replace(/"/g,'&quot;')}"`;
+      impTooltipAttr = ` data-tooltip="${titulo.replace(/"/g,'&quot;')}" onclick="showInfoTooltip(this,event)"`;
     }
     // Tooltip de Faturado (sistema + externas)
     let fatTooltipAttr = '';
     if(vexList.length){
       const linhas = vexList.map(v=>`+ ${v.descricao}: R$ ${_fmtBRL(v.valor)}`).join('\n');
       const titulo = `Sistema: R$ ${_fmtBRL(r.totalFaturado)}\nVendas Externas:\n${linhas}\n─────\nTotal: R$ ${_fmtBRL(fatTotal)}`;
-      fatTooltipAttr = ` title="${titulo.replace(/"/g,'&quot;')}"`;
+      fatTooltipAttr = ` data-tooltip="${titulo.replace(/"/g,'&quot;')}" onclick="showInfoTooltip(this,event)"`;
     }
     // Tooltip de Insumos (sistema + custo das externas)
     let insTooltipAttr = '';
@@ -5693,7 +5932,7 @@ function renderFinanceiro(){
         return `+ ${v.descricao}: ${v.percCusto||0}% × R$ ${_fmtBRL(v.valor)} = R$ ${_fmtBRL(c)}`;
       }).join('\n');
       const titulo = `Sistema: R$ ${_fmtBRL(r.totalGastoInsumos)}\nCusto Vendas Externas:\n${linhas}\n─────\nTotal: R$ ${_fmtBRL(insumosTotal)}`;
-      insTooltipAttr = ` title="${titulo.replace(/"/g,'&quot;')}"`;
+      insTooltipAttr = ` data-tooltip="${titulo.replace(/"/g,'&quot;')}" onclick="showInfoTooltip(this,event)"`;
     }
 
     html += `<div class="card" style="padding:10px 12px;margin-bottom:10px;">`;
@@ -5712,10 +5951,10 @@ function renderFinanceiro(){
 
     // Resumo financeiro sempre visível (5 colunas: Fat / Insumos / Fixos / Encargos / Lucro)
     html += `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:8px;font-size:.65rem;text-align:center;">`;
-    html += `<div${fatTooltipAttr} style="${vexList.length?'cursor:help;':''}"><div style="color:var(--gray);font-weight:600;">Faturado${vexList.length?' ℹ️':''}</div><div style="font-weight:800;color:#166534;font-size:.74rem;">R$ ${_fmtBRL(fatTotal)}${vexList.length?'<span style="color:#15803d;font-size:.6rem;font-weight:700"> +ext</span>':''}</div></div>`;
-    html += `<div${insTooltipAttr} style="${(vexList.length&&vexCustoTotal>0)?'cursor:help;':''}"><div style="color:var(--gray);font-weight:600;">Insumos${(vexList.length&&vexCustoTotal>0)?' ℹ️':''}</div><div style="font-weight:800;color:#9a3412;font-size:.74rem;">R$ ${_fmtBRL(insumosTotal)}</div></div>`;
-    html += `<div${cfTooltipAttr} style="${cfList.length?'cursor:help;':''}"><div style="color:var(--gray);font-weight:600;">Fixos${cfList.length?' ℹ️':''}</div><div style="font-weight:800;color:#92400e;font-size:.74rem;">R$ ${_fmtBRL(cfTotal)}</div></div>`;
-    html += `<div${impTooltipAttr} style="${encargosTotal>0?'cursor:help;':''}"><div style="color:var(--gray);font-weight:600;">Encargos${encargosTotal>0?' ℹ️':''}</div><div style="font-weight:800;color:#1e3a8a;font-size:.74rem;">R$ ${_fmtBRL(encargosTotal)}</div></div>`;
+    html += `<div${fatTooltipAttr}${vexList.length?' class="has-info-tooltip"':''}><div style="color:var(--gray);font-weight:600;">Faturado${vexList.length?' ℹ️':''}</div><div style="font-weight:800;color:#166534;font-size:.74rem;">R$ ${_fmtBRL(fatTotal)}${vexList.length?'<span style="color:#15803d;font-size:.6rem;font-weight:700"> +ext</span>':''}</div></div>`;
+    html += `<div${insTooltipAttr}${(vexList.length&&vexCustoTotal>0)?' class="has-info-tooltip"':''}><div style="color:var(--gray);font-weight:600;">Insumos${(vexList.length&&vexCustoTotal>0)?' ℹ️':''}</div><div style="font-weight:800;color:#9a3412;font-size:.74rem;">R$ ${_fmtBRL(insumosTotal)}</div></div>`;
+    html += `<div${cfTooltipAttr}${cfList.length?' class="has-info-tooltip"':''}><div style="color:var(--gray);font-weight:600;">Fixos${cfList.length?' ℹ️':''}</div><div style="font-weight:800;color:#92400e;font-size:.74rem;">R$ ${_fmtBRL(cfTotal)}</div></div>`;
+    html += `<div${impTooltipAttr}${encargosTotal>0?' class="has-info-tooltip"':''}><div style="color:var(--gray);font-weight:600;">Encargos${encargosTotal>0?' ℹ️':''}</div><div style="font-weight:800;color:#1e3a8a;font-size:.74rem;">R$ ${_fmtBRL(encargosTotal)}</div></div>`;
     html += `<div><div style="color:var(--gray);font-weight:600;">Lucro</div><div style="font-weight:800;color:${dif>=0?'#1e40af':'#991b1b'};font-size:.74rem;">R$ ${_fmtBRL(dif)}</div></div>`;
     html += `</div>`;
 
