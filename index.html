@@ -207,7 +207,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.36</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.37</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1185,7 +1185,7 @@ const DEFAULT_ITEMS=[
   {id:'bob-maq',nome:'Bobina Maquininha',cat:'mimos',unidade:'unidades'},
 ];
 
-let db={items:[],inventarios:[],consumos:[],entradas:[],perdas:[],relatorios:[],financeiro:[],custosFixos:[],vendasExternas:[],minimos:{},receitas:null,usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7,diasLoja1:7,diasLoja2:7,diasLoja3:7,impostoLoja1:0,impostoLoja2:0,impostoLoja3:0}};
+let db={items:[],inventarios:[],consumos:[],entradas:[],perdas:[],relatorios:[],financeiro:[],custosFixos:[],vendasExternas:[],minimos:{},receitas:null,usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7,diasLoja1:7,diasLoja2:7,diasLoja3:7,impostoLoja1:0,impostoLoja2:0,impostoLoja3:0,franqueadoraLoja1:0,franqueadoraLoja2:0,franqueadoraLoja3:0,royaltiesLoja1:0,royaltiesLoja2:0,royaltiesLoja3:0}};
 let lojaC=null,lojaI=null,lojaP=null,lojaD=null,lojaE=null,lojaPr=null,lojaImp=null;
 let projLojasFiltro = new Set(); // multi-select estoque (vazio por padrão)
 let divLojasFiltro = new Set();  // multi-select divergência (vazio por padrão)
@@ -4673,17 +4673,50 @@ function totalCustoFixoDoDia(data, loja){
   return custosFixosDoDia(data, loja).reduce((s,c)=>s+c.valor, 0);
 }
 
-// ── Impostos (percentual sobre faturado, por loja) ──
+// ── Encargos sobre faturado (impostos + franqueadora + royalties — todos % do faturado do sistema) ──
 function _percImposto(loja){
   const key = `impostoLoja${Number(loja)}`;
   const v = parseFloat(db.config?.[key]);
   return isNaN(v) ? 0 : v;
 }
 
+function _percFranqueadora(loja){
+  const key = `franqueadoraLoja${Number(loja)}`;
+  const v = parseFloat(db.config?.[key]);
+  return isNaN(v) ? 0 : v;
+}
+
+function _percRoyalties(loja){
+  const key = `royaltiesLoja${Number(loja)}`;
+  const v = parseFloat(db.config?.[key]);
+  return isNaN(v) ? 0 : v;
+}
+
+function _percEncargosTotal(loja){
+  return _percImposto(loja) + _percFranqueadora(loja) + _percRoyalties(loja);
+}
+
 function impostoDoRegistro(r){
   const perc = _percImposto(Number(r.loja));
   if(!perc) return 0;
   return (Number(r.totalFaturado)||0) * perc / 100;
+}
+
+function franqueadoraDoRegistro(r){
+  const perc = _percFranqueadora(Number(r.loja));
+  if(!perc) return 0;
+  return (Number(r.totalFaturado)||0) * perc / 100;
+}
+
+function royaltiesDoRegistro(r){
+  const perc = _percRoyalties(Number(r.loja));
+  if(!perc) return 0;
+  return (Number(r.totalFaturado)||0) * perc / 100;
+}
+
+function encargosDoRegistro(r){
+  // Soma dos 3 encargos sobre o faturado do sistema
+  return impostoDoRegistro(r) + franqueadoraDoRegistro(r) + royaltiesDoRegistro(r);
 }
 
 // ── Vendas Externas (canais recorrentes com lançamentos diários) ──
@@ -4773,6 +4806,40 @@ async function salvarImposto(loja){
   }
 }
 
+async function salvarFranqueadora(loja){
+  const inp = document.getElementById(`franq-input-${loja}`);
+  const v = parseFloat(inp.value);
+  if(isNaN(v) || v < 0){ showToast('⚠️ Percentual inválido'); return; }
+  if(v > 100){ showToast('⚠️ Percentual não pode passar de 100%'); return; }
+  if(!db.config) db.config = {};
+  db.config[`franqueadoraLoja${loja}`] = v;
+  const ok = await saveCloud();
+  if(ok){
+    renderListaCustos();
+    renderFinanceiro();
+    showToast(`✅ Taxa franqueadora atualizada: ${v}%`);
+  } else {
+    showToast('❌ Erro ao salvar');
+  }
+}
+
+async function salvarRoyalties(loja){
+  const inp = document.getElementById(`roy-input-${loja}`);
+  const v = parseFloat(inp.value);
+  if(isNaN(v) || v < 0){ showToast('⚠️ Percentual inválido'); return; }
+  if(v > 100){ showToast('⚠️ Percentual não pode passar de 100%'); return; }
+  if(!db.config) db.config = {};
+  db.config[`royaltiesLoja${loja}`] = v;
+  const ok = await saveCloud();
+  if(ok){
+    renderListaCustos();
+    renderFinanceiro();
+    showToast(`✅ Royalties atualizado: ${v}%`);
+  } else {
+    showToast('❌ Erro ao salvar');
+  }
+}
+
 function abrirGerenciarCustos(){
   renderListaCustos();
   document.getElementById('modal-custos').style.display = 'flex';
@@ -4800,24 +4867,52 @@ function renderListaCustos(){
   }
   sub.textContent = `Loja: ${lojaIcon(lojaFiltro)} ${nomeLoja(lojaFiltro)}`;
 
-  // Card especial de Impostos (sempre no topo)
-  const percAtual = _percImposto(lojaFiltro);
+  // Card especial de Encargos (impostos + franqueadora + royalties — todos % sobre faturado do sistema)
+  const percImp = _percImposto(lojaFiltro);
+  const percFranq = _percFranqueadora(lojaFiltro);
+  const percRoy = _percRoyalties(lojaFiltro);
+  const percTotal = percImp + percFranq + percRoy;
   const cardImposto = `
     <div class="card" style="margin-bottom:14px;padding:12px 14px;background:#eff6ff;border:1.5px solid #bfdbfe">
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
         <div style="flex:1;min-width:0">
-          <div style="font-family:'Baloo 2',cursive;font-size:1rem;font-weight:800;color:#1e40af">🧾 Impostos</div>
-          <div style="font-size:.72rem;color:#1e3a8a;margin-top:2px">Percentual aplicado sobre o valor faturado diário</div>
+          <div style="font-family:'Baloo 2',cursive;font-size:1rem;font-weight:800;color:#1e40af">🧾 Encargos sobre Faturamento</div>
+          <div style="font-size:.72rem;color:#1e3a8a;margin-top:2px">Todos os percentuais são aplicados sobre o faturado diário do sistema</div>
         </div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;background:white;border:1px solid #bfdbfe;border-radius:10px;padding:8px 10px">
-        <input id="imp-input-${lojaFiltro}" type="number" min="0" max="100" step="0.01" value="${percAtual}"
-          style="flex:1;border:1.5px solid #bfdbfe;border-radius:8px;padding:7px 10px;font-family:'Nunito',sans-serif;font-size:.95rem;font-weight:700;color:#1e40af;text-align:right">
-        <div style="font-size:1rem;font-weight:800;color:#1e40af">%</div>
-        <button onclick="salvarImposto(${lojaFiltro})" style="background:#1e40af;color:white;border:none;border-radius:8px;padding:7px 14px;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">Salvar</button>
+
+      <div style="margin-bottom:8px">
+        <div style="font-size:.7rem;color:#1e40af;font-weight:700;margin-bottom:4px">🧾 Impostos</div>
+        <div style="display:flex;gap:8px;align-items:center;background:white;border:1px solid #bfdbfe;border-radius:10px;padding:7px 10px">
+          <input id="imp-input-${lojaFiltro}" type="number" min="0" max="100" step="0.01" value="${percImp}"
+            style="flex:1;border:1.5px solid #bfdbfe;border-radius:8px;padding:6px 10px;font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:700;color:#1e40af;text-align:right">
+          <div style="font-size:.95rem;font-weight:800;color:#1e40af">%</div>
+          <button onclick="salvarImposto(${lojaFiltro})" style="background:#1e40af;color:white;border:none;border-radius:8px;padding:6px 12px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer">Salvar</button>
+        </div>
       </div>
-      <div style="font-size:.7rem;color:#1e3a8a;margin-top:8px;line-height:1.4">
-        💡 Exemplo: faturado R$ 4.000 × ${percAtual||10}% = R$ ${_fmtBRL(4000*(percAtual||10)/100)} de impostos
+
+      <div style="margin-bottom:8px">
+        <div style="font-size:.7rem;color:#1e40af;font-weight:700;margin-bottom:4px">📃 Taxa Franqueadora</div>
+        <div style="display:flex;gap:8px;align-items:center;background:white;border:1px solid #bfdbfe;border-radius:10px;padding:7px 10px">
+          <input id="franq-input-${lojaFiltro}" type="number" min="0" max="100" step="0.01" value="${percFranq}"
+            style="flex:1;border:1.5px solid #bfdbfe;border-radius:8px;padding:6px 10px;font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:700;color:#1e40af;text-align:right">
+          <div style="font-size:.95rem;font-weight:800;color:#1e40af">%</div>
+          <button onclick="salvarFranqueadora(${lojaFiltro})" style="background:#1e40af;color:white;border:none;border-radius:8px;padding:6px 12px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer">Salvar</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:8px">
+        <div style="font-size:.7rem;color:#1e40af;font-weight:700;margin-bottom:4px">👑 Royalties</div>
+        <div style="display:flex;gap:8px;align-items:center;background:white;border:1px solid #bfdbfe;border-radius:10px;padding:7px 10px">
+          <input id="roy-input-${lojaFiltro}" type="number" min="0" max="100" step="0.01" value="${percRoy}"
+            style="flex:1;border:1.5px solid #bfdbfe;border-radius:8px;padding:6px 10px;font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:700;color:#1e40af;text-align:right">
+          <div style="font-size:.95rem;font-weight:800;color:#1e40af">%</div>
+          <button onclick="salvarRoyalties(${lojaFiltro})" style="background:#1e40af;color:white;border:none;border-radius:8px;padding:6px 12px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer">Salvar</button>
+        </div>
+      </div>
+
+      <div style="font-size:.7rem;color:#1e3a8a;margin-top:8px;line-height:1.5;background:white;border:1px dashed #bfdbfe;border-radius:8px;padding:8px 10px">
+        💡 <strong>Total: ${percTotal.toLocaleString('pt-BR',{maximumFractionDigits:2})}%</strong> · Faturado R$ 4.000 × ${percTotal||10}% = R$ ${_fmtBRL(4000*(percTotal||10)/100)} de encargos
       </div>
     </div>`;
 
@@ -5339,18 +5434,25 @@ function renderFinanceiro(){
   });
   const totCustoFix = Object.values(cfPorDesc).reduce((s,v)=>s+v, 0);
 
-  // Agrega impostos do período (separado por loja, já que cada loja tem % diferente)
-  const impPorLoja = {};
+  // Agrega ENCARGOS do período (impostos + franqueadora + royalties), separado por loja+tipo
+  const encPorLoja = {};
   registros.forEach(r => {
     const imp = impostoDoRegistro(r);
-    if(imp > 0){
-      const lj = Number(r.loja);
-      if(!impPorLoja[lj]) impPorLoja[lj] = { total: 0, faturado: 0, perc: _percImposto(lj) };
-      impPorLoja[lj].total += imp;
-      impPorLoja[lj].faturado += (r.totalFaturado||0);
-    }
+    const franq = franqueadoraDoRegistro(r);
+    const roy = royaltiesDoRegistro(r);
+    if(imp <= 0 && franq <= 0 && roy <= 0) return;
+    const lj = Number(r.loja);
+    if(!encPorLoja[lj]) encPorLoja[lj] = {
+      faturado: 0,
+      imposto: 0, franq: 0, roy: 0,
+      percImp: _percImposto(lj), percFranq: _percFranqueadora(lj), percRoy: _percRoyalties(lj),
+    };
+    encPorLoja[lj].faturado += (r.totalFaturado||0);
+    encPorLoja[lj].imposto += imp;
+    encPorLoja[lj].franq += franq;
+    encPorLoja[lj].roy += roy;
   });
-  const totImpostos = Object.values(impPorLoja).reduce((s,v)=>s+v.total, 0);
+  const totImpostos = Object.values(encPorLoja).reduce((s,v)=>s+v.imposto+v.franq+v.roy, 0);
 
   const totDif = totFat - totCustoIns - totCustoFix - totImpostos;
 
@@ -5364,13 +5466,18 @@ function renderFinanceiro(){
     const titulo = `Custos fixos do período (soma rateada):\n\n${linhas}\n─────\nTotal: R$ ${_fmtBRL(totCustoFix)}`;
     cfTopTooltip = ` title="${titulo.replace(/"/g,'&quot;')}"`;
   }
-  // Tooltip de impostos no topo
+  // Tooltip de Encargos no topo (impostos + franqueadora + royalties)
   let impTopTooltip = '';
   if(totImpostos > 0){
-    const linhas = Object.entries(impPorLoja)
-      .map(([lj,v])=>`${nomeLoja(Number(lj))}: ${v.perc}% × R$ ${_fmtBRL(v.faturado)} = R$ ${_fmtBRL(v.total)}`)
-      .join('\n');
-    const titulo = `Impostos do período (% sobre faturado do sistema):\n\n${linhas}\n─────\nTotal: R$ ${_fmtBRL(totImpostos)}`;
+    const blocos = Object.entries(encPorLoja).map(([lj,v])=>{
+      const linhas = [];
+      if(v.imposto > 0) linhas.push(`  🧾 Impostos ${v.percImp}%: R$ ${_fmtBRL(v.imposto)}`);
+      if(v.franq > 0) linhas.push(`  📃 Franqueadora ${v.percFranq}%: R$ ${_fmtBRL(v.franq)}`);
+      if(v.roy > 0) linhas.push(`  👑 Royalties ${v.percRoy}%: R$ ${_fmtBRL(v.roy)}`);
+      const subt = v.imposto + v.franq + v.roy;
+      return `${nomeLoja(Number(lj))} (faturado R$ ${_fmtBRL(v.faturado)}):\n${linhas.join('\n')}\n  Subtotal: R$ ${_fmtBRL(subt)}`;
+    }).join('\n\n');
+    const titulo = `Encargos do período (% sobre faturado do sistema):\n\n${blocos}\n─────\nTotal: R$ ${_fmtBRL(totImpostos)}`;
     impTopTooltip = ` title="${titulo.replace(/"/g,'&quot;')}"`;
   }
   // Tooltip de vendas externas no topo
@@ -5436,7 +5543,7 @@ function renderFinanceiro(){
         <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#92400e;margin-top:2px;">R$ ${_fmtBRL(totCustoFix)}</div>
       </div>
       <div${impTopTooltip} style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:10px;text-align:center;${totImpostos>0?'cursor:help;':''}">
-        <div style="font-size:.65rem;color:#1e40af;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">🧾 Impostos${totImpostos>0?' ℹ️':''}</div>
+        <div style="font-size:.65rem;color:#1e40af;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">🧾 Encargos${totImpostos>0?' ℹ️':''}</div>
         <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#1e40af;margin-top:2px;">R$ ${_fmtBRL(totImpostos)}</div>
       </div>
       <div style="background:${totDif>=0?'#f0f9ff':'#fef2f2'};border:1px solid ${totDif>=0?'#7dd3fc':'#fecaca'};border-radius:12px;padding:10px;text-align:center;">
@@ -5451,9 +5558,15 @@ function renderFinanceiro(){
     // Custos fixos rateados pra esse dia/loja
     const cfList = custosFixosDoDia(r.data, Number(r.loja));
     const cfTotal = cfList.reduce((s,c)=>s+c.valor, 0);
-    // Impostos do dia (% sobre faturado do sistema, NÃO inclui vendas externas)
+    // Encargos do dia (% sobre faturado do sistema): impostos + franqueadora + royalties
     const impTotal = impostoDoRegistro(r);
+    const franqTotal = franqueadoraDoRegistro(r);
+    const royTotal = royaltiesDoRegistro(r);
+    const encargosTotal = impTotal + franqTotal + royTotal;
     const impPerc = _percImposto(Number(r.loja));
+    const franqPerc = _percFranqueadora(Number(r.loja));
+    const royPerc = _percRoyalties(Number(r.loja));
+    const encargosPerc = impPerc + franqPerc + royPerc;
     // Vendas externas do dia
     const vexList = vendasExternasDoDia(r.data, Number(r.loja));
     const vexTotal = vexList.reduce((s,v)=>s+(Number(v.valor)||0), 0);
@@ -5461,7 +5574,7 @@ function renderFinanceiro(){
     // Totais combinados
     const fatTotal = (r.totalFaturado||0) + vexTotal;
     const insumosTotal = (r.totalGastoInsumos||0) + vexCustoTotal;
-    const dif = fatTotal - insumosTotal - cfTotal - impTotal;
+    const dif = fatTotal - insumosTotal - cfTotal - encargosTotal;
     const expandido = !!finExpandidos[r.id];
     const [yy,mm,dd] = (r.data||'').split('-');
     const dataFmt = yy ? `${dd}/${mm}/${yy}` : (r.data||'—');
@@ -5474,10 +5587,14 @@ function renderFinanceiro(){
       const titulo = `Custos fixos rateados (mensal÷dias do mês):\n\n${linhas}\n─────\nTotal: R$ ${_fmtBRL(cfTotal)}`;
       cfTooltipAttr = ` title="${titulo.replace(/"/g,'&quot;')}"`;
     }
-    // Tooltip de impostos
+    // Tooltip de encargos (impostos + franqueadora + royalties)
     let impTooltipAttr = '';
-    if(impTotal > 0){
-      const titulo = `Impostos: ${impPerc}% sobre R$ ${_fmtBRL(r.totalFaturado)} = R$ ${_fmtBRL(impTotal)}\n(Vendas externas não pagam imposto)`;
+    if(encargosTotal > 0){
+      const linhas = [];
+      if(impTotal > 0) linhas.push(`🧾 Impostos: ${impPerc}% = R$ ${_fmtBRL(impTotal)}`);
+      if(franqTotal > 0) linhas.push(`📃 Franqueadora: ${franqPerc}% = R$ ${_fmtBRL(franqTotal)}`);
+      if(royTotal > 0) linhas.push(`👑 Royalties: ${royPerc}% = R$ ${_fmtBRL(royTotal)}`);
+      const titulo = `Encargos sobre R$ ${_fmtBRL(r.totalFaturado)} (faturado do sistema):\n\n${linhas.join('\n')}\n─────\nTotal: ${encargosPerc.toLocaleString('pt-BR',{maximumFractionDigits:2})}% = R$ ${_fmtBRL(encargosTotal)}\n\n(Vendas externas não pagam encargos)`;
       impTooltipAttr = ` title="${titulo.replace(/"/g,'&quot;')}"`;
     }
     // Tooltip de Faturado (sistema + externas)
@@ -5512,12 +5629,12 @@ function renderFinanceiro(){
     html += `<div style="font-size:1rem;color:var(--gray);flex-shrink:0;">${expandido?'▾':'▸'}</div>`;
     html += `</div>`;
 
-    // Resumo financeiro sempre visível (5 colunas: Fat / Insumos / Fixo / Impostos / Lucro)
+    // Resumo financeiro sempre visível (5 colunas: Fat / Insumos / Fixos / Encargos / Lucro)
     html += `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:8px;font-size:.65rem;text-align:center;">`;
     html += `<div${fatTooltipAttr} style="${vexList.length?'cursor:help;':''}"><div style="color:var(--gray);font-weight:600;">Faturado${vexList.length?' ℹ️':''}</div><div style="font-weight:800;color:#166534;font-size:.74rem;">R$ ${_fmtBRL(fatTotal)}${vexList.length?'<span style="color:#15803d;font-size:.6rem;font-weight:700"> +ext</span>':''}</div></div>`;
     html += `<div${insTooltipAttr} style="${(vexList.length&&vexCustoTotal>0)?'cursor:help;':''}"><div style="color:var(--gray);font-weight:600;">Insumos${(vexList.length&&vexCustoTotal>0)?' ℹ️':''}</div><div style="font-weight:800;color:#9a3412;font-size:.74rem;">R$ ${_fmtBRL(insumosTotal)}</div></div>`;
     html += `<div${cfTooltipAttr} style="${cfList.length?'cursor:help;':''}"><div style="color:var(--gray);font-weight:600;">Fixos${cfList.length?' ℹ️':''}</div><div style="font-weight:800;color:#92400e;font-size:.74rem;">R$ ${_fmtBRL(cfTotal)}</div></div>`;
-    html += `<div${impTooltipAttr} style="${impTotal>0?'cursor:help;':''}"><div style="color:var(--gray);font-weight:600;">Impostos${impTotal>0?' ℹ️':''}</div><div style="font-weight:800;color:#1e3a8a;font-size:.74rem;">R$ ${_fmtBRL(impTotal)}</div></div>`;
+    html += `<div${impTooltipAttr} style="${encargosTotal>0?'cursor:help;':''}"><div style="color:var(--gray);font-weight:600;">Encargos${encargosTotal>0?' ℹ️':''}</div><div style="font-weight:800;color:#1e3a8a;font-size:.74rem;">R$ ${_fmtBRL(encargosTotal)}</div></div>`;
     html += `<div><div style="color:var(--gray);font-weight:600;">Lucro</div><div style="font-weight:800;color:${dif>=0?'#1e40af':'#991b1b'};font-size:.74rem;">R$ ${_fmtBRL(dif)}</div></div>`;
     html += `</div>`;
 
