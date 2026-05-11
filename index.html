@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.52</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.53</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1811,7 +1811,11 @@ async function salvarConsumo(){
     db.consumos=db.consumos.filter(c=>!(c.data===dt&&c.loja==lojaC&&c.itemId===item.id));
     if(!isNaN(val)&&val>0)db.consumos.push({data:dt,loja:lojaC,itemId:item.id,qty:val,usuario:resp,ts:tsAgora});
   });
-  await saveCloud('consumo'); showToast('✅ Consumo salvo!');
+  const ok = await saveCloud('consumo');
+  if(ok){
+    showToast('✅ Consumo salvo! Estoque atualizado.');
+    renderProjetado();
+  }
 }
 
 document.getElementById('data-inv').value=hoje();
@@ -1864,12 +1868,12 @@ async function salvarInventario(){
     const val=parseFloat(el.value);
     if(!isNaN(val)&&val>=0)db.inventarios.push({data:dt,loja:lojaI,itemId:item.id,qty:val,usuario:resp,ts:tsAgoraInv});
   });
-  // Captura os itens contados para o histórico
-  db.items.forEach(item=>{
-    const el=document.getElementById('inv-'+item.id);if(!el)return;
-    const val=parseFloat(el.value);
-  });
-  await saveCloud('inv'); showToast('📋 Inventário salvo!');
+  const ok = await saveCloud('inv');
+  if(ok){
+    showToast('📋 Inventário salvo! Estoque atualizado.');
+    // Re-renderiza o estoque projetado (essencial pra ver o resultado da contagem)
+    renderProjetado();
+  }
 }
 
 function renderProjetado(){
