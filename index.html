@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.47</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.49</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -867,7 +867,9 @@
         <div id="fin-config-menu" style="display:none;position:absolute;top:46px;right:0;background:white;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:50;min-width:230px;overflow:hidden;">
           <div style="padding:8px 12px;font-size:.7rem;color:var(--gray);font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #f3f4f6;background:#fafafa;">Configurações</div>
           <button onclick="fecharFinConfigMenu();abrirGerenciarCustos();" style="width:100%;text-align:left;background:white;border:none;border-bottom:1px solid #f3f4f6;padding:11px 14px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:700;color:#92400e;display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='#fff7ed';" onmouseout="this.style.background='white';">💰 Custos Fixos</button>
-          <button onclick="fecharFinConfigMenu();abrirGerenciarVendas();" style="width:100%;text-align:left;background:white;border:none;padding:11px 14px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:700;color:#15803d;display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='#f0fdf4';" onmouseout="this.style.background='white';">💵 Vendas Externas</button>
+          <button onclick="fecharFinConfigMenu();abrirGerenciarVendas();" style="width:100%;text-align:left;background:white;border:none;border-bottom:1px solid #f3f4f6;padding:11px 14px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:700;color:#15803d;display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='#f0fdf4';" onmouseout="this.style.background='white';">💵 Vendas Externas</button>
+          <div style="padding:6px 12px;font-size:.65rem;color:var(--gray);font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #f3f4f6;background:#fafafa;">Relatórios</div>
+          <button onclick="fecharFinConfigMenu();gerarRelatorioMensal();" style="width:100%;text-align:left;background:white;border:none;padding:11px 14px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:700;color:#1e40af;display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='#eff6ff';" onmouseout="this.style.background='white';">📄 Relatório Mensal (PDF)</button>
         </div>
       </div>
       <div class="info-box" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
@@ -3932,6 +3934,206 @@ async function excluirSabor(nome){
   }
 }
 
+// ════════════════════════════════════════════════════════════════════
+//  RELATÓRIO MENSAL (formato planilha: PDV + canais externos + Lucro)
+// ════════════════════════════════════════════════════════════════════
+function gerarRelatorioMensal(){
+  const lojaFiltro = _lojaAtualFin();
+  if(!lojaFiltro){
+    showToast('⚠️ Escolha uma loja no filtro do Financeiro primeiro');
+    return;
+  }
+
+  // Determina o mês corrente baseado no filtro de período (ou usa o mês atual)
+  let mesRef;
+  if(finDataDe){
+    mesRef = finDataDe.slice(0,7); // YYYY-MM
+  } else {
+    const hoje = new Date();
+    mesRef = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+  }
+  const [anoNum, mesNum] = mesRef.split('-').map(Number);
+  const ultimoDia = new Date(anoNum, mesNum, 0).getDate(); // dia 0 do próximo mês = último dia
+  const nomeMes = new Date(anoNum, mesNum-1, 1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+
+  // ── Coleta canais de vendas externas únicos da loja (que tenham lançamentos no mês) ──
+  _migrarVendasExternas();
+  const canaisLoja = (db.vendasExternas||[])
+    .filter(v => Number(v.loja) === Number(lojaFiltro))
+    .filter(v => {
+      // Apenas canais com pelo menos 1 lançamento no mês
+      const lancs = v.lancamentos || {};
+      return Object.keys(lancs).some(k => k.startsWith(mesRef) && Number(lancs[k]) > 0);
+    })
+    .sort((a,b)=> (a.descricao||'').localeCompare(b.descricao||'','pt-BR'));
+
+  // ── Para cada dia do mês, calcula os valores ──
+  const linhas = [];
+  let somaPDV = 0, somaPDVcusto = 0;
+  const somaCanais = {}; // {canalId: {fat, custo}}
+  canaisLoja.forEach(c => somaCanais[c.id] = { fat:0, custo:0 });
+  let somaTotalFat = 0, somaTotalCusto = 0, somaLucro = 0;
+
+  for(let dia = 1; dia <= ultimoDia; dia++){
+    const dataISO = `${anoNum}-${String(mesNum).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+    const dt = new Date(anoNum, mesNum-1, dia);
+    const diaSemana = ['dom.','seg.','ter.','qua.','qui.','sex.','sáb.'][dt.getDay()];
+    const dataFmt = `${diaSemana} - ${String(dia).padStart(2,'0')}/${String(mesNum).padStart(2,'0')}/${String(anoNum).slice(-2)}`;
+
+    // Registro financeiro do PDV deste dia/loja (se existir)
+    const r = (db.financeiro||[]).find(x => x.data===dataISO && Number(x.loja)===Number(lojaFiltro));
+
+    // PDV: faturado e custo do dia
+    const pdvFat = r ? (Number(r.totalFaturado)||0) : 0;
+    let pdvCusto = 0;
+    if(r){
+      // Custo do PDV = CMV (insumos) + custos fixos rateados + encargos
+      pdvCusto += (Number(r.totalGastoInsumos)||0);
+      // Custos fixos rateados pra esse dia/loja
+      const cfList = custosFixosDoDia(dataISO, Number(lojaFiltro));
+      pdvCusto += cfList.reduce((s,c)=>s+(Number(c.valor)||0), 0);
+      // Encargos do dia (imposto + marketing + royalties + cartão)
+      pdvCusto += encargosDoRegistro(r);
+    } else {
+      // Mesmo sem PDV, custos fixos rateados ainda incidem? Como o critério é simular o lucro real,
+      // mantenho o rateio apenas se houver faturamento. Sem faturamento, não há custo a apresentar.
+    }
+
+    // Canais externos: faturado e custo do dia
+    const canaisDoDia = {}; // canalId → {fat, custo}
+    canaisLoja.forEach(c => {
+      const valor = Number((c.lancamentos||{})[dataISO]) || 0;
+      const custo = valor * (Number(c.percCusto)||0) / 100;
+      canaisDoDia[c.id] = { fat: valor, custo };
+      somaCanais[c.id].fat += valor;
+      somaCanais[c.id].custo += custo;
+    });
+
+    // Totais do dia
+    const totalFatDia = pdvFat + canaisLoja.reduce((s,c)=> s + canaisDoDia[c.id].fat, 0);
+    const totalCustoDia = pdvCusto + canaisLoja.reduce((s,c)=> s + canaisDoDia[c.id].custo, 0);
+    const lucroDia = totalFatDia - totalCustoDia;
+
+    somaPDV += pdvFat;
+    somaPDVcusto += pdvCusto;
+    somaTotalFat += totalFatDia;
+    somaTotalCusto += totalCustoDia;
+    somaLucro += lucroDia;
+
+    linhas.push({ dataFmt, pdvFat, pdvCusto, canaisDoDia, totalFatDia, totalCustoDia, lucroDia });
+  }
+
+  // ── Monta HTML ──
+  const fmt = v => v>0 ? `R$ ${_fmtBRL(v)}` : '<span style="color:#9ca3af;font-style:italic">R$ 0,00</span>';
+  const lojaNome = nomeLoja(Number(lojaFiltro));
+
+  // Cabeçalho com colunas dinâmicas: PDV + cada canal + Totais
+  const numColsCanais = canaisLoja.length;
+  let headerCanaisCols = '';
+  canaisLoja.forEach(c => {
+    headerCanaisCols += `<th style="background:#fef9c3;color:#713f12;border:1px solid #ccc">${(c.descricao||'').toUpperCase()}</th>`;
+    headerCanaisCols += `<th style="background:#fef3c7;color:#92400e;border:1px solid #ccc;font-style:italic">Custos</th>`;
+  });
+
+  // Linhas da tabela
+  const trDias = linhas.map((L,idx) => {
+    let canaisCells = '';
+    canaisLoja.forEach(c => {
+      const d = L.canaisDoDia[c.id] || {fat:0, custo:0};
+      canaisCells += `<td style="text-align:right">${fmt(d.fat)}</td>`;
+      canaisCells += `<td style="text-align:right;font-style:italic;color:#7c2d12">${fmt(d.custo)}</td>`;
+    });
+    return `<tr>
+      <td style="background:#dcfce7">${L.dataFmt}</td>
+      <td style="background:#dcfce7">Vendas Loja</td>
+      <td style="text-align:right;background:#fefce8">${fmt(L.pdvFat)}</td>
+      <td style="text-align:right;font-style:italic;color:#7c2d12;background:#fef3c7">${fmt(L.pdvCusto)}</td>
+      ${canaisCells}
+      <td style="text-align:right;background:#dbeafe;font-weight:700;color:#1e3a8a">${fmt(L.totalFatDia)}</td>
+      <td style="text-align:right;background:#fecaca;font-weight:700;color:#991b1b">${fmt(L.totalCustoDia)}</td>
+      <td style="text-align:right;background:#fed7aa;font-weight:700;color:${L.lucroDia>=0?'#166534':'#991b1b'}">${L.lucroDia===0?'<span style="color:#9ca3af;font-style:italic">R$ 0,00</span>':'R$ '+_fmtBRL(L.lucroDia)}</td>
+    </tr>`;
+  }).join('');
+
+  // Linha de totais (rodapé)
+  let trTotaisCanais = '';
+  canaisLoja.forEach(c => {
+    trTotaisCanais += `<td style="text-align:right;font-weight:800">R$ ${_fmtBRL(somaCanais[c.id].fat)}</td>`;
+    trTotaisCanais += `<td style="text-align:right;font-weight:800;font-style:italic;color:#7c2d12">R$ ${_fmtBRL(somaCanais[c.id].custo)}</td>`;
+  });
+  const trTotais = `<tr style="background:#e5e7eb">
+    <td colspan="2" style="font-weight:800;text-align:right">TOTAIS</td>
+    <td style="text-align:right;font-weight:800">R$ ${_fmtBRL(somaPDV)}</td>
+    <td style="text-align:right;font-weight:800;font-style:italic;color:#7c2d12">R$ ${_fmtBRL(somaPDVcusto)}</td>
+    ${trTotaisCanais}
+    <td style="text-align:right;font-weight:800;color:#1e3a8a">R$ ${_fmtBRL(somaTotalFat)}</td>
+    <td style="text-align:right;font-weight:800;color:#991b1b">R$ ${_fmtBRL(somaTotalCusto)}</td>
+    <td style="text-align:right;font-weight:800;color:${somaLucro>=0?'#166534':'#991b1b'}">R$ ${_fmtBRL(somaLucro)}</td>
+  </tr>`;
+
+  const dataHoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const mesFmt = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1);
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+  <title>Faturamento ${lojaNome} – ${mesFmt}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;color:#222;font-size:11px;padding:14px;background:white}
+    h1{font-size:16px;color:#c9345a;margin-bottom:2px}
+    .sub{font-size:10px;color:#6b7280;margin-bottom:12px}
+    .resumo{display:flex;gap:14px;justify-content:flex-end;margin-bottom:12px}
+    .resumo .box{border:1px solid #d1d5db;border-radius:6px;padding:8px 14px;background:#f9fafb}
+    .resumo .box.fat{background:#dcfce7;border-color:#86efac}
+    .resumo .box.luc{background:#fef3c7;border-color:#fde68a}
+    .resumo .lbl{font-size:9px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.5px}
+    .resumo .val{font-size:14px;font-weight:800;color:#0f172a;margin-top:2px}
+    table{width:100%;border-collapse:collapse;font-size:9.5px}
+    th{background:#f3f4f6;color:#111;padding:6px 8px;text-align:left;border:1px solid #ccc;font-weight:700}
+    td{padding:4px 8px;border:1px solid #e5e7eb;background:white}
+    .grupo-pdv{background:#fefce8 !important}
+    .rodape{margin-top:14px;font-size:9px;color:#9ca3af;text-align:center}
+    @media print{
+      body{padding:8px}
+      @page{size:A4 landscape;margin:8mm}
+    }
+  </style></head><body>
+  <h1>🐄 Faturamento ${lojaNome.toUpperCase()}</h1>
+  <div class="sub">Mês de referência: <strong>${mesFmt}</strong> &nbsp;|&nbsp; Gerado em ${dataHoje} &nbsp;|&nbsp; ${ultimoDia} dias</div>
+  <div class="resumo">
+    <div class="box fat">
+      <div class="lbl">Faturamento do Mês</div>
+      <div class="val">R$ ${_fmtBRL(somaTotalFat)}</div>
+    </div>
+    <div class="box luc">
+      <div class="lbl">Lucro do Mês</div>
+      <div class="val" style="color:${somaLucro>=0?'#166534':'#991b1b'}">R$ ${_fmtBRL(somaLucro)}</div>
+    </div>
+  </div>
+  <table>
+    <thead><tr>
+      <th style="background:#dcfce7;color:#166534">DATA</th>
+      <th style="background:#dcfce7;color:#166534">ESPECIFICAÇÃO</th>
+      <th style="background:#fefce8;color:#854d0e;text-align:right">PDV</th>
+      <th style="background:#fef3c7;color:#92400e;text-align:right;font-style:italic">Custos</th>
+      ${headerCanaisCols}
+      <th style="background:#dbeafe;color:#1e3a8a;text-align:right">TOTAL FATURADO</th>
+      <th style="background:#fecaca;color:#991b1b;text-align:right">CUSTO TOTAL</th>
+      <th style="background:#fed7aa;color:#92400e;text-align:right">LUCRO</th>
+    </tr></thead>
+    <tbody>${trDias}${trTotais}</tbody>
+  </table>
+  <div class="rodape">Milky Moo – Sistema de Controle de Estoque · CMV inclui insumos + custos fixos rateados + encargos (impostos, marketing, royalties, taxa cartão)</div>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
+
+  const blob = new Blob([html],{type:'text/html'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href=url; a.download=`milkymoo-faturamento-${lojaNome.toLowerCase().replace(/\s+/g,'-')}-${mesRef}.html`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast(`📄 Relatório mensal de ${lojaNome} (${mesFmt}) gerado!`);
+}
+
 function gerarPDFInsumos(){
   const dataHoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
   const CAT_LABEL = {alimentos:'🍓 Alimentos',bebidas:'🥤 Bebidas',caldas:'🫙 Caldas',insumos:'📦 Insumos',limpeza:'🧹 Limpeza',mimos:'🎀 Mimos'};
@@ -6423,16 +6625,56 @@ function renderFinanceiro(){
     const titulo = `Vendas externas do período (por canal):\n\n${linhas}\n─────\nTotal vendido: R$ ${_fmtBRL(totVendaExt)}\nCusto insumos: R$ ${_fmtBRL(totCustoVendaExt)}`;
     vexTopTooltip = ` data-tooltip="${titulo.replace(/"/g,'&quot;')}" onclick="showInfoTooltip(this,event)"`;
   }
-  // Tooltip de Faturado (sistema + externas)
+  // Tooltip de Faturado no topo (sempre disponível com composição por categoria)
   let fatTopTooltip = '';
-  if(totVendaExt > 0){
-    const titulo = `Sistema: R$ ${_fmtBRL(totFatSistema)}\nVendas Externas: R$ ${_fmtBRL(totVendaExt)}\n─────\nTotal: R$ ${_fmtBRL(totFat)}`;
-    fatTopTooltip = ` data-tooltip="${titulo.replace(/"/g,'&quot;')}" onclick="showInfoTooltip(this,event)"`;
+  if(totFat > 0){
+    // Soma porTamanho e sabores agregados de todos os registros
+    const porCatPeriodo = {};
+    const subtotalPorCatPeriodo = {};
+    registros.forEach(r => {
+      if(r.porTamanho){
+        Object.entries(r.porTamanho).forEach(([k,v])=>{
+          porCatPeriodo[k] = (porCatPeriodo[k]||0) + (Number(v)||0);
+        });
+      }
+      (r.sabores||[]).forEach(s=>{
+        const k = String(s.tamanho);
+        subtotalPorCatPeriodo[k] = (subtotalPorCatPeriodo[k]||0) + (Number(s.subtotal)||0);
+      });
+    });
+    const linhas = [];
+    if(Object.keys(porCatPeriodo).length > 0){
+      const cats = Object.entries(porCatPeriodo)
+        .filter(([t,q])=> q > 0)
+        .sort((a,b)=> _ordemCat(a[0]) - _ordemCat(b[0]));
+      cats.forEach(([cat,qt])=>{
+        const sub = subtotalPorCatPeriodo[String(cat)] || 0;
+        const label = _labelCatPlural(cat);
+        if(sub > 0){
+          linhas.push(`  ${label}: ${qt} un = R$ ${_fmtBRL(sub)}`);
+        } else {
+          linhas.push(`  ${label}: ${qt} un`);
+        }
+      });
+    }
+    let titulo;
+    if(totVendaExt > 0){
+      const linhasExt = ['Vendas Externas:', `  R$ ${_fmtBRL(totVendaExt)}`];
+      titulo = `Sistema: R$ ${_fmtBRL(totFatSistema)}\n${linhas.join('\n')}\n${linhasExt.join('\n')}\n─────\nTotal: R$ ${_fmtBRL(totFat)}`;
+    } else if(linhas.length > 0){
+      titulo = `Composição do Faturado:\n\n${linhas.join('\n')}\n─────\nTotal: R$ ${_fmtBRL(totFat)}`;
+    }
+    if(titulo){
+      fatTopTooltip = ` data-tooltip="${titulo.replace(/"/g,'&quot;')}" onclick="showInfoTooltip(this,event)"`;
+    }
   }
-  // Tooltip de Insumos (sistema + custo das externas)
+  // Tooltip de Insumos no topo (sempre disponível se houver custo)
   let insTopTooltip = '';
-  if(totCustoVendaExt > 0){
-    const titulo = `Sistema: R$ ${_fmtBRL(totCustoInsSistema)}\nCusto Vendas Externas: R$ ${_fmtBRL(totCustoVendaExt)}\n─────\nTotal: R$ ${_fmtBRL(totCustoIns)}`;
+  if(totCustoIns > 0){
+    const linhasI = [];
+    if(totCustoInsSistema > 0) linhasI.push(`Insumos das vendas (CMV): R$ ${_fmtBRL(totCustoInsSistema)}`);
+    if(totCustoVendaExt > 0) linhasI.push(`Custo Vendas Externas: R$ ${_fmtBRL(totCustoVendaExt)}`);
+    const titulo = `${linhasI.join('\n')}\n─────\nTotal: R$ ${_fmtBRL(totCustoIns)}`;
     insTopTooltip = ` data-tooltip="${titulo.replace(/"/g,'&quot;')}" onclick="showInfoTooltip(this,event)"`;
   }
 
@@ -6450,16 +6692,16 @@ function renderFinanceiro(){
   resumo.textContent = `${registros.length} registro${registros.length===1?'':'s'} · período somado abaixo`;
   tots.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-      <div${fatTopTooltip}${totVendaExt>0?' class="has-info-tooltip"':''} style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:10px;text-align:center;">
-        <div style="font-size:.65rem;color:#166534;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">💰 Faturado${totVendaExt>0?' ℹ️':''}</div>
+      <div${fatTopTooltip}${fatTopTooltip?' class="has-info-tooltip"':''} style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:10px;text-align:center;">
+        <div style="font-size:.65rem;color:#166534;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">💰 Faturado${fatTopTooltip?' ℹ️':''}</div>
         <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#166534;margin-top:2px;">R$ ${_fmtBRL(totFat)}</div>
       </div>
       <div${vexTopTooltip}${totVendaExt>0?' class="has-info-tooltip"':''} style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:12px;padding:10px;text-align:center;">
         <div style="font-size:.65rem;color:#065f46;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">💵 Vendas Externas${totVendaExt>0?' ℹ️':''}</div>
         <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#065f46;margin-top:2px;">R$ ${_fmtBRL(totVendaExt)}</div>
       </div>
-      <div${insTopTooltip}${totCustoVendaExt>0?' class="has-info-tooltip"':''} style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px;text-align:center;">
-        <div style="font-size:.65rem;color:#9a3412;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">📦 Custo Insumos${totCustoVendaExt>0?' ℹ️':''}</div>
+      <div${insTopTooltip}${insTopTooltip?' class="has-info-tooltip"':''} style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px;text-align:center;">
+        <div style="font-size:.65rem;color:#9a3412;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">📦 Custo Insumos${insTopTooltip?' ℹ️':''}</div>
         <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#9a3412;margin-top:2px;">R$ ${_fmtBRL(totCustoIns)}</div>
       </div>
       <div${cfTopTooltip}${totCustoFix>0?' class="has-info-tooltip"':''} style="background:#fef3c7;border:1px solid #fde68a;border-radius:12px;padding:10px;text-align:center;">
@@ -6537,20 +6779,59 @@ function renderFinanceiro(){
       impTooltipAttr = ` data-tooltip="${titulo.replace(/"/g,'&quot;')}" onclick="showInfoTooltip(this,event)"`;
     }
     // Tooltip de Faturado (sistema + externas)
+    // Tooltip do Faturado (sempre disponível: composição por categoria + vendas externas se houver)
     let fatTooltipAttr = '';
+    const linhasFat = [];
+    // Composição por categoria (180/300/500/700, adicional, bebida, mimo...)
+    if(r.porTamanho && r.totalFaturado > 0){
+      const categoriasOrdenadas = Object.entries(r.porTamanho)
+        .filter(([t,q])=> q > 0)
+        .sort((a,b)=> _ordemCat(a[0]) - _ordemCat(b[0]));
+      // Calcula subtotal por categoria a partir dos sabores (se disponível)
+      const subtotalPorCat = {};
+      (r.sabores||[]).forEach(s=>{
+        const k = String(s.tamanho);
+        subtotalPorCat[k] = (subtotalPorCat[k]||0) + (Number(s.subtotal)||0);
+      });
+      categoriasOrdenadas.forEach(([cat,qt])=>{
+        const sub = subtotalPorCat[String(cat)] || 0;
+        const label = _labelCatPlural(cat);
+        if(sub > 0){
+          linhasFat.push(`  ${label}: ${qt} un = R$ ${_fmtBRL(sub)}`);
+        } else {
+          linhasFat.push(`  ${label}: ${qt} un`);
+        }
+      });
+    }
     if(vexList.length){
-      const linhas = vexList.map(v=>`+ ${v.descricao}: R$ ${_fmtBRL(v.valor)}`).join('\n');
-      const titulo = `Sistema: R$ ${_fmtBRL(r.totalFaturado)}\nVendas Externas:\n${linhas}\n─────\nTotal: R$ ${_fmtBRL(fatTotal)}`;
+      linhasFat.push('Vendas Externas:');
+      vexList.forEach(v => linhasFat.push(`  + ${v.descricao}: R$ ${_fmtBRL(v.valor)}`));
+    }
+    if(linhasFat.length > 0){
+      let titulo;
+      if(vexList.length){
+        titulo = `Sistema: R$ ${_fmtBRL(r.totalFaturado)}\n${linhasFat.join('\n')}\n─────\nTotal: R$ ${_fmtBRL(fatTotal)}`;
+      } else {
+        titulo = `Composição do Faturado:\n\n${linhasFat.join('\n')}\n─────\nTotal: R$ ${_fmtBRL(fatTotal)}`;
+      }
       fatTooltipAttr = ` data-tooltip="${titulo.replace(/"/g,'&quot;')}" onclick="showInfoTooltip(this,event)"`;
     }
-    // Tooltip de Insumos (sistema + custo das externas)
+
+    // Tooltip de Insumos (sempre disponível se houver custo)
     let insTooltipAttr = '';
+    const linhasIns = [];
+    if(r.totalGastoInsumos > 0){
+      linhasIns.push(`Insumos das vendas (CMV): R$ ${_fmtBRL(r.totalGastoInsumos)}`);
+    }
     if(vexList.length && vexCustoTotal > 0){
-      const linhas = vexList.map(v=>{
+      linhasIns.push('Custo das Vendas Externas:');
+      vexList.forEach(v=>{
         const c = (Number(v.valor)||0)*(Number(v.percCusto)||0)/100;
-        return `+ ${v.descricao}: ${v.percCusto||0}% × R$ ${_fmtBRL(v.valor)} = R$ ${_fmtBRL(c)}`;
-      }).join('\n');
-      const titulo = `Sistema: R$ ${_fmtBRL(r.totalGastoInsumos)}\nCusto Vendas Externas:\n${linhas}\n─────\nTotal: R$ ${_fmtBRL(insumosTotal)}`;
+        if(c > 0) linhasIns.push(`  + ${v.descricao}: ${v.percCusto||0}% × R$ ${_fmtBRL(v.valor)} = R$ ${_fmtBRL(c)}`);
+      });
+    }
+    if(linhasIns.length > 0 && insumosTotal > 0){
+      const titulo = `${linhasIns.join('\n')}\n─────\nTotal: R$ ${_fmtBRL(insumosTotal)}`;
       insTooltipAttr = ` data-tooltip="${titulo.replace(/"/g,'&quot;')}" onclick="showInfoTooltip(this,event)"`;
     }
 
@@ -6569,9 +6850,11 @@ function renderFinanceiro(){
     html += `</div>`;
 
     // Resumo financeiro sempre visível (5 colunas: Fat / Insumos / Fixos / Encargos / Lucro)
+    const fatTemTooltip = !!fatTooltipAttr;
+    const insTemTooltip = !!insTooltipAttr;
     html += `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:8px;font-size:.65rem;text-align:center;">`;
-    html += `<div${fatTooltipAttr}${vexList.length?' class="has-info-tooltip"':''}><div style="color:var(--gray);font-weight:600;">Faturado${vexList.length?' ℹ️':''}</div><div style="font-weight:800;color:#166534;font-size:.74rem;">R$ ${_fmtBRL(fatTotal)}${vexList.length?'<span style="color:#15803d;font-size:.6rem;font-weight:700"> +ext</span>':''}</div></div>`;
-    html += `<div${insTooltipAttr}${(vexList.length&&vexCustoTotal>0)?' class="has-info-tooltip"':''}><div style="color:var(--gray);font-weight:600;">Insumos${(vexList.length&&vexCustoTotal>0)?' ℹ️':''}</div><div style="font-weight:800;color:#9a3412;font-size:.74rem;">R$ ${_fmtBRL(insumosTotal)}</div></div>`;
+    html += `<div${fatTooltipAttr}${fatTemTooltip?' class="has-info-tooltip"':''}><div style="color:var(--gray);font-weight:600;">Faturado${fatTemTooltip?' ℹ️':''}</div><div style="font-weight:800;color:#166534;font-size:.74rem;">R$ ${_fmtBRL(fatTotal)}${vexList.length?'<span style="color:#15803d;font-size:.6rem;font-weight:700"> +ext</span>':''}</div></div>`;
+    html += `<div${insTooltipAttr}${insTemTooltip?' class="has-info-tooltip"':''}><div style="color:var(--gray);font-weight:600;">Insumos${insTemTooltip?' ℹ️':''}</div><div style="font-weight:800;color:#9a3412;font-size:.74rem;">R$ ${_fmtBRL(insumosTotal)}</div></div>`;
     html += `<div${cfTooltipAttr}${cfList.length?' class="has-info-tooltip"':''}><div style="color:var(--gray);font-weight:600;">Fixos${cfList.length?' ℹ️':''}</div><div style="font-weight:800;color:#92400e;font-size:.74rem;">R$ ${_fmtBRL(cfTotal)}</div></div>`;
     html += `<div${impTooltipAttr}${encargosTotal>0?' class="has-info-tooltip"':''}><div style="color:var(--gray);font-weight:600;">Encargos${encargosTotal>0?' ℹ️':''}</div><div style="font-weight:800;color:#1e3a8a;font-size:.74rem;">R$ ${_fmtBRL(encargosTotal)}</div></div>`;
     html += `<div><div style="color:var(--gray);font-weight:600;">Lucro</div><div style="font-weight:800;color:${dif>=0?'#1e40af':'#991b1b'};font-size:.74rem;">R$ ${_fmtBRL(dif)}</div></div>`;
