@@ -188,7 +188,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.28</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.29</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -919,34 +919,56 @@
       </div>
     </div>
 
-    <!-- MODAL ADICIONAR VENDA EXTERNA -->
-    <div id="modal-venda-externa" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:700;align-items:center;justify-content:center;padding:20px">
+    <!-- MODAL CRIAR/EDITAR CANAL DE VENDA EXTERNA -->
+    <div id="modal-canal-ve" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:700;align-items:center;justify-content:center;padding:20px">
       <div style="background:white;border-radius:20px;padding:24px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;">
-        <div style="font-family:'Baloo 2',cursive;font-size:1.2rem;font-weight:800;color:#166534;margin-bottom:6px;text-align:center">💵 Nova Venda Externa</div>
-        <div style="font-size:.75rem;color:var(--gray);text-align:center;margin-bottom:16px" id="venda-ext-loja-info">—</div>
+        <div id="canal-ve-titulo" style="font-family:'Baloo 2',cursive;font-size:1.2rem;font-weight:800;color:#166534;margin-bottom:6px;text-align:center">➕ Novo Canal</div>
+        <div style="font-size:.75rem;color:var(--gray);text-align:center;margin-bottom:16px" id="canal-ve-loja-info">—</div>
 
-        <label class="field-label">Data da venda</label>
-        <input id="venda-ext-data" type="date" class="field-input" style="margin-bottom:12px">
+        <label class="field-label">Descrição do canal</label>
+        <input id="canal-ve-desc" type="text" placeholder="Ex: iFood, Pix avulso, Eventos..." class="field-input" style="margin-bottom:12px">
 
-        <label class="field-label">Descrição</label>
-        <input id="venda-ext-desc" type="text" placeholder="Ex: Evento Pix, Festa empresa..." class="field-input" style="margin-bottom:12px">
-
-        <label class="field-label">Valor vendido (R$)</label>
-        <input id="venda-ext-valor" type="number" min="0" step="0.01" placeholder="0,00" class="field-input" style="margin-bottom:12px">
-
-        <label class="field-label">% Custo de insumos</label>
+        <label class="field-label">% Custo de insumos (CMV fixo)</label>
         <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-          <input id="venda-ext-perc" type="number" min="0" max="100" step="0.01" placeholder="30" class="field-input" style="flex:1;margin-bottom:0">
+          <input id="canal-ve-perc" type="number" min="0" max="100" step="0.01" placeholder="30" class="field-input" style="flex:1;margin-bottom:0">
           <div style="font-size:1rem;font-weight:800;color:#166534">%</div>
         </div>
         <div style="font-size:.7rem;color:var(--gray);margin-bottom:16px;line-height:1.4">
-          💡 Use o percentual médio de CMV (custo da mercadoria vendida) que essa venda teve. Ex: 30% se o custo foi cerca de R$ 30 a cada R$ 100 vendidos.
+          💡 Este percentual será aplicado a TODOS os lançamentos diários desse canal.
         </div>
 
         <div style="display:flex;gap:8px">
-          <button onclick="fecharVendaExterna()" style="flex:1;background:var(--gray-light);color:#333;border:none;border-radius:10px;padding:12px;font-family:'Baloo 2',cursive;font-weight:700;cursor:pointer">Cancelar</button>
-          <button onclick="salvarVendaExterna()" style="flex:1;background:#166534;color:white;border:none;border-radius:10px;padding:12px;font-family:'Baloo 2',cursive;font-weight:700;cursor:pointer">Salvar</button>
+          <button onclick="fecharCanalVE()" style="flex:1;background:var(--gray-light);color:#333;border:none;border-radius:10px;padding:12px;font-family:'Baloo 2',cursive;font-weight:700;cursor:pointer">Cancelar</button>
+          <button onclick="salvarCanalVE()" style="flex:1;background:#166534;color:white;border:none;border-radius:10px;padding:12px;font-family:'Baloo 2',cursive;font-weight:700;cursor:pointer">Salvar</button>
         </div>
+      </div>
+    </div>
+
+    <!-- MODAL PLANILHA MENSAL DE LANÇAMENTOS -->
+    <div id="modal-planilha-ve" style="display:none;position:fixed;inset:0;background:white;z-index:700;flex-direction:column;overflow:hidden">
+      <div style="background:linear-gradient(135deg,#166534,#15803d);color:white;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Baloo 2',cursive;font-size:1.1rem;font-weight:800" id="planilha-ve-titulo">📋 Lançamentos</div>
+          <div style="font-size:.72rem;opacity:.85" id="planilha-ve-info">—</div>
+        </div>
+        <button onclick="fecharPlanilhaVE()" style="background:rgba(255,255,255,.2);border:none;border-radius:50px;padding:7px 14px;color:white;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer;flex-shrink:0">✕ Fechar</button>
+      </div>
+
+      <!-- Navegação de mês -->
+      <div style="padding:10px 14px;border-bottom:1px solid var(--border);background:#f0fdf4;display:flex;align-items:center;gap:10px;flex-shrink:0">
+        <button onclick="navegarMesVE(-1)" style="background:white;border:1.5px solid #bbf7d0;color:#166534;border-radius:8px;padding:6px 12px;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;cursor:pointer">◀</button>
+        <div style="flex:1;text-align:center;font-family:'Baloo 2',cursive;font-size:1rem;font-weight:800;color:#166534" id="planilha-ve-mes">—</div>
+        <button onclick="navegarMesVE(1)" style="background:white;border:1.5px solid #bbf7d0;color:#166534;border-radius:8px;padding:6px 12px;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;cursor:pointer">▶</button>
+      </div>
+
+      <div id="planilha-ve-lista" style="flex:1;overflow-y:auto;padding:8px 14px"></div>
+
+      <div style="padding:12px 14px;border-top:1px solid var(--border);background:#f0fdf4;display:flex;gap:8px;align-items:center;flex-shrink:0">
+        <div style="flex:1">
+          <div style="font-size:.7rem;color:#166534;font-weight:700">Total do mês</div>
+          <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#166534" id="planilha-ve-total">R$ 0,00</div>
+        </div>
+        <button onclick="salvarPlanilhaVE()" style="background:#166534;color:white;border:none;border-radius:10px;padding:12px 20px;font-family:'Baloo 2',cursive;font-weight:800;cursor:pointer">💾 Salvar</button>
       </div>
     </div>
     <div id="modal-editar-lancamento" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:700;align-items:center;justify-content:center;padding:20px;">
@@ -1167,6 +1189,7 @@ async function doLogin(){
     if(!Array.isArray(db.financeiro))  db.financeiro=[];
     if(!Array.isArray(db.custosFixos))  db.custosFixos=[];
     if(!Array.isArray(db.vendasExternas))  db.vendasExternas=[];
+    _migrarVendasExternas();
     if(!Array.isArray(db.items))       db.items=[];
     if(!db.receitas)db.receitas=null;
   }
@@ -1287,6 +1310,7 @@ async function carregarDados(){
     if(!Array.isArray(db.financeiro))  db.financeiro=[];
     if(!Array.isArray(db.custosFixos))  db.custosFixos=[];
     if(!Array.isArray(db.vendasExternas))  db.vendasExternas=[];
+    _migrarVendasExternas();
     // Firebase tem prioridade — DEFAULT só preenche usuários ausentes
     if(usuariosSalvos){
       db.usuarios = {...DEFAULT_USERS};
@@ -1323,6 +1347,7 @@ async function atualizarDados(forcado=false){
     if(!Array.isArray(db.financeiro))  db.financeiro=[];
     if(!Array.isArray(db.custosFixos))  db.custosFixos=[];
     if(!Array.isArray(db.vendasExternas))  db.vendasExternas=[];
+    _migrarVendasExternas();
     if(!Array.isArray(db.items))       db.items=[];
   }
   const ud=await window.firebaseGetUsers();
@@ -4527,11 +4552,63 @@ function impostoDoRegistro(r){
   return (Number(r.totalFaturado)||0) * perc / 100;
 }
 
-// ── Vendas Externas (não passam pelo sistema/Degust) ──
+// ── Vendas Externas (canais recorrentes com lançamentos diários) ──
+// Estrutura: { id, loja, descricao, percCusto, lancamentos: {YYYY-MM-DD: valor} }
+// Migração: array antigo de lançamentos isolados → agrupa por loja+descricao+percCusto
+function _migrarVendasExternas(){
+  if(!Array.isArray(db.vendasExternas)) { db.vendasExternas = []; return false; }
+  // Se já está no formato novo (tem lancamentos object), não migra
+  const precisaMigrar = db.vendasExternas.some(v => v.data !== undefined && !v.lancamentos);
+  if(!precisaMigrar) return false;
+  const agrupado = {};
+  db.vendasExternas.forEach(v => {
+    if(v.lancamentos){
+      // já no formato novo, preserva
+      const k = `${v.loja}|${(v.descricao||'').trim().toLowerCase()}|${Number(v.percCusto)||0}`;
+      if(!agrupado[k]) agrupado[k] = v;
+      else {
+        Object.assign(agrupado[k].lancamentos, v.lancamentos);
+      }
+      return;
+    }
+    // formato antigo: tem data + valor isolados
+    const k = `${v.loja}|${(v.descricao||'').trim().toLowerCase()}|${Number(v.percCusto)||0}`;
+    if(!agrupado[k]){
+      agrupado[k] = {
+        id: v.id || `vex_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+        loja: v.loja,
+        descricao: v.descricao||'',
+        percCusto: Number(v.percCusto)||0,
+        lancamentos: {},
+        criadoEm: v.criadoEm || new Date().toISOString(),
+      };
+    }
+    if(v.data && (Number(v.valor)||0) > 0){
+      agrupado[k].lancamentos[v.data] = (agrupado[k].lancamentos[v.data]||0) + (Number(v.valor)||0);
+    }
+  });
+  db.vendasExternas = Object.values(agrupado);
+  return true; // migrou
+}
+
 function vendasExternasDoDia(data, loja){
-  return (db.vendasExternas||[])
-    .filter(v => v.data === data && v.loja == loja)
-    .sort((a,b) => (a.criadoEm||'').localeCompare(b.criadoEm||''));
+  // Retorna lançamentos individuais por canal nesse dia.
+  // Cada item: { id, descricao, percCusto, valor }
+  if(!Array.isArray(db.vendasExternas)) return [];
+  const out = [];
+  db.vendasExternas.forEach(v => {
+    if(v.loja != loja) return;
+    const valor = v.lancamentos ? Number(v.lancamentos[data]||0) : 0;
+    if(valor > 0){
+      out.push({
+        id: v.id,
+        descricao: v.descricao,
+        percCusto: Number(v.percCusto)||0,
+        valor,
+      });
+    }
+  });
+  return out;
 }
 
 function totalVendaExternaDoDia(data, loja){
@@ -4539,7 +4616,6 @@ function totalVendaExternaDoDia(data, loja){
 }
 
 function totalCustoVendaExternaDoDia(data, loja){
-  // Custo de insumos das vendas externas (cada venda tem seu próprio %)
   return vendasExternasDoDia(data, loja).reduce((s,v)=>{
     const perc = Number(v.percCusto)||0;
     return s + ((Number(v.valor)||0) * perc / 100);
@@ -4611,24 +4687,27 @@ function renderListaCustos(){
       </div>
     </div>`;
 
-  // Card de Vendas Externas (vendas fora do sistema)
-  const vendasExt = (db.vendasExternas||[])
+  // Card de Vendas Externas (canais recorrentes — clica pra abrir planilha mensal)
+  _migrarVendasExternas(); // garante formato novo
+  const canais = (db.vendasExternas||[])
     .filter(v => v.loja == lojaFiltro)
-    .sort((a,b) => (b.data||'').localeCompare(a.data||''));
-  let listaVendasHtml = '';
-  if(vendasExt.length === 0){
-    listaVendasHtml = `<div style="font-size:.72rem;color:#166534;padding:8px 0;text-align:center;font-style:italic">Nenhuma venda externa cadastrada.</div>`;
+    .sort((a,b) => (a.descricao||'').localeCompare(b.descricao||'','pt-BR'));
+  let listaCanaisHtml = '';
+  if(canais.length === 0){
+    listaCanaisHtml = `<div style="font-size:.72rem;color:#166534;padding:10px 6px;text-align:center;font-style:italic">Nenhum canal cadastrado.<br>Clique em ➕ Novo para criar (ex: iFood, Pix, Eventos).</div>`;
   } else {
-    listaVendasHtml = vendasExt.map(v => {
-      const custo = (Number(v.valor)||0) * (Number(v.percCusto)||0) / 100;
-      const [yy,mm,dd] = (v.data||'').split('-');
-      const dataFmt = yy ? `${dd}/${mm}/${yy}` : (v.data||'—');
-      return `<div style="background:white;border:1px solid #bbf7d0;border-radius:8px;padding:8px 10px;margin-bottom:6px;display:flex;align-items:center;gap:8px">
+    listaCanaisHtml = canais.map(v => {
+      const lancs = v.lancamentos || {};
+      const numLancs = Object.values(lancs).filter(x => Number(x)>0).length;
+      const totalLancs = Object.values(lancs).reduce((s,x)=>s+(Number(x)||0), 0);
+      return `<div style="background:white;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="abrirPlanilhaVendaExt('${v.id}')">
+        <div style="font-size:1.2rem;flex-shrink:0">📋</div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:.82rem;font-weight:800;color:#166534">${v.descricao||'(sem descrição)'}</div>
-          <div style="font-size:.68rem;color:var(--gray);margin-top:2px">📅 ${dataFmt} · R$ ${_fmtBRL(v.valor)} · Custo ${v.percCusto||0}% (R$ ${_fmtBRL(custo)})</div>
+          <div style="font-size:.88rem;font-weight:800;color:#166534">${v.descricao||'(sem descrição)'}</div>
+          <div style="font-size:.68rem;color:var(--gray);margin-top:2px">CMV ${v.percCusto||0}% · ${numLancs} dia${numLancs===1?'':'s'} lançado${numLancs===1?'':'s'} · Total R$ ${_fmtBRL(totalLancs)}</div>
         </div>
-        <button onclick="excluirVendaExterna('${v.id}')" style="background:var(--red);color:white;border:none;border-radius:6px;padding:5px 9px;font-family:'Baloo 2',cursive;font-size:.72rem;font-weight:700;cursor:pointer">✕</button>
+        <button onclick="event.stopPropagation();abrirEditarCanalVE('${v.id}')" style="background:var(--purple);color:white;border:none;border-radius:6px;padding:5px 9px;font-family:'Baloo 2',cursive;font-size:.72rem;font-weight:700;cursor:pointer">✏️</button>
+        <button onclick="event.stopPropagation();excluirCanalVE('${v.id}')" style="background:var(--red);color:white;border:none;border-radius:6px;padding:5px 9px;font-family:'Baloo 2',cursive;font-size:.72rem;font-weight:700;cursor:pointer">🗑️</button>
       </div>`;
     }).join('');
   }
@@ -4638,12 +4717,12 @@ function renderListaCustos(){
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
         <div style="flex:1;min-width:0">
           <div style="font-family:'Baloo 2',cursive;font-size:1rem;font-weight:800;color:#166534">💵 Vendas Externas</div>
-          <div style="font-size:.72rem;color:#14532d;margin-top:2px">Vendas que NÃO passaram pelo sistema (sem imposto). Cada venda informa seu próprio % de custo de insumos.</div>
+          <div style="font-size:.72rem;color:#14532d;margin-top:2px">Canais de venda fora do sistema (sem imposto). Clique num canal para lançar os valores diários.</div>
         </div>
-        <button onclick="abrirNovaVendaExterna()" style="background:#166534;color:white;border:none;border-radius:8px;padding:7px 12px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer;flex-shrink:0">➕ Nova</button>
+        <button onclick="abrirNovoCanalVE()" style="background:#166534;color:white;border:none;border-radius:8px;padding:7px 12px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer;flex-shrink:0">➕ Novo</button>
       </div>
-      <div style="background:white;border:1px solid #bbf7d0;border-radius:10px;padding:8px;max-height:240px;overflow-y:auto">
-        ${listaVendasHtml}
+      <div>
+        ${listaCanaisHtml}
       </div>
     </div>`;
 
@@ -4815,68 +4894,210 @@ async function excluirCusto(id){
   }
 }
 
-// ── CRUD Vendas Externas ──
-function abrirNovaVendaExterna(){
+// ── CRUD Canais de Vendas Externas ──
+let _canalVeEditandoId = null;
+let _planilhaVeCanalId = null;
+let _planilhaVeMesRef = null; // 'YYYY-MM'
+
+function abrirNovoCanalVE(){
   const loja = _lojaAtualFin();
   if(!loja){ showToast('⚠️ Selecione uma loja no filtro do Financeiro primeiro.'); return; }
-  document.getElementById('venda-ext-loja-info').textContent = `${lojaIcon(loja)} ${nomeLoja(loja)}`;
-  // Data default: hoje
-  const hj = new Date();
-  document.getElementById('venda-ext-data').value = `${hj.getFullYear()}-${String(hj.getMonth()+1).padStart(2,'0')}-${String(hj.getDate()).padStart(2,'0')}`;
-  document.getElementById('venda-ext-desc').value = '';
-  document.getElementById('venda-ext-valor').value = '';
-  document.getElementById('venda-ext-perc').value = '';
-  document.getElementById('modal-venda-externa').style.display = 'flex';
-  setTimeout(()=>document.getElementById('venda-ext-desc').focus(), 100);
+  _canalVeEditandoId = null;
+  document.getElementById('canal-ve-titulo').textContent = '➕ Novo Canal';
+  document.getElementById('canal-ve-loja-info').textContent = `${lojaIcon(loja)} ${nomeLoja(loja)}`;
+  document.getElementById('canal-ve-desc').value = '';
+  document.getElementById('canal-ve-perc').value = '';
+  document.getElementById('modal-canal-ve').style.display = 'flex';
+  setTimeout(()=>document.getElementById('canal-ve-desc').focus(), 100);
 }
 
-function fecharVendaExterna(){
-  document.getElementById('modal-venda-externa').style.display = 'none';
+function abrirEditarCanalVE(id){
+  const v = (db.vendasExternas||[]).find(x => x.id===id);
+  if(!v) return;
+  _canalVeEditandoId = id;
+  document.getElementById('canal-ve-titulo').textContent = '✏️ Editar Canal';
+  document.getElementById('canal-ve-loja-info').textContent = `${lojaIcon(v.loja)} ${nomeLoja(v.loja)}`;
+  document.getElementById('canal-ve-desc').value = v.descricao||'';
+  document.getElementById('canal-ve-perc').value = v.percCusto||0;
+  document.getElementById('modal-canal-ve').style.display = 'flex';
 }
 
-async function salvarVendaExterna(){
+function fecharCanalVE(){
+  _canalVeEditandoId = null;
+  document.getElementById('modal-canal-ve').style.display = 'none';
+}
+
+async function salvarCanalVE(){
   const loja = _lojaAtualFin();
-  const data = document.getElementById('venda-ext-data').value;
-  const desc = document.getElementById('venda-ext-desc').value.trim();
-  const valor = parseFloat(document.getElementById('venda-ext-valor').value) || 0;
-  const perc = parseFloat(document.getElementById('venda-ext-perc').value);
+  const desc = document.getElementById('canal-ve-desc').value.trim();
+  const perc = parseFloat(document.getElementById('canal-ve-perc').value);
 
   if(!loja){ showToast('⚠️ Loja não selecionada'); return; }
-  if(!data){ showToast('⚠️ Informe a data'); return; }
   if(!desc){ showToast('⚠️ Informe a descrição'); return; }
-  if(valor <= 0){ showToast('⚠️ Informe um valor maior que zero'); return; }
-  if(isNaN(perc) || perc < 0 || perc > 100){ showToast('⚠️ % custo deve estar entre 0 e 100'); return; }
+  if(isNaN(perc) || perc < 0 || perc > 100){ showToast('⚠️ % deve estar entre 0 e 100'); return; }
 
   if(!Array.isArray(db.vendasExternas)) db.vendasExternas = [];
-  db.vendasExternas.push({
-    id: `vex_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
-    loja, data, descricao: desc, valor, percCusto: perc,
-    criadoEm: new Date().toISOString(),
-  });
 
+  if(_canalVeEditandoId){
+    const v = db.vendasExternas.find(x => x.id === _canalVeEditandoId);
+    if(v){
+      v.descricao = desc;
+      v.percCusto = perc;
+      v.editadoEm = new Date().toISOString();
+    }
+  } else {
+    db.vendasExternas.push({
+      id: `vex_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+      loja, descricao: desc, percCusto: perc,
+      lancamentos: {},
+      criadoEm: new Date().toISOString(),
+    });
+  }
   const ok = await saveCloud();
   if(ok){
-    fecharVendaExterna();
+    fecharCanalVE();
     renderListaCustos();
     renderFinanceiro();
-    showToast('✅ Venda externa adicionada!');
+    showToast(_canalVeEditandoId ? '✅ Canal atualizado!' : '✅ Canal criado!');
   } else {
     showToast('❌ Erro ao salvar');
   }
 }
 
-async function excluirVendaExterna(id){
+async function excluirCanalVE(id){
   const v = (db.vendasExternas||[]).find(x => x.id === id);
   if(!v) return;
-  if(!window.confirm(`Excluir a venda externa "${v.descricao}" (R$ ${_fmtBRL(v.valor)})?`)) return;
+  const numLancs = Object.values(v.lancamentos||{}).filter(x => Number(x)>0).length;
+  let msg = `Excluir o canal "${v.descricao}"?`;
+  if(numLancs > 0) msg += `\n\n⚠️ Isso vai apagar ${numLancs} lançamento(s) diário(s) também!`;
+  if(!window.confirm(msg)) return;
   db.vendasExternas = db.vendasExternas.filter(x => x.id !== id);
   const ok = await saveCloud();
   if(ok){
     renderListaCustos();
     renderFinanceiro();
-    showToast('🗑️ Venda externa excluída');
+    showToast('🗑️ Canal excluído');
   } else {
     showToast('❌ Erro ao excluir');
+  }
+}
+
+// ── Planilha mensal de lançamentos ──
+function abrirPlanilhaVendaExt(canalId){
+  const v = (db.vendasExternas||[]).find(x => x.id === canalId);
+  if(!v) return;
+  _planilhaVeCanalId = canalId;
+  // Default: mês corrente
+  const hj = new Date();
+  _planilhaVeMesRef = `${hj.getFullYear()}-${String(hj.getMonth()+1).padStart(2,'0')}`;
+  document.getElementById('planilha-ve-titulo').textContent = `📋 ${v.descricao}`;
+  document.getElementById('planilha-ve-info').textContent = `${lojaIcon(v.loja)} ${nomeLoja(v.loja)} · CMV ${v.percCusto||0}%`;
+  renderPlanilhaVE();
+  document.getElementById('modal-planilha-ve').style.display = 'flex';
+}
+
+function fecharPlanilhaVE(){
+  _planilhaVeCanalId = null;
+  _planilhaVeMesRef = null;
+  document.getElementById('modal-planilha-ve').style.display = 'none';
+}
+
+function navegarMesVE(delta){
+  if(!_planilhaVeMesRef) return;
+  // Antes de navegar, persiste o que está digitado no buffer (sem cloud save ainda)
+  _coletarValoresPlanilhaVE();
+  const [a,m] = _planilhaVeMesRef.split('-').map(Number);
+  const novaData = new Date(a, m-1 + delta, 1);
+  _planilhaVeMesRef = `${novaData.getFullYear()}-${String(novaData.getMonth()+1).padStart(2,'0')}`;
+  renderPlanilhaVE();
+}
+
+function _coletarValoresPlanilhaVE(){
+  // Lê inputs da planilha e atualiza db.vendasExternas em memória (sem saveCloud)
+  if(!_planilhaVeCanalId || !_planilhaVeMesRef) return;
+  const v = (db.vendasExternas||[]).find(x => x.id === _planilhaVeCanalId);
+  if(!v) return;
+  if(!v.lancamentos) v.lancamentos = {};
+  const dias = _diasNoMes(_planilhaVeMesRef);
+  for(let d=1; d<=dias; d++){
+    const dd = String(d).padStart(2,'0');
+    const dataKey = `${_planilhaVeMesRef}-${dd}`;
+    const inp = document.getElementById(`ve-dia-${dataKey}`);
+    if(!inp) continue;
+    const val = parseFloat(inp.value);
+    if(isNaN(val) || val <= 0){
+      // remove entrada se estava lá
+      delete v.lancamentos[dataKey];
+    } else {
+      v.lancamentos[dataKey] = val;
+    }
+  }
+}
+
+function renderPlanilhaVE(){
+  const v = (db.vendasExternas||[]).find(x => x.id === _planilhaVeCanalId);
+  if(!v || !_planilhaVeMesRef){ return; }
+  const [ano,mes] = _planilhaVeMesRef.split('-').map(Number);
+  const nomesMes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  document.getElementById('planilha-ve-mes').textContent = `${nomesMes[mes-1]} / ${ano}`;
+  const dias = _diasNoMes(_planilhaVeMesRef);
+  const diasSemana = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const hojeStr = (() => {
+    const h = new Date();
+    return `${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,'0')}-${String(h.getDate()).padStart(2,'0')}`;
+  })();
+
+  let html = '';
+  let total = 0;
+  for(let d=1; d<=dias; d++){
+    const dd = String(d).padStart(2,'0');
+    const dataKey = `${_planilhaVeMesRef}-${dd}`;
+    const valor = (v.lancamentos||{})[dataKey] || 0;
+    if(valor > 0) total += valor;
+    const dt = new Date(ano, mes-1, d);
+    const dia_sem = diasSemana[dt.getDay()];
+    const isFinde = dt.getDay() === 0 || dt.getDay() === 6;
+    const isHoje = dataKey === hojeStr;
+    const corLinha = isHoje ? '#fef3c7' : (isFinde ? '#f9fafb' : 'white');
+    const borda = isHoje ? '#fbbf24' : '#e5e7eb';
+    html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:${corLinha};border:1px solid ${borda};border-radius:8px;margin-bottom:4px">
+      <div style="flex:0 0 90px;font-size:.78rem;font-weight:700;color:${isHoje?'#92400e':'#166534'}">${dd}/${String(mes).padStart(2,'0')} <span style="color:var(--gray);font-weight:600">· ${dia_sem}</span></div>
+      <div style="flex:1;display:flex;align-items:center;gap:6px">
+        <span style="font-size:.75rem;color:var(--gray);font-weight:700">R$</span>
+        <input id="ve-dia-${dataKey}" type="number" min="0" step="0.01" value="${valor>0?valor:''}" placeholder="0,00"
+          style="flex:1;border:1.5px solid ${valor>0?'#86efac':'#e5e7eb'};border-radius:8px;padding:7px 10px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:700;color:#333;text-align:right"
+          oninput="atualizarTotalPlanilhaVE()">
+      </div>
+    </div>`;
+  }
+  document.getElementById('planilha-ve-lista').innerHTML = html;
+  document.getElementById('planilha-ve-total').textContent = `R$ ${_fmtBRL(total)}`;
+}
+
+function atualizarTotalPlanilhaVE(){
+  if(!_planilhaVeMesRef) return;
+  const dias = _diasNoMes(_planilhaVeMesRef);
+  let total = 0;
+  for(let d=1; d<=dias; d++){
+    const dd = String(d).padStart(2,'0');
+    const inp = document.getElementById(`ve-dia-${_planilhaVeMesRef}-${dd}`);
+    if(inp){
+      const v = parseFloat(inp.value);
+      if(!isNaN(v) && v > 0) total += v;
+    }
+  }
+  document.getElementById('planilha-ve-total').textContent = `R$ ${_fmtBRL(total)}`;
+}
+
+async function salvarPlanilhaVE(){
+  _coletarValoresPlanilhaVE();
+  const ok = await saveCloud();
+  if(ok){
+    renderListaCustos();
+    renderFinanceiro();
+    showToast('✅ Lançamentos salvos!');
+  } else {
+    showToast('❌ Erro ao salvar');
   }
 }
 
@@ -4910,17 +5131,31 @@ function renderFinanceiro(){
   const totFatSistema = registros.reduce((s,r)=> s + (r.totalFaturado||0), 0);
   const totCustoInsSistema = registros.reduce((s,r)=> s + (r.totalGastoInsumos||0), 0);
 
-  // Vendas externas do período (filtra pela mesma janela de datas e lojas)
-  // Período: usa min/max das datas dos registros pra cobrir o mesmo intervalo.
-  // Loja: respeita filtroLoja (se filtroLoja não vazio).
-  let vendasExtPeriodo = (db.vendasExternas||[]).slice();
-  if(limite){
-    if(limite.de) vendasExtPeriodo = vendasExtPeriodo.filter(v => (v.data||'') >= limite.de);
-    if(limite.ate) vendasExtPeriodo = vendasExtPeriodo.filter(v => (v.data||'') <= limite.ate);
-  }
-  if(filtroLoja) vendasExtPeriodo = vendasExtPeriodo.filter(v => String(v.loja) === String(filtroLoja));
-  const totVendaExt = vendasExtPeriodo.reduce((s,v)=>s+(Number(v.valor)||0), 0);
-  const totCustoVendaExt = vendasExtPeriodo.reduce((s,v)=>s+((Number(v.valor)||0)*(Number(v.percCusto)||0)/100), 0);
+  // Vendas externas do período: percorre canais → lançamentos diários
+  // filtra por loja (se filtroLoja) e por janela de datas (limite)
+  // Cada item resultante: { descricao, data, valor, percCusto, custo }
+  const vendasExtPeriodo = [];
+  (db.vendasExternas||[]).forEach(canal => {
+    if(filtroLoja && String(canal.loja) !== String(filtroLoja)) return;
+    Object.entries(canal.lancamentos||{}).forEach(([data, valor]) => {
+      const val = Number(valor)||0;
+      if(val <= 0) return;
+      if(limite){
+        if(limite.de && data < limite.de) return;
+        if(limite.ate && data > limite.ate) return;
+      }
+      vendasExtPeriodo.push({
+        descricao: canal.descricao,
+        loja: canal.loja,
+        data,
+        valor: val,
+        percCusto: Number(canal.percCusto)||0,
+        custo: val * (Number(canal.percCusto)||0) / 100,
+      });
+    });
+  });
+  const totVendaExt = vendasExtPeriodo.reduce((s,v)=>s+v.valor, 0);
+  const totCustoVendaExt = vendasExtPeriodo.reduce((s,v)=>s+v.custo, 0);
 
   const totFat = totFatSistema + totVendaExt;
   const totCustoIns = totCustoInsSistema + totCustoVendaExt;
@@ -4974,18 +5209,20 @@ function renderFinanceiro(){
   // Tooltip de vendas externas no topo
   let vexTopTooltip = '';
   if(totVendaExt > 0){
-    const linhas = vendasExtPeriodo
-      .sort((a,b)=>(b.data||'').localeCompare(a.data||''))
-      .slice(0, 15) // limita pra tooltip não ficar gigante
-      .map(v=>{
-        const [yy,mm,dd] = (v.data||'').split('-');
-        const dataFmt = yy?`${dd}/${mm}`:'';
-        const custo = (Number(v.valor)||0)*(Number(v.percCusto)||0)/100;
-        return `${dataFmt} ${v.descricao}: R$ ${_fmtBRL(v.valor)} (custo ${v.percCusto||0}%)`;
-      })
+    // Agrupa por descrição (canal) e mostra subtotais
+    const porCanal = {};
+    vendasExtPeriodo.forEach(v => {
+      const k = v.descricao || '(sem descrição)';
+      if(!porCanal[k]) porCanal[k] = { total: 0, custo: 0, dias: 0, perc: v.percCusto };
+      porCanal[k].total += v.valor;
+      porCanal[k].custo += v.custo;
+      porCanal[k].dias += 1;
+    });
+    const linhas = Object.entries(porCanal)
+      .sort((a,b) => b[1].total - a[1].total)
+      .map(([k,v]) => `${k} (CMV ${v.perc}%): ${v.dias} dia${v.dias===1?'':'s'} · R$ ${_fmtBRL(v.total)}`)
       .join('\n');
-    const maisLabel = vendasExtPeriodo.length > 15 ? `\n... e mais ${vendasExtPeriodo.length-15} venda(s)` : '';
-    const titulo = `Vendas externas do período:\n\n${linhas}${maisLabel}\n─────\nTotal vendido: R$ ${_fmtBRL(totVendaExt)}\nCusto insumos: R$ ${_fmtBRL(totCustoVendaExt)}`;
+    const titulo = `Vendas externas do período (por canal):\n\n${linhas}\n─────\nTotal vendido: R$ ${_fmtBRL(totVendaExt)}\nCusto insumos: R$ ${_fmtBRL(totCustoVendaExt)}`;
     vexTopTooltip = ` title="${titulo.replace(/"/g,'&quot;')}"`;
   }
   // Tooltip de Faturado (sistema + externas)
