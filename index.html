@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.49</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.50</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -4078,23 +4078,25 @@ function gerarRelatorioMensal(){
   <title>Faturamento ${lojaNome} – ${mesFmt}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Arial,sans-serif;color:#222;font-size:11px;padding:14px;background:white}
-    h1{font-size:16px;color:#c9345a;margin-bottom:2px}
-    .sub{font-size:10px;color:#6b7280;margin-bottom:12px}
-    .resumo{display:flex;gap:14px;justify-content:flex-end;margin-bottom:12px}
-    .resumo .box{border:1px solid #d1d5db;border-radius:6px;padding:8px 14px;background:#f9fafb}
+    body{font-family:Arial,sans-serif;color:#222;font-size:9px;padding:8px;background:white}
+    h1{font-size:13px;color:#c9345a;margin-bottom:1px}
+    .sub{font-size:8.5px;color:#6b7280;margin-bottom:6px}
+    .resumo{display:flex;gap:10px;justify-content:flex-end;margin-bottom:6px}
+    .resumo .box{border:1px solid #d1d5db;border-radius:5px;padding:4px 10px;background:#f9fafb}
     .resumo .box.fat{background:#dcfce7;border-color:#86efac}
     .resumo .box.luc{background:#fef3c7;border-color:#fde68a}
-    .resumo .lbl{font-size:9px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.5px}
-    .resumo .val{font-size:14px;font-weight:800;color:#0f172a;margin-top:2px}
-    table{width:100%;border-collapse:collapse;font-size:9.5px}
-    th{background:#f3f4f6;color:#111;padding:6px 8px;text-align:left;border:1px solid #ccc;font-weight:700}
-    td{padding:4px 8px;border:1px solid #e5e7eb;background:white}
+    .resumo .lbl{font-size:8px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.3px}
+    .resumo .val{font-size:11px;font-weight:800;color:#0f172a;margin-top:1px}
+    table{width:100%;border-collapse:collapse;font-size:7.5px;table-layout:fixed}
+    th{background:#f3f4f6;color:#111;padding:3px 4px;text-align:left;border:1px solid #ccc;font-weight:700;font-size:7.5px}
+    td{padding:2px 4px;border:1px solid #e5e7eb;background:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .grupo-pdv{background:#fefce8 !important}
-    .rodape{margin-top:14px;font-size:9px;color:#9ca3af;text-align:center}
+    .rodape{margin-top:6px;font-size:7px;color:#9ca3af;text-align:center}
     @media print{
-      body{padding:8px}
-      @page{size:A4 landscape;margin:8mm}
+      body{padding:4mm}
+      @page{size:A4 landscape;margin:5mm}
+      table{page-break-inside:avoid}
+      tr{page-break-inside:avoid;page-break-after:auto}
     }
   </style></head><body>
   <h1>🐄 Faturamento ${lojaNome.toUpperCase()}</h1>
