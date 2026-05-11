@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.46</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.47</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -3341,34 +3341,75 @@ function _removerPdvDoConsolidado(reg, pdv, abertura){
       reg.formasPagamento[k] = Math.max(0, (reg.formasPagamento[k]||0) - (Number(v)||0));
     });
   }
-  // Subtrai sabores linha por linha (se breakdown disponível)
-  if(Array.isArray(pdvRem.sabores) && Array.isArray(reg.sabores)){
-    pdvRem.sabores.forEach(sRem => {
-      const ex = reg.sabores.find(x => x.nomeProd===sRem.nomeProd && String(x.tamanho)===String(sRem.tamanho));
-      if(ex){
-        ex.qtd = Math.max(0, (ex.qtd||0) - (sRem.qtd||0));
-        ex.subtotal = Math.max(0, (ex.subtotal||0) - (sRem.subtotal||0));
-        ex.custoInsumos = Math.max(0, (ex.custoInsumos||0) - (sRem.custoInsumos||0));
-      }
-    });
-    // Remove sabores zerados
-    reg.sabores = reg.sabores.filter(s => (s.qtd||0) > 0);
-  }
-  // Subtrai insumos linha por linha (se breakdown disponível)
-  if(Array.isArray(pdvRem.insumos) && Array.isArray(reg.insumos)){
-    pdvRem.insumos.forEach(insRem => {
-      const ex = reg.insumos.find(x => x.itemId === insRem.itemId);
-      if(ex){
-        ex.qty = Math.max(0, (ex.qty||0) - (insRem.qty||0));
-      }
-    });
-    // Remove insumos zerados
-    reg.insumos = reg.insumos.filter(i => (i.qty||0) > 0);
-  }
 
+  // Remove o PDV
   reg.pdvs.splice(idx, 1);
-  // ⚠️ Se PDVs antigos (sem breakdown) foram removidos, sabores/insumos podem ficar acumulados.
-  // Use o botão "Reparar" no detalhe do dia se notar inconsistência.
+
+  // ── RECONSTRUÇÃO DE SABORES/INSUMOS ──────────────────────────────────────
+  // Estratégia:
+  // 1) Se TODOS os PDVs remanescentes têm breakdown → regenera sabores/insumos a partir deles (exato)
+  // 2) Se algum PDV remanescente NÃO tem breakdown (importação antiga) → zera sabores/insumos
+  //    (será reconstruído ao re-importar o TXT antigo, ou usuário pode usar o botão de reparo)
+  const todosTemBreakdown = reg.pdvs.length === 0 ||
+    reg.pdvs.every(p => Array.isArray(p.sabores) && Array.isArray(p.insumos));
+
+  if(todosTemBreakdown){
+    // Regenera sabores: zera e soma de novo a partir de cada PDV
+    reg.sabores = [];
+    reg.insumos = [];
+    // Também reconstrói porTamanho/formasPagamento (mais seguro)
+    reg.porTamanho = {};
+    reg.formasPagamento = {};
+
+    reg.pdvs.forEach(p => {
+      // Sabores
+      (p.sabores||[]).forEach(s => {
+        const ex = reg.sabores.find(x => x.nomeProd===s.nomeProd && String(x.tamanho)===String(s.tamanho));
+        if(ex){
+          ex.qtd = (ex.qtd||0) + (s.qtd||0);
+          ex.subtotal = (ex.subtotal||0) + (s.subtotal||0);
+          ex.custoInsumos = (ex.custoInsumos||0) + (s.custoInsumos||0);
+        } else {
+          reg.sabores.push({
+            nomeProd: s.nomeProd, tamanho: s.tamanho, qtd: s.qtd||0,
+            subtotal: s.subtotal||0, custoInsumos: s.custoInsumos||0,
+          });
+        }
+      });
+      // Insumos
+      (p.insumos||[]).forEach(ing => {
+        if(!ing.itemId) return;
+        const ex = reg.insumos.find(x => x.itemId === ing.itemId);
+        if(ex){
+          ex.qty = (ex.qty||0) + (ing.qty||0);
+        } else {
+          reg.insumos.push({
+            itemId: ing.itemId, nome: ing.nome||'', qty: ing.qty||0,
+            unidade: ing.unidade||'', unidadePrim: ing.unidadePrim||'',
+            valorEmbalagem: ing.valorEmbalagem||0, qtdPorUnidade: ing.qtdPorUnidade||0,
+            temFracao: !!ing.temFracao, custoPorUnit: ing.custoPorUnit||0,
+          });
+        }
+      });
+      // porTamanho
+      if(p.porTamanho){
+        Object.entries(p.porTamanho).forEach(([k,v])=>{
+          reg.porTamanho[k] = (reg.porTamanho[k]||0) + (Number(v)||0);
+        });
+      }
+      // formasPagamento
+      if(p.formasPagamento){
+        Object.entries(p.formasPagamento).forEach(([k,v])=>{
+          reg.formasPagamento[k] = (reg.formasPagamento[k]||0) + (Number(v)||0);
+        });
+      }
+    });
+  } else {
+    // Algum PDV remanescente é antigo (sem breakdown): zera sabores/insumos pra evitar acumulação
+    // Os totais agregados continuam corretos. Usuário pode re-importar pra reconstruir detalhes.
+    reg.sabores = [];
+    reg.insumos = [];
+  }
 }
 
 // Repara inconsistências do registro financeiro (lista de sabores ≠ totalFaturado)
