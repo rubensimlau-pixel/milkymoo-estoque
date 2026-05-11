@@ -207,7 +207,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.35</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.36</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -4288,11 +4288,14 @@ function renderHistorico(){
       const setaTipo = tipoExpandido ? '▾' : '▸';
 
       // Linha de cabeçalho do TIPO (clicável)
-      html += `<div onclick="toggleHistTipo('${chaveTipo}')" style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:${tipoExpandido?'1px solid #f3f4f6':'1px dashed var(--border)'};">`;
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:${tipoExpandido?'1px solid #f3f4f6':'1px dashed var(--border)'};">`;
+      html += `<div onclick="toggleHistTipo('${chaveTipo}')" style="cursor:pointer;display:flex;align-items:center;gap:8px;flex:1;min-width:0;">`;
       html += `<div style="font-size:.85rem;color:var(--gray);width:14px;flex-shrink:0;">${setaTipo}</div>`;
       html += `<div style="font-size:1.05rem;flex-shrink:0;">${grpTipo.icone}</div>`;
       html += `<span style="background:${grpTipo.cor};color:white;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:50px;text-transform:uppercase;letter-spacing:.5px;">${grpTipo.tipoLabel}</span>`;
       html += `<span style="flex:1;font-size:.78rem;color:var(--gray);font-weight:600;">${totalItensTipo} ${totalItensTipo===1?'item':'itens'}</span>`;
+      html += `</div>`;
+      html += `<button onclick="apagarHistGrupo('${tipo}','${dia}',null)" title="Apagar todos os ${totalItensTipo} itens deste grupo" style="background:#fee2e2;color:#991b1b;border:none;border-radius:8px;padding:5px 9px;font-size:.7rem;font-weight:700;cursor:pointer;flex-shrink:0;">🗑️</button>`;
       html += `</div>`;
 
       if(!tipoExpandido) return;
@@ -4308,11 +4311,14 @@ function renderHistorico(){
         const lojaIc = lojaIcon(Number(loja));
 
         // Linha de cabeçalho da LOJA (clicável)
-        html += `<div onclick="toggleHistLoja('${chaveLoja}')" style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:8px 12px 8px 32px;background:#fafafa;border-bottom:${lojaExpandida?'1px solid #f3f4f6':'1px dashed #e5e7eb'};">`;
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px 8px 32px;background:#fafafa;border-bottom:${lojaExpandida?'1px solid #f3f4f6':'1px dashed #e5e7eb'};">`;
+        html += `<div onclick="toggleHistLoja('${chaveLoja}')" style="cursor:pointer;display:flex;align-items:center;gap:8px;flex:1;min-width:0;">`;
         html += `<div style="font-size:.78rem;color:var(--gray);width:14px;flex-shrink:0;">${setaLoja}</div>`;
         html += `<div style="font-size:.95rem;flex-shrink:0;">${lojaIc}</div>`;
         html += `<span style="font-size:.78rem;font-weight:700;color:#222;">${lojaNome}</span>`;
         html += `<span style="flex:1;font-size:.72rem;color:var(--gray);font-weight:600;">${lista.length} ${lista.length===1?'item':'itens'}</span>`;
+        html += `</div>`;
+        html += `<button onclick="apagarHistGrupo('${tipo}','${dia}','${loja}')" title="Apagar todos os ${lista.length} itens desta loja" style="background:#fee2e2;color:#991b1b;border:none;border-radius:6px;padding:3px 7px;font-size:.65rem;font-weight:700;cursor:pointer;flex-shrink:0;">🗑️</button>`;
         html += `</div>`;
 
         if(!lojaExpandida) return;
@@ -4448,6 +4454,55 @@ async function apagarLancamento(tipo, idx){
   const ok = await saveCloud('historico');
   if(ok){
     showToast('🗑️ Lançamento apagado');
+    renderHistorico();
+  } else {
+    showToast('⚠️ Erro ao apagar');
+  }
+}
+
+// Apaga em massa: todos os registros de um tipo num dia, opcionalmente filtrando loja
+async function apagarHistGrupo(tipo, dia, loja /* null = todas as lojas */){
+  const arr = _arrayDoTipo(tipo);
+  if(!arr){ showToast('⚠️ Tipo não encontrado'); return; }
+
+  // Para 'importar', o "dia" é a data do ts (data da importação), não da venda
+  const matchData = (r) => {
+    if(tipo === 'importar' && r.ts){
+      return r.ts.slice(0,10) === dia;
+    }
+    return (r.data||'sem-data') === dia;
+  };
+  const matchLoja = (r) => loja == null ? true : (String(r.loja) === String(loja));
+
+  // Conta antes de confirmar
+  const aApagar = arr.filter(r => matchData(r) && matchLoja(r));
+  if(aApagar.length === 0){
+    showToast('Nenhum item pra apagar');
+    return;
+  }
+
+  const tipoLabels = {consumo:'consumos', perda:'perdas', inventario:'inventários', entrada:'entradas', importar:'importações'};
+  const tipoLbl = tipoLabels[tipo] || tipo;
+  const [yy,mm,dd] = (dia||'').split('-');
+  const dataFmt = yy ? `${dd}/${mm}/${yy}` : dia;
+  const lojaLbl = loja == null ? 'TODAS as lojas' : nomeLoja(Number(loja));
+
+  const conf = window.confirm(
+    `⚠️ APAGAR EM MASSA\n\n` +
+    `Vai apagar ${aApagar.length} ${tipoLbl} do dia ${dataFmt} (${lojaLbl}).\n\n` +
+    `Esta ação NÃO pode ser desfeita. Confirma?`
+  );
+  if(!conf) return;
+
+  // Filtra ARRAY removendo os que casam
+  const restantes = arr.filter(r => !(matchData(r) && matchLoja(r)));
+  // Substitui o conteúdo do array (preserva referência se for usada em outro lugar)
+  arr.length = 0;
+  restantes.forEach(r => arr.push(r));
+
+  const ok = await saveCloud('historico');
+  if(ok){
+    showToast(`🗑️ ${aApagar.length} item(ns) apagado(s)`);
     renderHistorico();
   } else {
     showToast('⚠️ Erro ao apagar');
