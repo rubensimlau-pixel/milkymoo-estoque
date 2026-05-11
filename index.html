@@ -41,7 +41,7 @@
   .header-user{font-size:.78rem;opacity:.85;}
   .header-btns{display:flex;gap:8px;align-items:center;}
   .btn-hdr{background:rgba(255,255,255,.25);border:none;border-radius:50px;padding:6px 14px;color:white;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;}
-  .tabs{display:flex;gap:8px;padding:10px 14px;position:relative;z-index:10;margin-top:0;overflow-x:auto;scrollbar-width:none;background:var(--cream);}
+  .tabs{display:flex;gap:8px;padding:18px 14px 22px;position:relative;z-index:10;margin-top:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;background:var(--cream);}
   .tabs::-webkit-scrollbar{display:none;}
   .tab{flex-shrink:0;background:white;border:none;border-radius:50px;padding:9px 16px;font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;color:var(--gray);box-shadow:0 2px 10px rgba(0,0,0,.09);transition:all .2s;}
   .tab.active{background:var(--pink);color:white;box-shadow:0 4px 14px rgba(255,107,157,.4);}
@@ -49,11 +49,39 @@
   .section{display:none;}.section.active{display:block;}
   .card{background:white;border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin-bottom:14px;}
   .card-title{font-family:'Baloo 2',cursive;font-size:1rem;font-weight:700;color:var(--pink-dark);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
-  .loja-sel{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
-  .loja-btn{background:white;border:2px solid var(--border);border-radius:50px;padding:5px 12px;cursor:pointer;text-align:center;transition:all .15s;font-family:'Nunito',sans-serif;display:inline-flex;align-items:center;gap:5px;line-height:1.1;flex:0 0 auto;}
-  .loja-btn .li{font-size:.95rem;}.loja-btn .ln{font-size:.78rem;font-weight:700;color:var(--gray);}
-  .loja-btn.active{border-color:var(--pink);background:var(--pink-light);}.loja-btn.active .ln{color:var(--pink-dark);}
-  .loja-btn.active::after{content:'✓';margin-left:2px;color:var(--pink-dark);font-weight:800;font-size:.85rem;}
+  /* Seletor de loja - dropdown */
+  .loja-sel{position:relative;margin-bottom:12px;}
+  .loja-dd-btn{width:100%;background:white;border:2px solid var(--border);border-radius:12px;padding:10px 14px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.88rem;font-weight:700;color:#333;display:flex;align-items:center;justify-content:space-between;gap:8px;box-shadow:var(--shadow);transition:all .15s;}
+  .loja-dd-btn:hover{border-color:var(--pink);}
+  .loja-dd-btn.is-empty{color:var(--gray);border-color:var(--orange);background:#fff7ed;}
+  .loja-dd-btn .loja-dd-caret{font-size:.7rem;color:var(--gray);transition:transform .2s;}
+  .loja-dd-btn.is-open .loja-dd-caret{transform:rotate(180deg);}
+  .loja-dd-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;background:white;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:50;overflow:hidden;border:1px solid var(--border);display:none;}
+  .loja-dd-menu.is-open{display:block;}
+  .loja-dd-item{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.88rem;font-weight:600;color:#333;border-bottom:1px solid #f0f0f0;transition:background .12s;}
+  .loja-dd-item:last-child{border-bottom:none;}
+  .loja-dd-item:hover{background:#fff5f8;}
+  .loja-dd-item .loja-dd-check{width:18px;height:18px;border:2px solid var(--border);border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.75rem;color:white;background:white;transition:all .15s;}
+  .loja-dd-item.is-selected .loja-dd-check{background:var(--pink);border-color:var(--pink);}
+  .loja-dd-item.is-selected .loja-dd-check::before{content:'✓';font-weight:800;}
+  .loja-dd-item .loja-dd-radio{width:18px;height:18px;border:2px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:white;transition:all .15s;}
+  .loja-dd-item.is-selected .loja-dd-radio{border-color:var(--pink);}
+  .loja-dd-item.is-selected .loja-dd-radio::before{content:'';width:9px;height:9px;border-radius:50%;background:var(--pink);}
+  .loja-dd-icon{font-size:1rem;}
+  .loja-empty-msg{background:#fff7ed;border:2px solid var(--orange);border-radius:12px;padding:24px 16px;text-align:center;color:#9a3412;font-weight:700;font-size:.92rem;margin-bottom:14px;}
+  .loja-empty-msg .ej{font-size:2rem;display:block;margin-bottom:8px;}
+  .loja-empty-msg .lbl{font-weight:400;font-size:.82rem;margin-top:6px;color:#92400e;}
+  /* Quando aba está sem loja selecionada, esconde tudo exceto a loja-sel e o container onde a msg é injetada */
+  .section.no-loja > *:not(.loja-sel):not(.loja-empty-msg){display:none !important;}
+  .section.no-loja .loja-sel{display:block !important;}
+  /* Containers que contêm a msg quando não há loja - manter visíveis */
+  .section.no-loja #consumo-lista,
+  .section.no-loja #inv-lista,
+  .section.no-loja #proj-lista,
+  .section.no-loja #perdas-copos,
+  .section.no-loja #entrada-lista,
+  .section.no-loja #compras-lista,
+  .section.no-loja #div-lista{display:block !important;}
   .row-hdr{display:flex;gap:8px;padding-bottom:5px;margin-bottom:2px;}
   .rh-name{flex:1;font-size:.68rem;color:var(--gray);font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
   .rh-col{width:72px;font-size:.68rem;color:var(--gray);font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:.5px;}
@@ -160,7 +188,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.8</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.11</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -184,8 +212,6 @@
 
 <div id="screen-app" class="screen">
   <div class="app-header">
-    <img src="data:image/png;base64,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" alt="vaca"
-      style="position:absolute;bottom:-6px;right:6px;height:70%;max-height:70px;z-index:1;object-fit:contain;pointer-events:none;opacity:.7;">
     <div class="header-row">
       <div></div>
       <div class="header-center">
@@ -217,9 +243,15 @@
         <input class="resp-input" id="resp-consumo" type="text" placeholder="Digite seu nome">
       </div>
       <div class="loja-sel">
-        <button class="loja-btn active" id="blc1" onclick="selLoja(1,'c')"><div class="li">🏪</div><div class="ln" id="lnc1">Cajamar</div></button>
-        <button class="loja-btn" id="blc2" onclick="selLoja(2,'c')"><div class="li">🏬</div><div class="ln" id="lnc2">Iguatemi</div></button>
-        <button class="loja-btn" id="blc3" onclick="selLoja(3,'c')"><div class="li">🏗️</div><div class="ln" id="lnc3">Carapicuíba</div></button>
+        <button class="loja-dd-btn is-empty" id="ddbtn-c" onclick="toggleLojaDD('c')">
+          <span id="ddlbl-c">Selecionar loja</span>
+          <span class="loja-dd-caret">▾</span>
+        </button>
+        <div class="loja-dd-menu" id="ddmenu-c">
+          <div class="loja-dd-item" data-n="1" onclick="pickLoja('c',1)"><span class="loja-dd-radio"></span><span class="loja-dd-icon">🏪</span><span id="ddln-c-1">Cajamar</span></div>
+          <div class="loja-dd-item" data-n="2" onclick="pickLoja('c',2)"><span class="loja-dd-radio"></span><span class="loja-dd-icon">🏬</span><span id="ddln-c-2">Iguatemi</span></div>
+          <div class="loja-dd-item" data-n="3" onclick="pickLoja('c',3)"><span class="loja-dd-radio"></span><span class="loja-dd-icon">🏗️</span><span id="ddln-c-3">Carapicuíba</span></div>
+        </div>
       </div>
       <div class="filtro-bar">
         <input type="text" class="filtro-busca" id="busca-consumo" placeholder="🔍 Buscar item..." oninput="aplicarFiltroBusca('consumo')">
@@ -250,9 +282,15 @@
         <input class="resp-input" id="resp-inv" type="text" placeholder="Digite seu nome">
       </div>
       <div class="loja-sel">
-        <button class="loja-btn active" id="bli1" onclick="selLoja(1,'i')"><div class="li">🏪</div><div class="ln" id="lni1">Cajamar</div></button>
-        <button class="loja-btn" id="bli2" onclick="selLoja(2,'i')"><div class="li">🏬</div><div class="ln" id="lni2">Iguatemi</div></button>
-        <button class="loja-btn" id="bli3" onclick="selLoja(3,'i')"><div class="li">🏗️</div><div class="ln" id="lni3">Carapicuíba</div></button>
+        <button class="loja-dd-btn is-empty" id="ddbtn-i" onclick="toggleLojaDD('i')">
+          <span id="ddlbl-i">Selecionar loja</span>
+          <span class="loja-dd-caret">▾</span>
+        </button>
+        <div class="loja-dd-menu" id="ddmenu-i">
+          <div class="loja-dd-item" data-n="1" onclick="pickLoja('i',1)"><span class="loja-dd-radio"></span><span class="loja-dd-icon">🏪</span><span id="ddln-i-1">Cajamar</span></div>
+          <div class="loja-dd-item" data-n="2" onclick="pickLoja('i',2)"><span class="loja-dd-radio"></span><span class="loja-dd-icon">🏬</span><span id="ddln-i-2">Iguatemi</span></div>
+          <div class="loja-dd-item" data-n="3" onclick="pickLoja('i',3)"><span class="loja-dd-radio"></span><span class="loja-dd-icon">🏗️</span><span id="ddln-i-3">Carapicuíba</span></div>
+        </div>
       </div>
       <div class="filtro-bar">
         <input type="text" class="filtro-busca" id="busca-inv" placeholder="🔍 Buscar item..." oninput="aplicarFiltroBusca('inv')">
@@ -273,9 +311,15 @@
 
     <div id="sec-projetado" class="section">
       <div class="loja-sel">
-        <button class="loja-btn active" id="blp1" onclick="selLoja(1,'p')"><div class="li">🏪</div><div class="ln" id="lnp1">Cajamar</div></button>
-        <button class="loja-btn active" id="blp2" onclick="selLoja(2,'p')"><div class="li">🏬</div><div class="ln" id="lnp2">Iguatemi</div></button>
-        <button class="loja-btn active" id="blp3" onclick="selLoja(3,'p')"><div class="li">🏗️</div><div class="ln" id="lnp3">Carapicuíba</div></button>
+        <button class="loja-dd-btn is-empty" id="ddbtn-p" onclick="toggleLojaDD('p')">
+          <span id="ddlbl-p">Selecionar lojas</span>
+          <span class="loja-dd-caret">▾</span>
+        </button>
+        <div class="loja-dd-menu" id="ddmenu-p">
+          <div class="loja-dd-item" data-n="1" onclick="pickLoja('p',1)"><span class="loja-dd-check"></span><span class="loja-dd-icon">🏪</span><span id="ddln-p-1">Cajamar</span></div>
+          <div class="loja-dd-item" data-n="2" onclick="pickLoja('p',2)"><span class="loja-dd-check"></span><span class="loja-dd-icon">🏬</span><span id="ddln-p-2">Iguatemi</span></div>
+          <div class="loja-dd-item" data-n="3" onclick="pickLoja('p',3)"><span class="loja-dd-check"></span><span class="loja-dd-icon">🏗️</span><span id="ddln-p-3">Carapicuíba</span></div>
+        </div>
       </div>
       <div class="filtro-bar">
         <input type="text" class="filtro-busca" id="busca-proj" placeholder="🔍 Buscar item..." oninput="aplicarFiltroBusca('proj')">
@@ -296,9 +340,15 @@
     <div id="sec-compras" class="section">
       <div class="rel-hdr" style="background:linear-gradient(135deg,var(--pink),#ffd6e4);"><h2>🛒 Lista de Compras</h2><p id="compras-periodo">próximos 7 dias</p></div>
       <div class="loja-sel">
-        <button class="loja-btn active" id="blcomp1" onclick="selLojaCompras(1)"><div class="li">🏪</div><div class="ln" id="lncomp1">Cajamar</div></button>
-        <button class="loja-btn active" id="blcomp2" onclick="selLojaCompras(2)"><div class="li">🏬</div><div class="ln" id="lncomp2">Iguatemi</div></button>
-        <button class="loja-btn active" id="blcomp3" onclick="selLojaCompras(3)"><div class="li">🏗️</div><div class="ln" id="lncomp3">Carapicuíba</div></button>
+        <button class="loja-dd-btn is-empty" id="ddbtn-comp" onclick="toggleLojaDD('comp')">
+          <span id="ddlbl-comp">Selecionar lojas</span>
+          <span class="loja-dd-caret">▾</span>
+        </button>
+        <div class="loja-dd-menu" id="ddmenu-comp">
+          <div class="loja-dd-item" data-n="1" onclick="pickLoja('comp',1)"><span class="loja-dd-check"></span><span class="loja-dd-icon">🏪</span><span id="ddln-comp-1">Cajamar</span></div>
+          <div class="loja-dd-item" data-n="2" onclick="pickLoja('comp',2)"><span class="loja-dd-check"></span><span class="loja-dd-icon">🏬</span><span id="ddln-comp-2">Iguatemi</span></div>
+          <div class="loja-dd-item" data-n="3" onclick="pickLoja('comp',3)"><span class="loja-dd-check"></span><span class="loja-dd-icon">🏗️</span><span id="ddln-comp-3">Carapicuíba</span></div>
+        </div>
       </div>
       <div id="compras-chips" class="chips"></div>
       <div class="filtro-bar">
@@ -327,9 +377,15 @@
         <input class="resp-input" id="resp-perdas" type="text" placeholder="Digite seu nome">
       </div>
       <div class="loja-sel">
-        <button class="loja-btn active" id="blpr1" onclick="selLoja(1,'pr')"><div class="li">🏪</div><div class="ln" id="lnpr1">Cajamar</div></button>
-        <button class="loja-btn" id="blpr2" onclick="selLoja(2,'pr')"><div class="li">🏬</div><div class="ln" id="lnpr2">Iguatemi</div></button>
-        <button class="loja-btn" id="blpr3" onclick="selLoja(3,'pr')"><div class="li">🏗️</div><div class="ln" id="lnpr3">Carapicuíba</div></button>
+        <button class="loja-dd-btn is-empty" id="ddbtn-pr" onclick="toggleLojaDD('pr')">
+          <span id="ddlbl-pr">Selecionar loja</span>
+          <span class="loja-dd-caret">▾</span>
+        </button>
+        <div class="loja-dd-menu" id="ddmenu-pr">
+          <div class="loja-dd-item" data-n="1" onclick="pickLoja('pr',1)"><span class="loja-dd-radio"></span><span class="loja-dd-icon">🏪</span><span id="ddln-pr-1">Cajamar</span></div>
+          <div class="loja-dd-item" data-n="2" onclick="pickLoja('pr',2)"><span class="loja-dd-radio"></span><span class="loja-dd-icon">🏬</span><span id="ddln-pr-2">Iguatemi</span></div>
+          <div class="loja-dd-item" data-n="3" onclick="pickLoja('pr',3)"><span class="loja-dd-radio"></span><span class="loja-dd-icon">🏗️</span><span id="ddln-pr-3">Carapicuíba</span></div>
+        </div>
       </div>
 
       <!-- Lista de itens de perda -->
@@ -356,9 +412,15 @@
       </div>
 
       <div class="loja-sel">
-        <button class="loja-btn active" id="blimp1" onclick="selLoja(1,'imp')"><div class="li">🏪</div><div class="ln" id="lnimp1">Cajamar</div></button>
-        <button class="loja-btn" id="blimp2" onclick="selLoja(2,'imp')"><div class="li">🏬</div><div class="ln" id="lnimp2">Iguatemi</div></button>
-        <button class="loja-btn" id="blimp3" onclick="selLoja(3,'imp')"><div class="li">🏗️</div><div class="ln" id="lnimp3">Carapicuíba</div></button>
+        <button class="loja-dd-btn is-empty" id="ddbtn-imp" onclick="toggleLojaDD('imp')">
+          <span id="ddlbl-imp">Selecionar loja</span>
+          <span class="loja-dd-caret">▾</span>
+        </button>
+        <div class="loja-dd-menu" id="ddmenu-imp">
+          <div class="loja-dd-item" data-n="1" onclick="pickLoja('imp',1)"><span class="loja-dd-radio"></span><span class="loja-dd-icon">🏪</span><span id="ddln-imp-1">Cajamar</span></div>
+          <div class="loja-dd-item" data-n="2" onclick="pickLoja('imp',2)"><span class="loja-dd-radio"></span><span class="loja-dd-icon">🏬</span><span id="ddln-imp-2">Iguatemi</span></div>
+          <div class="loja-dd-item" data-n="3" onclick="pickLoja('imp',3)"><span class="loja-dd-radio"></span><span class="loja-dd-icon">🏗️</span><span id="ddln-imp-3">Carapicuíba</span></div>
+        </div>
       </div>
 
       <div class="date-bar"><label>📅 Data do relatório:</label><input type="date" id="data-importar"></div>
@@ -412,9 +474,15 @@
     <div id="sec-divergencia" class="section">
       <div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;"><strong>⚠️ Divergência</strong>Inventário anterior − consumo vs inventário real. <strong>Negativo = possível perda.</strong></div>
       <div class="loja-sel">
-        <button class="loja-btn active" id="bld1" onclick="selLoja(1,'d')"><div class="li">🏪</div><div class="ln" id="lnd1">Cajamar</div></button>
-        <button class="loja-btn active" id="bld2" onclick="selLoja(2,'d')"><div class="li">🏬</div><div class="ln" id="lnd2">Iguatemi</div></button>
-        <button class="loja-btn active" id="bld3" onclick="selLoja(3,'d')"><div class="li">🏗️</div><div class="ln" id="lnd3">Carapicuíba</div></button>
+        <button class="loja-dd-btn is-empty" id="ddbtn-d" onclick="toggleLojaDD('d')">
+          <span id="ddlbl-d">Selecionar lojas</span>
+          <span class="loja-dd-caret">▾</span>
+        </button>
+        <div class="loja-dd-menu" id="ddmenu-d">
+          <div class="loja-dd-item" data-n="1" onclick="pickLoja('d',1)"><span class="loja-dd-check"></span><span class="loja-dd-icon">🏪</span><span id="ddln-d-1">Cajamar</span></div>
+          <div class="loja-dd-item" data-n="2" onclick="pickLoja('d',2)"><span class="loja-dd-check"></span><span class="loja-dd-icon">🏬</span><span id="ddln-d-2">Iguatemi</span></div>
+          <div class="loja-dd-item" data-n="3" onclick="pickLoja('d',3)"><span class="loja-dd-check"></span><span class="loja-dd-icon">🏗️</span><span id="ddln-d-3">Carapicuíba</span></div>
+        </div>
       </div>
       <div id="div-semanas"></div>
       <div id="div-lista"></div>
@@ -664,9 +732,15 @@
         <strong>🛍️ Entrada de Compras</strong>Itens comprados. <strong>Somados ao estoque</strong> na hora.
       </div>
       <div class="loja-sel">
-        <button class="loja-btn active" id="ble1" onclick="selLoja(1,'e')"><div class="li">🏪</div><div class="ln" id="lne1">Cajamar</div></button>
-        <button class="loja-btn" id="ble2" onclick="selLoja(2,'e')"><div class="li">🏬</div><div class="ln" id="lne2">Iguatemi</div></button>
-        <button class="loja-btn" id="ble3" onclick="selLoja(3,'e')"><div class="li">🏗️</div><div class="ln" id="lne3">Carapicuíba</div></button>
+        <button class="loja-dd-btn is-empty" id="ddbtn-e" onclick="toggleLojaDD('e')">
+          <span id="ddlbl-e">Selecionar loja</span>
+          <span class="loja-dd-caret">▾</span>
+        </button>
+        <div class="loja-dd-menu" id="ddmenu-e">
+          <div class="loja-dd-item" data-n="1" onclick="pickLoja('e',1)"><span class="loja-dd-radio"></span><span class="loja-dd-icon">🏪</span><span id="ddln-e-1">Cajamar</span></div>
+          <div class="loja-dd-item" data-n="2" onclick="pickLoja('e',2)"><span class="loja-dd-radio"></span><span class="loja-dd-icon">🏬</span><span id="ddln-e-2">Iguatemi</span></div>
+          <div class="loja-dd-item" data-n="3" onclick="pickLoja('e',3)"><span class="loja-dd-radio"></span><span class="loja-dd-icon">🏗️</span><span id="ddln-e-3">Carapicuíba</span></div>
+        </div>
       </div>
       <div class="filtro-bar">
         <input type="text" class="filtro-busca" id="busca-ent" placeholder="🔍 Buscar item..." oninput="aplicarFiltroBusca('ent')">
@@ -964,9 +1038,9 @@ const DEFAULT_ITEMS=[
 ];
 
 let db={items:[],inventarios:[],consumos:[],entradas:[],perdas:[],relatorios:[],financeiro:[],minimos:{},receitas:null,usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7,diasLoja1:7,diasLoja2:7,diasLoja3:7}};
-let lojaC=1,lojaI=1,lojaP=1,lojaD=1,lojaE=1,lojaPr=1,lojaImp=1;
-let projLojasFiltro = new Set([1,2,3]); // multi-select estoque
-let divLojasFiltro = new Set([1,2,3]);  // multi-select divergência
+let lojaC=null,lojaI=null,lojaP=null,lojaD=null,lojaE=null,lojaPr=null,lojaImp=null;
+let projLojasFiltro = new Set(); // multi-select estoque (vazio por padrão)
+let divLojasFiltro = new Set();  // multi-select divergência (vazio por padrão)
 let autoRefreshInterval=null;
 
 async function cloudGet(){try{return window.firebaseGet?await window.firebaseGet():null;}catch(e){return null;}}
@@ -1013,7 +1087,14 @@ async function doLogin(){
   }
   err.style.display='none';
   currentUser={name:u,...USERS[u]};
-  if(currentUser.role==='loja'){lojaC=lojaI=lojaP=lojaD=currentUser.loja;}
+  if(currentUser.role==='loja'){
+    // Funcionária só pode atuar na própria loja: pré-seleciona em todos os contextos
+    const L = currentUser.loja;
+    lojaC=lojaI=lojaPr=lojaE=lojaImp=L;
+    projLojasFiltro = new Set([L]);
+    divLojasFiltro = new Set([L]);
+    comprasLojasFiltro = new Set([L]);
+  }
   document.getElementById('huser').textContent=currentUser.label;
   document.getElementById('screen-login').classList.remove('active');
   document.getElementById('screen-app').classList.add('active');
@@ -1106,7 +1187,9 @@ async function carregarDados(){
     } else { db.usuarios = null; }
   }
   // Itens vêm exclusivamente do Firebase — sem fallback local
-  aplicarNomes();renderConsumo();renderInv();renderProjetado();renderConfig();
+  aplicarNomes();
+  renderConsumo();renderInv();renderProjetado();renderConfig();
+  renderEntradas();renderPerdas();gerarCompras();renderDivergencia();renderImportar();
   setLoad(false);
 }
 
@@ -1188,36 +1271,158 @@ function showTab(name,btn){
   }
 }
 
-function selLoja(n,ctx){
-  if(currentUser?.role==='loja'&&currentUser.loja!==n)return;
-  // Multi-select: Estoque (p) e Divergência (d)
-  if(ctx==='p'){
-    if(projLojasFiltro.has(n)){
-      if(projLojasFiltro.size>1) projLojasFiltro.delete(n);
-    } else { projLojasFiltro.add(n); }
-    [1,2,3].forEach(i=>document.getElementById('blp'+i).classList.toggle('active',projLojasFiltro.has(i)));
-    renderProjetado();
-    return;
-  }
-  if(ctx==='d'){
-    if(divLojasFiltro.has(n)){
-      if(divLojasFiltro.size>1) divLojasFiltro.delete(n);
-    } else { divLojasFiltro.add(n); }
-    [1,2,3].forEach(i=>document.getElementById('bld'+i).classList.toggle('active',divLojasFiltro.has(i)));
-    renderDivergencia();
-    return;
-  }
-  // Single-select: preenchimento
-  if(ctx==='c'){lojaC=n;[1,2,3].forEach(i=>document.getElementById('blc'+i).classList.toggle('active',i===n));renderConsumo();}
-  if(ctx==='i'){lojaI=n;[1,2,3].forEach(i=>document.getElementById('bli'+i).classList.toggle('active',i===n));renderInv();}
-  if(ctx==='e'){lojaE=n;[1,2,3].forEach(i=>document.getElementById('ble'+i).classList.toggle('active',i===n));renderEntradas();}
-  if(ctx==='pr'){lojaPr=n;[1,2,3].forEach(i=>document.getElementById('blpr'+i).classList.toggle('active',i===n));renderPerdas();}
-  if(ctx==='imp'){lojaImp=n;[1,2,3].forEach(i=>document.getElementById('blimp'+i).classList.toggle('active',i===n));}
+// === Dropdown de seleção de loja ===
+// Estado: pra single -> uma das vars lojaC/lojaI/lojaPr/lojaE/lojaImp (null|1|2|3)
+//         pra multi  -> Sets projLojasFiltro/divLojasFiltro/comprasLojasFiltro
+
+const CTX_MULTI = new Set(['p','d','comp']);
+const CTX_SINGLE_VAR = {c:'lojaC',i:'lojaI',pr:'lojaPr',e:'lojaE',imp:'lojaImp'};
+const CTX_RENDER = {c:'renderConsumo',i:'renderInv',p:'renderProjetado',d:'renderDivergencia',e:'renderEntradas',pr:'renderPerdas',comp:'gerarCompras',imp:'renderImportar'};
+
+function ctxGetLojas(ctx){
+  // Retorna lista de lojas selecionadas em ctx ([] se nenhuma)
+  if(ctx==='p') return [...projLojasFiltro].sort();
+  if(ctx==='d') return [...divLojasFiltro].sort();
+  if(ctx==='comp') return [...comprasLojasFiltro].sort();
+  const n = window[CTX_SINGLE_VAR[ctx]];
+  return n ? [n] : [];
 }
+
+function ctxSetSingle(ctx,n){
+  // Set single-select. n=null pra limpar.
+  if(ctx==='c') lojaC=n;
+  else if(ctx==='i') lojaI=n;
+  else if(ctx==='pr') lojaPr=n;
+  else if(ctx==='e') lojaE=n;
+  else if(ctx==='imp') lojaImp=n;
+}
+
+function toggleLojaDD(ctx){
+  // Abre/fecha o menu dropdown
+  const menu = document.getElementById('ddmenu-'+ctx);
+  const btn = document.getElementById('ddbtn-'+ctx);
+  if(!menu||!btn) return;
+  const isOpen = menu.classList.contains('is-open');
+  // Fecha todos os outros menus abertos
+  document.querySelectorAll('.loja-dd-menu.is-open').forEach(m=>m.classList.remove('is-open'));
+  document.querySelectorAll('.loja-dd-btn.is-open').forEach(b=>b.classList.remove('is-open'));
+  if(!isOpen){
+    menu.classList.add('is-open');
+    btn.classList.add('is-open');
+  }
+}
+
+function pickLoja(ctx,n){
+  // Funcionária: só pode escolher a própria loja
+  if(currentUser?.role==='loja' && currentUser.loja!==n) return;
+
+  if(CTX_MULTI.has(ctx)){
+    // Multi-select: toggle
+    const set = ctx==='p'?projLojasFiltro:ctx==='d'?divLojasFiltro:comprasLojasFiltro;
+    if(set.has(n)) set.delete(n); else set.add(n);
+  } else {
+    // Single-select: troca; clicar na mesma desmarca (deixa vazio)
+    const atual = window[CTX_SINGLE_VAR[ctx]];
+    ctxSetSingle(ctx, atual===n ? null : n);
+    // Single: fecha o menu após escolher
+    if(atual!==n){
+      document.getElementById('ddmenu-'+ctx)?.classList.remove('is-open');
+      document.getElementById('ddbtn-'+ctx)?.classList.remove('is-open');
+    }
+  }
+  atualizarLojaDD(ctx);
+  // Re-renderiza
+  const renderFn = CTX_RENDER[ctx];
+  if(renderFn && typeof window[renderFn]==='function') window[renderFn]();
+}
+
+function atualizarLojaDD(ctx){
+  // Atualiza visual do dropdown (label do botão + estado dos itens)
+  const btn = document.getElementById('ddbtn-'+ctx);
+  const lbl = document.getElementById('ddlbl-'+ctx);
+  if(!btn||!lbl) return;
+
+  const sel = ctxGetLojas(ctx);
+  // Estado de cada item
+  [1,2,3].forEach(n=>{
+    const item = document.querySelector(`#ddmenu-${ctx} .loja-dd-item[data-n="${n}"]`);
+    if(item) item.classList.toggle('is-selected', sel.includes(n));
+  });
+  // Label do botão
+  if(sel.length===0){
+    lbl.textContent = CTX_MULTI.has(ctx) ? 'Selecionar lojas' : 'Selecionar loja';
+    btn.classList.add('is-empty');
+  } else if(sel.length===1){
+    lbl.textContent = `${lojaIcon(sel[0])} ${nomeLoja(sel[0])}`;
+    btn.classList.remove('is-empty');
+  } else if(sel.length===3){
+    lbl.textContent = 'Todas as lojas (3)';
+    btn.classList.remove('is-empty');
+  } else {
+    lbl.textContent = sel.map(n=>nomeLoja(n)).join(', ') + ` (${sel.length})`;
+    btn.classList.remove('is-empty');
+  }
+}
+
+function atualizarTodosLojaDD(){
+  ['c','i','p','d','e','pr','imp','comp'].forEach(atualizarLojaDD);
+}
+
+// Fecha menus abertos ao clicar fora
+document.addEventListener('click', function(ev){
+  if(ev.target.closest('.loja-sel')) return; // clique dentro -> ignora
+  document.querySelectorAll('.loja-dd-menu.is-open').forEach(m=>m.classList.remove('is-open'));
+  document.querySelectorAll('.loja-dd-btn.is-open').forEach(b=>b.classList.remove('is-open'));
+});
+
+function mensagemSelecioneLoja(multi){
+  const txt = multi
+    ? 'Selecione uma ou mais lojas no menu acima para ver os dados.'
+    : 'Selecione uma loja no menu acima para continuar.';
+  return `<div class="loja-empty-msg"><span class="ej">👆</span>Nenhuma loja selecionada<div class="lbl">${txt}</div></div>`;
+}
+
+function toggleNoLoja(secId, semLoja){
+  // Adiciona/remove classe .no-loja na seção para esconder filtros/botões periféricos
+  const sec = document.getElementById(secId);
+  if(sec) sec.classList.toggle('no-loja', !!semLoja);
+}
+
+function renderImportar(){
+  const sec = document.getElementById('sec-importar');
+  toggleNoLoja('sec-importar', !lojaImp);
+  // Remove msg antiga se houver
+  const oldMsg = sec?.querySelector(':scope > .loja-empty-msg');
+  if(oldMsg) oldMsg.remove();
+  if(!lojaImp && sec){
+    const div = document.createElement('div');
+    div.className = 'loja-empty-msg';
+    div.innerHTML = '<span class="ej">👆</span>Nenhuma loja selecionada<div class="lbl">Selecione uma loja no menu acima para continuar.</div>';
+    // Insere depois da loja-sel
+    const lojaSel = sec.querySelector('.loja-sel');
+    if(lojaSel && lojaSel.nextSibling) sec.insertBefore(div, lojaSel.nextSibling);
+    else sec.appendChild(div);
+  }
+}
+
+// Wrapper de retrocompat — alguns lugares ainda chamam selLoja(n,ctx)
+function selLoja(n,ctx){ pickLoja(ctx,n); }
+function selLojaCompras(n){ pickLoja('comp',n); }
 
 function nomeLoja(n){return n===1?(db.config.nomeLoja1||'Cajamar'):n===2?(db.config.nomeLoja2||'Iguatemi'):(db.config.nomeLoja3||'Carapicuíba');}
 function lojaIcon(n){return n===1?'🏪':n===2?'🏬':'🏗️';}
-function aplicarNomes(){[1,2,3].forEach(n=>{const nm=nomeLoja(n);['lnc','lni','lnp','lnd','lne','lnpr','lnimp','lncomp'].forEach(p=>{const el=document.getElementById(p+n);if(el)el.textContent=nm;});});}
+function aplicarNomes(){
+  [1,2,3].forEach(n=>{
+    const nm=nomeLoja(n);
+    // Atualiza labels dentro de cada dropdown (id pattern: ddln-{ctx}-{n})
+    ['c','i','p','d','e','pr','imp','comp'].forEach(ctx=>{
+      const el=document.getElementById(`ddln-${ctx}-${n}`);
+      if(el) el.textContent=nm;
+    });
+  });
+  // Re-renderiza os labels dos botões caso uma loja já esteja selecionada
+  atualizarTodosLojaDD();
+}
 
 function ultimoInventario(loja,ateData){
   const refs=db.inventarios.filter(r=>r.loja==loja&&r.data<=ateData);if(!refs.length)return null;
@@ -1267,6 +1472,8 @@ document.getElementById('data-consumo').addEventListener('change', function(){
   }
 });
 function renderConsumo(){
+  toggleNoLoja('sec-consumo', !lojaC);
+  if(!lojaC){ document.getElementById('consumo-lista').innerHTML = mensagemSelecioneLoja(false); return; }
   const dt=document.getElementById('data-consumo').value;
   const cats=['alimentos','caldas','insumos','bebidas','limpeza','mimos'];
   document.getElementById('consumo-lista').innerHTML=cats.map(cat=>{
@@ -1321,6 +1528,8 @@ document.getElementById('data-entrada').addEventListener('change', function(){
   }
 });
 function renderInv(){
+  toggleNoLoja('sec-inventario', !lojaI);
+  if(!lojaI){ document.getElementById('inv-lista').innerHTML = mensagemSelecioneLoja(false); return; }
   const dt=document.getElementById('data-inv').value;
   const saved={};db.inventarios.filter(r=>r.data===dt&&r.loja==lojaI).forEach(r=>saved[r.itemId]=r.qty);
   document.getElementById('inv-lista').innerHTML=cats().map(cat=>{
@@ -1357,7 +1566,8 @@ async function salvarInventario(){
 function renderProjetado(){
   const container=document.getElementById('proj-lista');
   const lojasAtivas = [1,2,3].filter(l => projLojasFiltro.has(l));
-  if(!lojasAtivas.length){ container.innerHTML=`<div class="empty"><span class="ej">🏪</span><p>Selecione pelo menos uma loja.</p></div>`; return; }
+  toggleNoLoja('sec-projetado', !lojasAtivas.length);
+  if(!lojasAtivas.length){ container.innerHTML = mensagemSelecioneLoja(true); return; }
   let html='';
   // Info-box geral só quando multi-loja (no single, o info-box detalhado por loja já tem o título)
   if(lojasAtivas.length>1){
@@ -1443,6 +1653,13 @@ const PERDAS_COPOS = [
 ];
 
 function renderPerdas(){
+  toggleNoLoja('sec-perdas', !lojaPr);
+  if(!lojaPr){
+    document.getElementById('perdas-copos').innerHTML = mensagemSelecioneLoja(false);
+    const ms = document.getElementById('perdas-shakes'); if(ms) ms.innerHTML='';
+    const ins = document.getElementById('perdas-insumos'); if(ins) ins.innerHTML='';
+    return;
+  }
   // Copos vazios
   document.getElementById('perdas-copos').innerHTML = PERDAS_COPOS.map(c=>`
     <div class="item-row">
@@ -1519,6 +1736,8 @@ async function salvarPerdas(){
 }
 
 function renderEntradas(){
+  toggleNoLoja('sec-entradas', !lojaE);
+  if(!lojaE){ document.getElementById('entrada-lista').innerHTML = mensagemSelecioneLoja(false); return; }
   const dt=document.getElementById('data-entrada').value;
   const cats=[...new Set(db.items.map(i=>i.cat))];
   document.getElementById('entrada-lista').innerHTML=cats.map(cat=>{
@@ -1559,29 +1778,20 @@ async function salvarEntrada(){
   btn.disabled=false;
 }
 
-let comprasLojasFiltro = new Set([1,2,3]); // multi-select: todas por padrão. Pelo menos uma sempre selecionada.
-
-function selLojaCompras(n){
-  if(comprasLojasFiltro.has(n)){
-    // só desmarca se sobrar pelo menos uma
-    if(comprasLojasFiltro.size>1) comprasLojasFiltro.delete(n);
-  } else {
-    comprasLojasFiltro.add(n);
-  }
-  [1,2,3].forEach(i => {
-    const b = document.getElementById('blcomp'+i);
-    if(b) b.classList.toggle('active', comprasLojasFiltro.has(i));
-  });
-  gerarCompras();
-}
+let comprasLojasFiltro = new Set(); // multi-select compras (vazio por padrão)
 
 function gerarCompras(){
+  // Lojas a considerar conforme o filtro multi-select
+  const lojasAtivas = [1,2,3].filter(l => comprasLojasFiltro.has(l));
+  toggleNoLoja('sec-compras', !lojasAtivas.length);
+  if(!lojasAtivas.length){
+    document.getElementById('compras-lista').innerHTML = mensagemSelecioneLoja(true);
+    const c = document.getElementById('compras-chips'); if(c) c.innerHTML='';
+    return;
+  }
   const hj=hoje();
   const cats=[...new Set(db.items.map(i=>i.cat))];
   let comprar=[], okList=[];
-
-  // Lojas a considerar conforme o filtro multi-select
-  const lojasAtivas = [1,2,3].filter(l => comprasLojasFiltro.has(l));
 
   db.items.forEach(item=>{
     lojasAtivas.forEach(loja=>{
@@ -1662,7 +1872,12 @@ function gerarCompras(){
   aplicarFiltroBusca('compras');
 }
 
-function renderDivergencia(){ document.getElementById('div-lista').innerHTML='<div class="empty">Selecione um período.</div>'; }
+function renderDivergencia(){
+  const lojasAtivas = [1,2,3].filter(l => divLojasFiltro.has(l));
+  toggleNoLoja('sec-divergencia', !lojasAtivas.length);
+  if(!lojasAtivas.length){ document.getElementById('div-lista').innerHTML = mensagemSelecioneLoja(true); return; }
+  document.getElementById('div-lista').innerHTML='<div class="empty">Selecione um período.</div>';
+}
 
 function renderConfig(){
   // cn1/cn2/cn3/cd já não existem no HTML (movidos para modal-unidades)
@@ -2113,7 +2328,7 @@ function processarRelatorio(){
   const lojaInfo = lojaMatch ? lojaMatch[0].trim() : '';
 
   // Detecta qual loja baseado no nome encontrado no relatório
-  let lojaDetectada = lojaImp; // fallback para loja selecionada
+  let lojaDetectada = lojaImp || 1; // fallback para loja selecionada (ou Cajamar)
   if(lojaInfo){
     const lojaInfoUpper = lojaInfo.toUpperCase();
     const nomeLoja1 = (db.config.nomeLoja1||'Cajamar').toUpperCase();
@@ -2125,9 +2340,9 @@ function processarRelatorio(){
     else if(lojaInfoUpper.includes(nomeLoja3.normalize('NFD').replace(/[\u0300-\u036f]/g,''))||lojaInfoNorm.includes('CARAPICUIBA')) lojaDetectada=3;
   }
 
-  // Atualiza seletor de loja automaticamente
+  // Atualiza dropdown de loja automaticamente
   lojaImp = lojaDetectada;
-  [1,2,3].forEach(i=>document.getElementById('blimp'+i).classList.toggle('active',i===lojaDetectada));
+  atualizarLojaDD('imp');
 
   // Atualiza campo de data automaticamente
   if(dataMatch) document.getElementById('data-importar').value = dataRelatorio;
