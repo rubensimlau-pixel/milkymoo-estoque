@@ -188,7 +188,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.23</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.26</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1110,7 +1110,7 @@ const DEFAULT_ITEMS=[
   {id:'bob-maq',nome:'Bobina Maquininha',cat:'mimos',unidade:'unidades'},
 ];
 
-let db={items:[],inventarios:[],consumos:[],entradas:[],perdas:[],relatorios:[],financeiro:[],custosFixos:[],minimos:{},receitas:null,usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7,diasLoja1:7,diasLoja2:7,diasLoja3:7}};
+let db={items:[],inventarios:[],consumos:[],entradas:[],perdas:[],relatorios:[],financeiro:[],custosFixos:[],minimos:{},receitas:null,usuarios:null,config:{nomeLoja1:'Cajamar',nomeLoja2:'Iguatemi',nomeLoja3:'Carapicuíba',diasSemana:7,diasLoja1:7,diasLoja2:7,diasLoja3:7,impostoLoja1:0,impostoLoja2:0,impostoLoja3:0}};
 let lojaC=null,lojaI=null,lojaP=null,lojaD=null,lojaE=null,lojaPr=null,lojaImp=null;
 let projLojasFiltro = new Set(); // multi-select estoque (vazio por padrão)
 let divLojasFiltro = new Set();  // multi-select divergência (vazio por padrão)
@@ -4469,6 +4469,36 @@ function totalCustoFixoDoDia(data, loja){
   return custosFixosDoDia(data, loja).reduce((s,c)=>s+c.valor, 0);
 }
 
+// ── Impostos (percentual sobre faturado, por loja) ──
+function _percImposto(loja){
+  const key = `impostoLoja${Number(loja)}`;
+  const v = parseFloat(db.config?.[key]);
+  return isNaN(v) ? 0 : v;
+}
+
+function impostoDoRegistro(r){
+  const perc = _percImposto(Number(r.loja));
+  if(!perc) return 0;
+  return (Number(r.totalFaturado)||0) * perc / 100;
+}
+
+async function salvarImposto(loja){
+  const inp = document.getElementById(`imp-input-${loja}`);
+  const v = parseFloat(inp.value);
+  if(isNaN(v) || v < 0){ showToast('⚠️ Percentual inválido'); return; }
+  if(v > 100){ showToast('⚠️ Percentual não pode passar de 100%'); return; }
+  if(!db.config) db.config = {};
+  db.config[`impostoLoja${loja}`] = v;
+  const ok = await saveCloud();
+  if(ok){
+    renderListaCustos();
+    renderFinanceiro();
+    showToast(`✅ Imposto atualizado: ${v}%`);
+  } else {
+    showToast('❌ Erro ao salvar');
+  }
+}
+
 function abrirGerenciarCustos(){
   renderListaCustos();
   document.getElementById('modal-custos').style.display = 'flex';
@@ -4496,16 +4526,37 @@ function renderListaCustos(){
   }
   sub.textContent = `Loja: ${lojaIcon(lojaFiltro)} ${nomeLoja(lojaFiltro)}`;
 
+  // Card especial de Impostos (sempre no topo)
+  const percAtual = _percImposto(lojaFiltro);
+  const cardImposto = `
+    <div class="card" style="margin-bottom:14px;padding:12px 14px;background:#eff6ff;border:1.5px solid #bfdbfe">
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Baloo 2',cursive;font-size:1rem;font-weight:800;color:#1e40af">🧾 Impostos</div>
+          <div style="font-size:.72rem;color:#1e3a8a;margin-top:2px">Percentual aplicado sobre o valor faturado diário</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;background:white;border:1px solid #bfdbfe;border-radius:10px;padding:8px 10px">
+        <input id="imp-input-${lojaFiltro}" type="number" min="0" max="100" step="0.01" value="${percAtual}"
+          style="flex:1;border:1.5px solid #bfdbfe;border-radius:8px;padding:7px 10px;font-family:'Nunito',sans-serif;font-size:.95rem;font-weight:700;color:#1e40af;text-align:right">
+        <div style="font-size:1rem;font-weight:800;color:#1e40af">%</div>
+        <button onclick="salvarImposto(${lojaFiltro})" style="background:#1e40af;color:white;border:none;border-radius:8px;padding:7px 14px;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">Salvar</button>
+      </div>
+      <div style="font-size:.7rem;color:#1e3a8a;margin-top:8px;line-height:1.4">
+        💡 Exemplo: faturado R$ 4.000 × ${percAtual||10}% = R$ ${_fmtBRL(4000*(percAtual||10)/100)} de impostos
+      </div>
+    </div>`;
+
   const custos = (db.custosFixos||[])
     .filter(c => c.loja == lojaFiltro)
     .sort((a,b) => (b.mesRef||'').localeCompare(a.mesRef||'') || (a.descricao||'').localeCompare(b.descricao||''));
 
   if(!custos.length){
-    cont.innerHTML = `<div class="empty"><span class="ej">💰</span><p>Nenhum custo fixo cadastrado para ${nomeLoja(lojaFiltro)}.<br>Clique em ➕ Novo para começar.</p></div>`;
+    cont.innerHTML = cardImposto + `<div class="empty"><span class="ej">💰</span><p>Nenhum custo fixo cadastrado para ${nomeLoja(lojaFiltro)}.<br>Clique em ➕ Novo para começar.</p></div>`;
     return;
   }
 
-  cont.innerHTML = custos.map(c => {
+  cont.innerHTML = cardImposto + custos.map(c => {
     const dias = _diasNoMes(c.mesRef);
     const diario = (Number(c.valor)||0) / dias;
     const tag = c.recorrente
@@ -4693,9 +4744,54 @@ function renderFinanceiro(){
   // Totalizadores do período filtrado
   const totFat = registros.reduce((s,r)=> s + (r.totalFaturado||0), 0);
   const totCustoIns = registros.reduce((s,r)=> s + (r.totalGastoInsumos||0), 0);
-  const totCustoFix = registros.reduce((s,r)=> s + totalCustoFixoDoDia(r.data, Number(r.loja)), 0);
-  const totDif = totFat - totCustoIns - totCustoFix;
+
+  // Agrega custos fixos do período por descrição (pra tooltip do totalizador)
+  const cfPorDesc = {};
+  registros.forEach(r => {
+    const lista = custosFixosDoDia(r.data, Number(r.loja));
+    lista.forEach(c => {
+      const k = c.descricao;
+      if(!cfPorDesc[k]) cfPorDesc[k] = 0;
+      cfPorDesc[k] += c.valor;
+    });
+  });
+  const totCustoFix = Object.values(cfPorDesc).reduce((s,v)=>s+v, 0);
+
+  // Agrega impostos do período (separado por loja, já que cada loja tem % diferente)
+  const impPorLoja = {};
+  registros.forEach(r => {
+    const imp = impostoDoRegistro(r);
+    if(imp > 0){
+      const lj = Number(r.loja);
+      if(!impPorLoja[lj]) impPorLoja[lj] = { total: 0, faturado: 0, perc: _percImposto(lj) };
+      impPorLoja[lj].total += imp;
+      impPorLoja[lj].faturado += (r.totalFaturado||0);
+    }
+  });
+  const totImpostos = Object.values(impPorLoja).reduce((s,v)=>s+v.total, 0);
+
+  const totDif = totFat - totCustoIns - totCustoFix - totImpostos;
   const totQtd = registros.reduce((s,r)=> s + Object.values(r.porTamanho||{}).reduce((a,b)=>a+(b||0),0), 0);
+
+  // Monta tooltip do card de custos fixos no topo
+  let cfTopTooltip = '';
+  if(totCustoFix > 0){
+    const linhas = Object.entries(cfPorDesc)
+      .sort((a,b)=>b[1]-a[1])
+      .map(([k,v])=>`${k}: R$ ${_fmtBRL(v)}`)
+      .join('\n');
+    const titulo = `Custos fixos do período (soma rateada):\n\n${linhas}\n─────\nTotal: R$ ${_fmtBRL(totCustoFix)}`;
+    cfTopTooltip = ` title="${titulo.replace(/"/g,'&quot;')}"`;
+  }
+  // Tooltip de impostos no topo
+  let impTopTooltip = '';
+  if(totImpostos > 0){
+    const linhas = Object.entries(impPorLoja)
+      .map(([lj,v])=>`${nomeLoja(Number(lj))}: ${v.perc}% × R$ ${_fmtBRL(v.faturado)} = R$ ${_fmtBRL(v.total)}`)
+      .join('\n');
+    const titulo = `Impostos do período (% sobre faturado):\n\n${linhas}\n─────\nTotal: R$ ${_fmtBRL(totImpostos)}`;
+    impTopTooltip = ` title="${titulo.replace(/"/g,'&quot;')}"`;
+  }
 
   if(registros.length === 0){
     tots.innerHTML = '';
@@ -4715,17 +4811,17 @@ function renderFinanceiro(){
         <div style="font-size:.65rem;color:#9a3412;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">📦 Custo Insumos</div>
         <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#9a3412;margin-top:2px;">R$ ${_fmtBRL(totCustoIns)}</div>
       </div>
-      <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:12px;padding:10px;text-align:center;">
-        <div style="font-size:.65rem;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">💸 Custos Fixos</div>
+      <div${cfTopTooltip} style="background:#fef3c7;border:1px solid #fde68a;border-radius:12px;padding:10px;text-align:center;${totCustoFix>0?'cursor:help;':''}">
+        <div style="font-size:.65rem;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">💸 Custos Fixos${totCustoFix>0?' ℹ️':''}</div>
         <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#92400e;margin-top:2px;">R$ ${_fmtBRL(totCustoFix)}</div>
       </div>
-      <div style="background:${totDif>=0?'#eff6ff':'#fef2f2'};border:1px solid ${totDif>=0?'#bfdbfe':'#fecaca'};border-radius:12px;padding:10px;text-align:center;">
-        <div style="font-size:.65rem;color:${totDif>=0?'#1e40af':'#991b1b'};font-weight:700;text-transform:uppercase;letter-spacing:.5px;">📊 Lucro</div>
-        <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:${totDif>=0?'#1e40af':'#991b1b'};margin-top:2px;">R$ ${_fmtBRL(totDif)}</div>
+      <div${impTopTooltip} style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:10px;text-align:center;${totImpostos>0?'cursor:help;':''}">
+        <div style="font-size:.65rem;color:#1e40af;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">🧾 Impostos${totImpostos>0?' ℹ️':''}</div>
+        <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#1e40af;margin-top:2px;">R$ ${_fmtBRL(totImpostos)}</div>
       </div>
-      <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:12px;padding:10px;text-align:center;grid-column:1/-1;">
-        <div style="font-size:.65rem;color:#6b21a8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">🥤 Copos</div>
-        <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#6b21a8;margin-top:2px;">${totQtd}</div>
+      <div style="background:${totDif>=0?'#f0f9ff':'#fef2f2'};border:1px solid ${totDif>=0?'#7dd3fc':'#fecaca'};border-radius:12px;padding:10px;text-align:center;grid-column:1/-1;">
+        <div style="font-size:.65rem;color:${totDif>=0?'#0c4a6e':'#991b1b'};font-weight:700;text-transform:uppercase;letter-spacing:.5px;">📊 Lucro</div>
+        <div style="font-family:'Baloo 2',cursive;font-size:1.25rem;font-weight:800;color:${totDif>=0?'#0c4a6e':'#991b1b'};margin-top:2px;">R$ ${_fmtBRL(totDif)}</div>
       </div>
     </div>`;
 
@@ -4735,7 +4831,10 @@ function renderFinanceiro(){
     // Custos fixos rateados pra esse dia/loja
     const cfList = custosFixosDoDia(r.data, Number(r.loja));
     const cfTotal = cfList.reduce((s,c)=>s+c.valor, 0);
-    const dif = (r.totalFaturado||0) - (r.totalGastoInsumos||0) - cfTotal;
+    // Impostos do dia (% sobre faturado)
+    const impTotal = impostoDoRegistro(r);
+    const impPerc = _percImposto(Number(r.loja));
+    const dif = (r.totalFaturado||0) - (r.totalGastoInsumos||0) - cfTotal - impTotal;
     const expandido = !!finExpandidos[r.id];
     const [yy,mm,dd] = (r.data||'').split('-');
     const dataFmt = yy ? `${dd}/${mm}/${yy}` : (r.data||'—');
@@ -4747,6 +4846,12 @@ function renderFinanceiro(){
       const linhas = cfList.map(c=>`${c.descricao}: R$ ${_fmtBRL(c.valor)}`).join('\n');
       const titulo = `Custos fixos rateados (mensal÷dias do mês):\n\n${linhas}\n─────\nTotal: R$ ${_fmtBRL(cfTotal)}`;
       cfTooltipAttr = ` title="${titulo.replace(/"/g,'&quot;')}"`;
+    }
+    // Tooltip de impostos
+    let impTooltipAttr = '';
+    if(impTotal > 0){
+      const titulo = `Impostos: ${impPerc}% sobre R$ ${_fmtBRL(r.totalFaturado)} = R$ ${_fmtBRL(impTotal)}`;
+      impTooltipAttr = ` title="${titulo.replace(/"/g,'&quot;')}"`;
     }
 
     html += `<div class="card" style="padding:10px 12px;margin-bottom:10px;">`;
@@ -4763,12 +4868,13 @@ function renderFinanceiro(){
     html += `<div style="font-size:1rem;color:var(--gray);flex-shrink:0;">${expandido?'▾':'▸'}</div>`;
     html += `</div>`;
 
-    // Resumo financeiro sempre visível (4 colunas com custos fixos)
-    html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:8px;font-size:.7rem;text-align:center;">`;
-    html += `<div><div style="color:var(--gray);font-weight:600;">Faturado</div><div style="font-weight:800;color:#166534;font-size:.8rem;">R$ ${_fmtBRL(r.totalFaturado)}</div></div>`;
-    html += `<div><div style="color:var(--gray);font-weight:600;">Custo Ins.</div><div style="font-weight:800;color:#9a3412;font-size:.8rem;">R$ ${_fmtBRL(r.totalGastoInsumos)}</div></div>`;
-    html += `<div${cfTooltipAttr} style="${cfList.length?'cursor:help;':''}"><div style="color:var(--gray);font-weight:600;">Custo Fixo${cfList.length?` ℹ️`:''}</div><div style="font-weight:800;color:#92400e;font-size:.8rem;">R$ ${_fmtBRL(cfTotal)}</div></div>`;
-    html += `<div><div style="color:var(--gray);font-weight:600;">Lucro</div><div style="font-weight:800;color:${dif>=0?'#1e40af':'#991b1b'};font-size:.8rem;">R$ ${_fmtBRL(dif)}</div></div>`;
+    // Resumo financeiro sempre visível (5 colunas: Fat / Insumos / Fixo / Impostos / Lucro)
+    html += `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:8px;font-size:.65rem;text-align:center;">`;
+    html += `<div><div style="color:var(--gray);font-weight:600;">Faturado</div><div style="font-weight:800;color:#166534;font-size:.74rem;">R$ ${_fmtBRL(r.totalFaturado)}</div></div>`;
+    html += `<div><div style="color:var(--gray);font-weight:600;">Insumos</div><div style="font-weight:800;color:#9a3412;font-size:.74rem;">R$ ${_fmtBRL(r.totalGastoInsumos)}</div></div>`;
+    html += `<div${cfTooltipAttr} style="${cfList.length?'cursor:help;':''}"><div style="color:var(--gray);font-weight:600;">Fixos${cfList.length?' ℹ️':''}</div><div style="font-weight:800;color:#92400e;font-size:.74rem;">R$ ${_fmtBRL(cfTotal)}</div></div>`;
+    html += `<div${impTooltipAttr} style="${impTotal>0?'cursor:help;':''}"><div style="color:var(--gray);font-weight:600;">Impostos${impTotal>0?' ℹ️':''}</div><div style="font-weight:800;color:#1e3a8a;font-size:.74rem;">R$ ${_fmtBRL(impTotal)}</div></div>`;
+    html += `<div><div style="color:var(--gray);font-weight:600;">Lucro</div><div style="font-weight:800;color:${dif>=0?'#1e40af':'#991b1b'};font-size:.74rem;">R$ ${_fmtBRL(dif)}</div></div>`;
     html += `</div>`;
 
     // Detalhamento (expansível)
