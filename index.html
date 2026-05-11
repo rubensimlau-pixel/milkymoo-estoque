@@ -160,7 +160,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.6</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.8</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -195,6 +195,7 @@
           <div style="font-family:'Baloo 2',cursive;font-size:1.2rem;font-weight:800;color:#222;line-height:1.1">Gestor Moo</div>
           <div id="huser" style="font-size:.72rem;color:#555;font-weight:600">—</div>
         </div>
+      </div>
       </div>
       <div class="header-actions">
         <button class="btn-hdr" onclick="doLogout()" title="Sair" style="padding:6px 10px;font-size:.95rem;background:rgba(255,255,255,0.85);position:relative;z-index:5;box-shadow:0 1px 4px rgba(0,0,0,0.12);">⏻</button>
@@ -271,7 +272,6 @@
     </div>
 
     <div id="sec-projetado" class="section">
-      <div class="info-box" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534;"><strong>📊 Estoque Projetado</strong>Inventário da segunda − consumo lançado até hoje.</div>
       <div class="loja-sel">
         <button class="loja-btn active" id="blp1" onclick="selLoja(1,'p')"><div class="li">🏪</div><div class="ln" id="lnp1">Cajamar</div></button>
         <button class="loja-btn active" id="blp2" onclick="selLoja(2,'p')"><div class="li">🏬</div><div class="ln" id="lnp2">Iguatemi</div></button>
@@ -1359,6 +1359,10 @@ function renderProjetado(){
   const lojasAtivas = [1,2,3].filter(l => projLojasFiltro.has(l));
   if(!lojasAtivas.length){ container.innerHTML=`<div class="empty"><span class="ej">🏪</span><p>Selecione pelo menos uma loja.</p></div>`; return; }
   let html='';
+  // Info-box geral só quando multi-loja (no single, o info-box detalhado por loja já tem o título)
+  if(lojasAtivas.length>1){
+    html+=`<div class="info-box" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534;"><strong>📊 Estoque Projetado</strong>Inventário mais recente com consumo descontado até hoje.</div>`;
+  }
   lojasAtivas.forEach(loja => {
     const res=calcProjetado(loja,hoje());
     if(!res){
@@ -1366,11 +1370,11 @@ function renderProjetado(){
       return;
     }
     const{dataBase,proj}=res;
-    // Se multi-loja, mostra nome da loja como cabeçalho; se única, mantém info-box original
+    // Se multi-loja, mostra nome da loja como cabeçalho; se única, info-box com título + data base
     if(lojasAtivas.length>1){
       html+=`<div class="sec-div"><span style="font-size:1.05rem">${lojaIcon(loja)}</span> ${nomeLoja(loja)} <span style="font-weight:400;font-size:.7rem;color:var(--gray)">— base: ${fmtDate(dataBase)}</span></div>`;
     } else {
-      html+=`<div class="info-box" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534;">Base: inventário de <strong>${fmtDate(dataBase)}</strong> com consumo descontado até hoje.</div>`;
+      html+=`<div class="info-box" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534;"><strong>📊 Estoque Projetado</strong>Inventário de <strong>${fmtDate(dataBase)}</strong> com consumo descontado até hoje.</div>`;
     }
     cats().forEach(cat=>{
       const its=itensDaCat(cat).filter(i=>proj[i.id]!==null);if(!its.length)return;
