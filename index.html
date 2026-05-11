@@ -188,7 +188,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.29</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.30</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -5024,9 +5024,8 @@ function _coletarValoresPlanilhaVE(){
     const dataKey = `${_planilhaVeMesRef}-${dd}`;
     const inp = document.getElementById(`ve-dia-${dataKey}`);
     if(!inp) continue;
-    const val = parseFloat(inp.value);
-    if(isNaN(val) || val <= 0){
-      // remove entrada se estava lá
+    const val = _parseInputMoeda(inp.value);
+    if(val <= 0){
       delete v.lancamentos[dataKey];
     } else {
       v.lancamentos[dataKey] = val;
@@ -5054,6 +5053,7 @@ function renderPlanilhaVE(){
     const dataKey = `${_planilhaVeMesRef}-${dd}`;
     const valor = (v.lancamentos||{})[dataKey] || 0;
     if(valor > 0) total += valor;
+    const valorFmt = valor > 0 ? _fmtBRL(valor) : '';
     const dt = new Date(ano, mes-1, d);
     const dia_sem = diasSemana[dt.getDay()];
     const isFinde = dt.getDay() === 0 || dt.getDay() === 6;
@@ -5064,14 +5064,46 @@ function renderPlanilhaVE(){
       <div style="flex:0 0 90px;font-size:.78rem;font-weight:700;color:${isHoje?'#92400e':'#166534'}">${dd}/${String(mes).padStart(2,'0')} <span style="color:var(--gray);font-weight:600">· ${dia_sem}</span></div>
       <div style="flex:1;display:flex;align-items:center;gap:6px">
         <span style="font-size:.75rem;color:var(--gray);font-weight:700">R$</span>
-        <input id="ve-dia-${dataKey}" type="number" min="0" step="0.01" value="${valor>0?valor:''}" placeholder="0,00"
+        <input id="ve-dia-${dataKey}" type="text" inputmode="numeric" value="${valorFmt}" placeholder="0,00"
           style="flex:1;border:1.5px solid ${valor>0?'#86efac':'#e5e7eb'};border-radius:8px;padding:7px 10px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:700;color:#333;text-align:right"
-          oninput="atualizarTotalPlanilhaVE()">
+          oninput="formatarInputMoeda(this)">
       </div>
     </div>`;
   }
   document.getElementById('planilha-ve-lista').innerHTML = html;
   document.getElementById('planilha-ve-total').textContent = `R$ ${_fmtBRL(total)}`;
+}
+
+// Formata input enquanto digita: estilo calculadora — últimos 2 dígitos = centavos
+// Ex: digitar "2050" → mostra "20,50"; "2000" → "20,00"; "1234567" → "12.345,67"
+function formatarInputMoeda(inp){
+  const apenasDigitos = (inp.value||'').replace(/\D/g, '');
+  if(!apenasDigitos){
+    inp.value = '';
+    atualizarTotalPlanilhaVE();
+    return;
+  }
+  // Remove zeros à esquerda exceto se for "0" puro
+  const num = parseInt(apenasDigitos, 10);
+  if(isNaN(num) || num === 0){
+    inp.value = '';
+    atualizarTotalPlanilhaVE();
+    return;
+  }
+  // Converte: centavos = últimos 2 dígitos
+  const centavos = num / 100;
+  inp.value = centavos.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  atualizarTotalPlanilhaVE();
+}
+
+// Inverte a formatação ao ler de volta (separadores brasileiros → number)
+function _parseInputMoeda(str){
+  if(!str) return 0;
+  // Remove tudo que não é dígito ou vírgula/ponto, depois normaliza
+  // Como entrada usa formato BR (1.234,56), tira ponto e troca vírgula por ponto
+  const s = String(str).replace(/\./g, '').replace(',', '.');
+  const v = parseFloat(s);
+  return isNaN(v) ? 0 : v;
 }
 
 function atualizarTotalPlanilhaVE(){
@@ -5082,8 +5114,8 @@ function atualizarTotalPlanilhaVE(){
     const dd = String(d).padStart(2,'0');
     const inp = document.getElementById(`ve-dia-${_planilhaVeMesRef}-${dd}`);
     if(inp){
-      const v = parseFloat(inp.value);
-      if(!isNaN(v) && v > 0) total += v;
+      const v = _parseInputMoeda(inp.value);
+      if(v > 0) total += v;
     }
   }
   document.getElementById('planilha-ve-total').textContent = `R$ ${_fmtBRL(total)}`;
@@ -5093,6 +5125,7 @@ async function salvarPlanilhaVE(){
   _coletarValoresPlanilhaVE();
   const ok = await saveCloud();
   if(ok){
+    fecharPlanilhaVE();
     renderListaCustos();
     renderFinanceiro();
     showToast('✅ Lançamentos salvos!');
