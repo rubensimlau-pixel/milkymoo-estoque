@@ -188,7 +188,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.19</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.20</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -698,6 +698,7 @@
           <div style="font-size:.75rem;opacity:.85" id="sabores-contador">Carregando...</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
+          <button onclick="sincronizarReceitasPadrao()" title="Mescla as receitas padrão do sistema (180ml, copos, tampas, etc) com as suas. Não sobrescreve sabores customizados." style="background:rgba(255,255,255,.2);color:white;border:1px solid rgba(255,255,255,.4);border-radius:50px;padding:7px 12px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer">🔄 Sincronizar Padrão</button>
           <button onclick="abrirNovoSabor()" style="background:white;color:var(--purple);border:none;border-radius:50px;padding:7px 14px;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">➕ Novo</button>
           <button onclick="fecharGerenciarSabores()" style="background:rgba(255,255,255,.2);border:none;border-radius:50px;padding:7px 14px;color:white;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">✕ Fechar</button>
         </div>
@@ -2954,6 +2955,53 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 // Retorna as receitas vigentes: Firebase tem prioridade sobre hardcoded
 function getReceitas(){
   return db.receitas || RECEITAS;
+}
+
+async function sincronizarReceitasPadrao(){
+  // Mescla as receitas hardcoded (RECEITAS) com as do Firebase (db.receitas)
+  // Estratégia: para cada sabor do padrão, SOBRESCREVE no db.receitas.
+  // Sabores customizados (que NÃO existem no padrão) são preservados.
+  const padrao = RECEITAS;
+  const atuais = db.receitas || {};
+
+  // Conta diferenças pra dar feedback no toast
+  let saboresAdicionados = 0;
+  let saboresAtualizados = 0;
+  let saboresCustomizados = 0;
+
+  const novo = {};
+  // Primeiro, copia sabores customizados (que existem só em atuais)
+  Object.keys(atuais).forEach(nome => {
+    if(!padrao[nome]){
+      novo[nome] = atuais[nome];
+      saboresCustomizados++;
+    }
+  });
+  // Agora aplica o padrão (sobrescreve)
+  Object.keys(padrao).forEach(nome => {
+    if(atuais[nome]) saboresAtualizados++;
+    else saboresAdicionados++;
+    novo[nome] = JSON.parse(JSON.stringify(padrao[nome]));
+  });
+
+  const confirma = window.confirm(
+    `⚠️ Confirmação - Sincronizar Receitas Padrão\n\n` +
+    `Esta ação vai:\n` +
+    `• Adicionar ${saboresAdicionados} sabor(es) novo(s) do padrão\n` +
+    `• Sobrescrever ${saboresAtualizados} sabor(es) existente(s) com a versão padrão (180ml, copos, tampas, colher, saquinho serão atualizados)\n` +
+    `• Preservar ${saboresCustomizados} sabor(es) que você criou e não estão no padrão\n\n` +
+    `Sabores sobrescritos NÃO podem ser desfeitos. Confirma?`
+  );
+  if(!confirma) return;
+
+  db.receitas = novo;
+  const ok = await saveCloud();
+  if(ok){
+    renderListaSabores();
+    showToast(`✅ Receitas sincronizadas! ${saboresAdicionados} novas + ${saboresAtualizados} atualizadas`);
+  } else {
+    showToast('❌ Erro ao salvar');
+  }
 }
 
 // Abre o modal de lista de sabores
