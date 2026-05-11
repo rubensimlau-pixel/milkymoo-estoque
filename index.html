@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.50</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.52</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -4078,27 +4078,43 @@ function gerarRelatorioMensal(){
   <title>Faturamento ${lojaNome} – ${mesFmt}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Arial,sans-serif;color:#222;font-size:9px;padding:8px;background:white}
-    h1{font-size:13px;color:#c9345a;margin-bottom:1px}
-    .sub{font-size:8.5px;color:#6b7280;margin-bottom:6px}
+    body{font-family:Arial,sans-serif;color:#222;font-size:10px;padding:8px;background:white}
+    h1{font-size:14px;color:#c9345a;margin-bottom:1px}
+    .sub{font-size:9px;color:#6b7280;margin-bottom:6px}
     .resumo{display:flex;gap:10px;justify-content:flex-end;margin-bottom:6px}
-    .resumo .box{border:1px solid #d1d5db;border-radius:5px;padding:4px 10px;background:#f9fafb}
+    .resumo .box{border:1px solid #d1d5db;border-radius:5px;padding:5px 12px;background:#f9fafb}
     .resumo .box.fat{background:#dcfce7;border-color:#86efac}
     .resumo .box.luc{background:#fef3c7;border-color:#fde68a}
-    .resumo .lbl{font-size:8px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.3px}
-    .resumo .val{font-size:11px;font-weight:800;color:#0f172a;margin-top:1px}
-    table{width:100%;border-collapse:collapse;font-size:7.5px;table-layout:fixed}
-    th{background:#f3f4f6;color:#111;padding:3px 4px;text-align:left;border:1px solid #ccc;font-weight:700;font-size:7.5px}
-    td{padding:2px 4px;border:1px solid #e5e7eb;background:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .resumo .lbl{font-size:8.5px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.3px}
+    .resumo .val{font-size:12px;font-weight:800;color:#0f172a;margin-top:1px}
+    table{width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed}
+    th{background:#f3f4f6;color:#111;padding:3px 2px;text-align:left;border:1px solid #ccc;font-weight:700;font-size:9px}
+    td{padding:2px 2px;border:1px solid #e5e7eb;background:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .grupo-pdv{background:#fefce8 !important}
-    .rodape{margin-top:6px;font-size:7px;color:#9ca3af;text-align:center}
+    .rodape{margin-top:6px;font-size:8px;color:#9ca3af;text-align:center}
+    /* Botão flutuante de impressão (visível na tela, oculto na impressão) */
+    .btn-imprimir{position:fixed;bottom:20px;right:20px;background:linear-gradient(135deg,#c9345a,#e11d48);color:white;border:none;border-radius:50px;padding:14px 24px;font-family:Arial,sans-serif;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 6px 20px rgba(201,52,90,.4);z-index:1000;display:flex;align-items:center;gap:8px}
+    .btn-imprimir:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(201,52,90,.5)}
+    .instr-mobile{display:none;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:11px;color:#92400e}
+    @media (max-width:768px){
+      body{font-size:11px}
+      .instr-mobile{display:block}
+      table{font-size:8.5px}
+      th,td{padding:3px 2px}
+    }
     @media print{
       body{padding:4mm}
       @page{size:A4 landscape;margin:5mm}
       table{page-break-inside:avoid}
       tr{page-break-inside:avoid;page-break-after:auto}
+      .btn-imprimir{display:none !important}
+      .instr-mobile{display:none !important}
     }
   </style></head><body>
+  <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+  <div class="instr-mobile">
+    📱 <strong>Mobile:</strong> Toque em "🖨️ Imprimir / Salvar PDF" no canto inferior direito. Depois escolha "Salvar como PDF" no destino.
+  </div>
   <h1>🐄 Faturamento ${lojaNome.toUpperCase()}</h1>
   <div class="sub">Mês de referência: <strong>${mesFmt}</strong> &nbsp;|&nbsp; Gerado em ${dataHoje} &nbsp;|&nbsp; ${ultimoDia} dias</div>
   <div class="resumo">
@@ -4125,15 +4141,33 @@ function gerarRelatorioMensal(){
     <tbody>${trDias}${trTotais}</tbody>
   </table>
   <div class="rodape">Milky Moo – Sistema de Controle de Estoque · CMV inclui insumos + custos fixos rateados + encargos (impostos, marketing, royalties, taxa cartão)</div>
-  <script>window.onload=function(){window.print();}<\/script>
+  <script>
+    // Auto-print SÓ em desktop (mobile precisa de interação do usuário)
+    window.onload=function(){
+      var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      if(!isMobile){
+        setTimeout(function(){ window.print(); }, 300);
+      }
+    };
+  <\/script>
   </body></html>`;
 
   const blob = new Blob([html],{type:'text/html'});
   const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href=url; a.download=`milkymoo-faturamento-${lojaNome.toLowerCase().replace(/\s+/g,'-')}-${mesRef}.html`;
-  a.click(); URL.revokeObjectURL(url);
-  showToast(`📄 Relatório mensal de ${lojaNome} (${mesFmt}) gerado!`);
+
+  // Tenta abrir em nova aba (funciona melhor no mobile pra usar Print/Compartilhar)
+  const novaAba = window.open(url, '_blank');
+  if(novaAba){
+    showToast(`📄 Relatório aberto em nova aba!`);
+    // Libera o blob URL depois de um tempo (para a aba ter chance de carregar)
+    setTimeout(()=> URL.revokeObjectURL(url), 60000);
+  } else {
+    // Fallback: se popup foi bloqueado, faz download
+    const a = document.createElement('a');
+    a.href=url; a.download=`milkymoo-faturamento-${lojaNome.toLowerCase().replace(/\s+/g,'-')}-${mesRef}.html`;
+    a.click(); URL.revokeObjectURL(url);
+    showToast(`📄 Relatório baixado! Abra o arquivo pra imprimir.`);
+  }
 }
 
 function gerarPDFInsumos(){
