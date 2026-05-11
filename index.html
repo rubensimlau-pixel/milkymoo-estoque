@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.42</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.46</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -764,6 +764,9 @@
         <div id="sabor-section-300"></div>
         <div id="sabor-section-500"></div>
         <div id="sabor-section-700"></div>
+        <div id="sabor-section-adicional"></div>
+        <div id="sabor-section-bebida"></div>
+        <div id="sabor-section-mimo"></div>
       </div>
     </div>
 
@@ -2532,37 +2535,87 @@ function processarRelatorio(){
   // Sazonais (ex: "PEDE MOOLECA 300ML") são somados ao copo correto.
   // ────────────────────────────────────────────────────────────────────────────
 
+  // Estrutura dinâmica de totais e insumos por categoria/tamanho
+  // Tamanhos pré-conhecidos: 180, 300, 500, 700 (milkshakes), 'adicional', 'bebida', 'mimo'
+  // Qualquer seção nova detectada vira uma categoria automaticamente
   const totaisPorTamanho  = { 180:0, 300:0, 500:0, 700:0 };
   const insumosPorTamanho = { 180:{}, 300:{}, 500:{}, 700:{} };
-  // Vendas por sabor: { 'PANDORA 300': {nomeProd, tamanho, qtd, subtotal, custoInsumos} }
+  // Vendas por sabor: { 'PANDORA|300': {nomeProd, tamanho, qtd, subtotal, custoInsumos} }
   const vendasPorSabor = {};
 
   const SECOES_MILK   = ['MILKSHAKES 180 ML','MILKSHAKES 300 ML','MILKSHAKES 500 ML','MILKSHAKES 700 ML','SAZONAL'];
   const TAMANHO_REGEX = /(180|300|500|700)\s*ML/i;
+  // Seções a IGNORAR (não geram vendas, são listas informativas)
+  const SECOES_IGNORADAS = ['TOP 5'];
+  // Mapa de seções genéricas: nome no relatório → slug interno
+  const MAPA_SECOES_GENERICAS = {
+    'ADICIONAIS': 'adicional',
+    'BEBIDAS': 'bebida',
+    'BEBIDA': 'bebida',
+    'MIMOS': 'mimo',
+    'MIMOOS': 'mimo',  // variante da franquia (2 Os)
+  };
+
+  // Função pra slugificar nomes de seções desconhecidas (ex: "SOBREMESAS" → "sobremesa")
+  function _slugSecao(nome){
+    let s = nome.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')   // remove acentos
+      .replace(/[^a-z0-9]+/g,'_')                          // não-alfanumérico → _
+      .replace(/^_+|_+$/g,'');                             // trim _
+    // Singulariza grosseiramente (sobremesas → sobremesa)
+    if(s.endsWith('s') && s.length > 3) s = s.slice(0,-1);
+    return s || 'outros';
+  }
+
+  // Garante que a estrutura tem a chave da categoria
+  function _garantirCategoria(cat){
+    if(!totaisPorTamanho.hasOwnProperty(cat)) totaisPorTamanho[cat] = 0;
+    if(!insumosPorTamanho.hasOwnProperty(cat)) insumosPorTamanho[cat] = {};
+  }
 
   let dentroSecaoMilk = false;
   let tamanhoSecao    = null;
+  let categoriaAtual  = null; // string da categoria pra seções não-milkshake
 
   txt.split('\n').forEach(linha => {
     // Normaliza: remove \r e substitui non-breaking spaces por espaço normal
     linha = linha.replace(/\r/g,'').replace(/\u00a0/g,' ');
     const trim = linha.trim();
-    if(/^TOTAL\s/.test(trim)){ dentroSecaoMilk = false; return; }
+    if(/^TOTAL\s/.test(trim)){ dentroSecaoMilk = false; categoriaAtual = null; return; }
     if(/^-{10,}$/.test(trim)) return;
 
     if(!/^\s{2,}\d+\s/.test(linha) && trim.length > 2 && /^[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ0-9\s\/]+$/.test(trim)){
       // Normaliza trim para comparação (colapsa múltiplos espaços)
       const trimNorm = trim.replace(/\s+/g,' ');
       const isMilk = SECOES_MILK.some(s => trimNorm === s || trimNorm.startsWith(s));
+      const isIgnorada = SECOES_IGNORADAS.some(s => trimNorm === s || trimNorm.startsWith(s));
+
+      // Reseta estado
+      dentroSecaoMilk = false; categoriaAtual = null; tamanhoSecao = null;
+
       if(isMilk){
         dentroSecaoMilk = true;
         const tm = trimNorm.match(TAMANHO_REGEX);
         tamanhoSecao = tm ? parseInt(tm[1]) : null;
-      } else { dentroSecaoMilk = false; tamanhoSecao = null; }
+      } else if(isIgnorada){
+        // Ignora completamente (TOP 5 etc.)
+      } else if(MAPA_SECOES_GENERICAS[trimNorm]){
+        // Seção genérica conhecida (ADICIONAIS, BEBIDAS, MIMOS, MIMOOS)
+        categoriaAtual = MAPA_SECOES_GENERICAS[trimNorm];
+        _garantirCategoria(categoriaAtual);
+      } else {
+        // Seção desconhecida: cria categoria automática
+        // Mas só se parecer uma seção real (cabeçalho em maiúsculas, sem dígitos no início)
+        // Evita capturar coisas como "Periodo" ou "Total Bruto"
+        if(/^[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÇ0-9\s]+$/.test(trimNorm) && trimNorm.length >= 4){
+          categoriaAtual = _slugSecao(trimNorm);
+          _garantirCategoria(categoriaAtual);
+        }
+      }
       return;
     }
 
-    if(!dentroSecaoMilk) return;
+    if(!dentroSecaoMilk && !categoriaAtual) return;
 
     // Linha de produto: "   [cod] NOME   [qtd]  [subtotal]  [%]"
     // subtotal em formato "1.234,56" ou "1234,56"
@@ -2573,6 +2626,34 @@ function processarRelatorio(){
     const qtdProd   = parseInt(m[2]);
     const subtotal  = parseFloat(m[3].replace(/\./g,'').replace(',','.'));
     if(!qtdProd || qtdProd <= 0) return;
+
+    // ── SEÇÕES NÃO-MILKSHAKE (adicional, bebida, mimo, outros) ──
+    if(categoriaAtual){
+      const cat = categoriaAtual;
+      totaisPorTamanho[cat] = (totaisPorTamanho[cat]||0) + qtdProd;
+      const chave = nomeProd + '|' + cat;
+      if(!vendasPorSabor[chave]){
+        vendasPorSabor[chave] = { nomeProd, tamanho:cat, qtd:0, subtotal:0, custoInsumos:0 };
+      }
+      vendasPorSabor[chave].qtd      += qtdProd;
+      vendasPorSabor[chave].subtotal += subtotal;
+      // Busca receita do produto pra essa categoria (ex: "AGUA SEM GAS" + 'bebida')
+      const receita = buscarReceita(nomeProd, cat);
+      receita.forEach(ing => {
+        if(!ing.itemId) return;
+        if(!insumosPorTamanho[cat][ing.itemId]){
+          insumosPorTamanho[cat][ing.itemId] = {nome:ing.nome, qty:0, unidade:ing.unidade, itemId:ing.itemId};
+        }
+        insumosPorTamanho[cat][ing.itemId].qty += ing.qty * qtdProd;
+        const itm = db.items.find(i=>i.id===ing.itemId);
+        if(itm && itm.valor > 0){
+          const qtdPorUnid = itm.qtdPorUnidade || 0;
+          const custUnit = (qtdPorUnid > 0 && itm.unidadeSecundaria) ? itm.valor / qtdPorUnid : itm.valor;
+          vendasPorSabor[chave].custoInsumos += custUnit * ing.qty * qtdProd;
+        }
+      });
+      return;
+    }
 
     let tamanho = null;
     const tmNome = nomeProd.match(TAMANHO_REGEX);
@@ -2610,6 +2691,36 @@ function processarRelatorio(){
     });
   });
 
+  // ── Parser da seção CONTAGEM DE NUMERARIOS (formas de pagamento) ───────────
+  // Lê as 19 formas e captura a COLUNA MANUAL (4 colunas: Sistema, %, Manual, %)
+  // Formato: "NOME_FORMA               123,45  10,00   123,45  10,00"
+  const formasPagamento = {};
+  const FORMAS_PAGTO_TODAS = [
+    'DINHEIRO','PIX POS','DEBITO POS','CREDITO POS','VOUCHER POS',
+    'ALELO','QRLINX','TICKET',
+    'HANZO CREDITO','HANZO DEBITO','HANZO CUPOM','HANZO DINHEIRO','HANZO PIX',
+    'MOO ADIDAS',
+    'HUB_OUTROS_99FOOD','HUB_OUTROS_IFOOD','HUB_OUTROS',
+    'IFOOD_OUTROS','IFOOD_ONLINE'
+  ];
+  // Trecho entre "CONTAGEM DE NUMERARIOS" e "TOTAL"
+  const trechoNumMatch = txt.match(/CONTAGEM DE NUMERARIOS[\s\S]*?(?=\n\s*-{10,}|\n\s*TOTAL\s)/i);
+  if(trechoNumMatch){
+    const trecho = trechoNumMatch[0];
+    FORMAS_PAGTO_TODAS.forEach(forma => {
+      // Constrói regex tolerante: nome + 4 colunas numéricas
+      const formaEsc = forma.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/\s+/g,'\\s+');
+      // Captura: nome  num,num  num,num  num,num  num,num  (em qualquer linha)
+      const re = new RegExp(`^\\s*${formaEsc}\\s+(\\d[\\d.]*,\\d{2})\\s+(\\d[\\d.]*,\\d{2})\\s+(\\d[\\d.]*,\\d{2})\\s+(\\d[\\d.]*,\\d{2})`,'mi');
+      const m = trecho.match(re);
+      if(m){
+        // m[1]=sistema, m[2]=sistema%, m[3]=manual, m[4]=manual%
+        const manual = parseFloat(m[3].replace(/\./g,'').replace(',','.'));
+        if(!isNaN(manual)) formasPagamento[forma] = manual;
+      }
+    });
+  }
+
   // Monta resultado para tamanhos com vendas (não depende do copo existir em db.items)
   [180, 300, 500, 700].forEach(tamanho => {
     const qtd = totaisPorTamanho[tamanho];
@@ -2624,6 +2735,31 @@ function processarRelatorio(){
       qtd,
       descricao:`${qtd} milkshake(s) ${tamanho}ml vendido(s)`,
       insumos:  Object.values(insumosPorTamanho[tamanho])
+    });
+  });
+
+  // Adicionais e outras categorias (bebida, mimo, outros, etc.): não há "copo",
+  // mas o sistema cria um registro fantasma pra capturar os insumos via insumosMap.
+  // Cada categoria vira um item virtual com itemId começando com '__cat_'.
+  Object.keys(totaisPorTamanho).forEach(cat => {
+    // Pula os tamanhos de milkshake (já tratados acima)
+    if([180, 300, 500, 700].includes(Number(cat))) return;
+    const qtd = totaisPorTamanho[cat] || 0;
+    if(qtd <= 0) return;
+    const insumosCategoria = Object.values(insumosPorTamanho[cat] || {});
+    const labels = {
+      adicional: 'Adicionais',
+      bebida:    'Bebidas',
+      mimo:      'Mimos',
+    };
+    const nomeCat = labels[cat] || (cat.charAt(0).toUpperCase() + cat.slice(1));
+    resultado.push({
+      itemId: `__cat_${cat}__`,  // sentinela
+      nome: nomeCat,
+      qtd,
+      descricao: `${qtd} ${nomeCat.toLowerCase()} vendido(s)`,
+      insumos: insumosCategoria,
+      skipConsumo: true,  // não cria consumo de "item fantasma"
     });
   });
 
@@ -2709,8 +2845,9 @@ function processarRelatorio(){
   const totalGastoGeral = insumosList.reduce((acc,i)=> acc + i.qty * i.custoPorUnit, 0);
 
   // ── Tabela de sabores vendidos ────────────────────────────────────────────
+  // Ordena por tamanho (180→300→500→700→adicional→bebida→mimo→outros)
   const saboresList = Object.values(vendasPorSabor)
-    .sort((a,b)=> a.tamanho - b.tamanho || a.nomeProd.localeCompare(b.nomeProd,'pt-BR'));
+    .sort((a,b)=> _ordemCat(a.tamanho) - _ordemCat(b.tamanho) || a.nomeProd.localeCompare(b.nomeProd,'pt-BR'));
   const totalFaturado = saboresList.reduce((s,x)=>s+x.subtotal,0);
   const totalCustoSabores = saboresList.reduce((s,x)=>s+x.custoInsumos,0);
 
@@ -2733,7 +2870,7 @@ function processarRelatorio(){
               ? `R$\u00a0${fmtBRL(s.custoInsumos)}`
               : '<span style="color:#d1d5db">—</span>';
             return `<div style="display:grid;grid-template-columns:1fr 50px 90px 90px 90px;padding:6px 12px;font-size:.75rem;background:${bg};border-bottom:1px solid #f3f4f6;align-items:center">
-              <span style="font-weight:700">${s.nomeProd}<br><span style="font-size:.65rem;color:var(--gray);font-weight:400">${s.tamanho}ml</span></span>
+              <span style="font-weight:700">${s.nomeProd}<br><span style="font-size:.65rem;color:var(--gray);font-weight:400">${_labelCat(s.tamanho)}</span></span>
               <span style="text-align:center;font-weight:800;color:#0369a1">${s.qtd}</span>
               <span style="text-align:right;font-size:.74rem">R$\u00a0${fmtBRL(s.subtotal)}</span>
               <span style="text-align:right;font-size:.74rem">${custoCell}</span>
@@ -2793,6 +2930,10 @@ function processarRelatorio(){
 
   // ── Cabeçalho resumo de vendas por tamanho ───────────────────────────────
   const resumoVendas = resultado.map(r=>{
+    if(r.itemId && r.itemId.startsWith('__cat_')){
+      const cat = r.itemId.replace(/^__cat_/, '').replace(/__$/, '');
+      return `<span style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:8px;padding:4px 10px;font-size:.8rem;font-weight:700;color:#6b21a8">${_labelCatPlural(cat)}: <strong>${r.qtd}</strong></span>`;
+    }
     const tam = r.itemId==='cop180'?'180':r.itemId==='cop300'?'300':r.itemId==='cop500'?'500':r.itemId==='cop700'?'700':'?';
     return `<span style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:8px;padding:4px 10px;font-size:.8rem;font-weight:700;color:#6b21a8">${tam}ml: <strong>${r.qtd}</strong></span>`;
   }).join('');
@@ -2817,10 +2958,78 @@ function processarRelatorio(){
     avisoLoja = `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;font-size:.74rem;color:#991b1b;margin-bottom:10px">⚠️ <strong>Não foi possível identificar a loja automaticamente.</strong> ${cnpjTxt?`CNPJ ${cnpjTxt} não cadastrado. `:''}Verifique a loja selecionada manualmente antes de salvar.</div>`;
   }
 
+  // ── Tabela de formas de pagamento (preview) ───────────────────────────────
+  let formasTableHtml = '';
+  const formasEncontradas = Object.keys(formasPagamento||{}).filter(k => Number(formasPagamento[k])>0);
+  if(formasEncontradas.length > 0){
+    const linhasForma = FORMAS_PAGAMENTO
+      .map(f => {
+        const valor = Number(formasPagamento[f.key]) || 0;
+        if(valor <= 0) return null;
+        const perc = _percTaxaForma(f.slug, lojaImp);
+        const taxa = valor * perc / 100;
+        const liquido = valor - taxa;
+        return { label:f.label, slug:f.slug, valor, perc, taxa, liquido };
+      })
+      .filter(x => x);
+    const totBrutoF = linhasForma.reduce((s,x)=>s+x.valor, 0);
+    const totTaxaF = linhasForma.reduce((s,x)=>s+x.taxa, 0);
+    const totLiqF = linhasForma.reduce((s,x)=>s+x.liquido, 0);
+    formasTableHtml = `
+      <div style="margin-bottom:14px">
+        <div style="font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;color:#1e3a8a;margin-bottom:6px">💰 Formas de Pagamento (coluna MANUAL)</div>
+        <div style="background:white;border-radius:10px;border:1px solid var(--border);overflow-x:auto;">
+          <div style="min-width:440px">
+            <div style="display:grid;grid-template-columns:1fr 95px 60px 95px 95px;background:#f9fafb;padding:7px 12px;font-size:.68rem;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border)">
+              <span>Forma</span>
+              <span style="text-align:right">Bruto</span>
+              <span style="text-align:right">Taxa%</span>
+              <span style="text-align:right">Taxa R$</span>
+              <span style="text-align:right">Líquido</span>
+            </div>
+            ${linhasForma.map((f,idx)=>{
+              const bg = idx%2===0 ? 'white' : '#fafafa';
+              return `<div style="display:grid;grid-template-columns:1fr 95px 60px 95px 95px;padding:6px 12px;font-size:.75rem;background:${bg};border-bottom:1px solid #f3f4f6;align-items:center">
+                <span style="font-weight:700">${f.label}</span>
+                <span style="text-align:right">R$\u00a0${fmtBRL(f.valor)}</span>
+                <span style="text-align:right;color:${f.perc>0?'#1e40af':'#d1d5db'};font-weight:700">${f.perc>0?f.perc.toFixed(2):'—'}</span>
+                <span style="text-align:right;color:${f.taxa>0?'#dc2626':'#d1d5db'}">${f.taxa>0?'R$\u00a0'+fmtBRL(f.taxa):'—'}</span>
+                <span style="text-align:right;font-weight:700;color:#166534">R$\u00a0${fmtBRL(f.liquido)}</span>
+              </div>`;
+            }).join('')}
+            <div style="display:grid;grid-template-columns:1fr 95px 60px 95px 95px;padding:8px 12px;background:#eff6ff;border-top:2px solid #bfdbfe;font-size:.78rem;font-weight:800">
+              <span style="color:#1e3a8a">💰 TOTAL</span>
+              <span style="text-align:right">R$\u00a0${fmtBRL(totBrutoF)}</span>
+              <span></span>
+              <span style="text-align:right;color:#dc2626">R$\u00a0${fmtBRL(totTaxaF)}</span>
+              <span style="text-align:right;color:#166534">R$\u00a0${fmtBRL(totLiqF)}</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Aviso de substituição: detecta se esse PDV/abertura já foi importado
+  let avisoSubstituicao = '';
+  if(pdvNum !== '?' && aberturaNum !== '?'){
+    const finExist = (db.financeiro||[]).find(x => x.data===dataRelatorio && x.loja==lojaImp);
+    if(finExist && Array.isArray(finExist.pdvs)){
+      const pdvJa = finExist.pdvs.find(p => String(p.pdv)===String(pdvNum) && String(p.abertura)===String(aberturaNum));
+      if(pdvJa){
+        const dtAnt = pdvJa.ts ? new Date(pdvJa.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+        avisoSubstituicao = `<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;font-size:.78rem;color:#92400e;margin-bottom:10px;line-height:1.5">
+          🔄 <strong>Este PDV/abertura já foi importado.</strong> Ao salvar, o lançamento anterior será SUBSTITUÍDO pelo novo.<br>
+          <span style="font-size:.72rem">Faturado anterior: <strong>R$ ${_fmtBRL(pdvJa.totalFaturado||0)}</strong>${dtAnt?` · Importado em ${dtAnt}`:''}</span>
+        </div>`;
+      }
+    }
+  }
+
   let previewHtml = `
     <div class="card">
       <div class="card-title"><span>🔍</span>Preview da Importação</div>
       ${avisoLoja}
+      ${avisoSubstituicao}
       <div style="font-size:.78rem;margin-bottom:12px;background:#f0fdf4;border-radius:8px;padding:8px 12px;border:1px solid #bbf7d0">
         📅 Data detectada: <strong style="color:#166534">${fmtDate(dataRelatorio)}</strong> &nbsp;|&nbsp;
         ${lojaIcon(lojaDetectada)} Loja detectada: <strong style="color:#166534">${nomeLoja(lojaDetectada)}</strong>${metodoBadge}${pdvLabel}
@@ -2829,6 +3038,7 @@ function processarRelatorio(){
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">${resumoVendas}</div>
       ${saboresTableHtml}
+      ${formasTableHtml}
       ${insumosTableHtml}
     </div>`;
 
@@ -2839,6 +3049,7 @@ function processarRelatorio(){
     resultado, dataRelatorio, insumosList,
     saboresList, totalFaturado, totalCustoSabores,
     totaisPorTamanho, totalGastoGeral,
+    formasPagamento,
     lojaImp,
     pdvNum, aberturaNum,
   };
@@ -2850,6 +3061,7 @@ async function confirmarImportacao(){
     resultado, dataRelatorio, insumosList,
     saboresList, totalFaturado, totalCustoSabores,
     totaisPorTamanho, totalGastoGeral,
+    formasPagamento,
     pdvNum, aberturaNum,
   } = importacaoPendente;
 
@@ -2860,32 +3072,46 @@ async function confirmarImportacao(){
   const pdvId = (pdvNum && pdvNum !== '?') ? pdvNum : '?';
   const aberId = (aberturaNum && aberturaNum !== '?') ? aberturaNum : '?';
 
+  // ❌ Recusa importação se PDV ou Abertura não foram identificados
+  if(pdvId === '?' || aberId === '?'){
+    alert(
+      `❌ Não foi possível identificar o PDV/Abertura no relatório.\n\n`+
+      `PDV detectado: ${pdvId === '?' ? '⚠️ não encontrado' : pdvId}\n`+
+      `Abertura detectada: ${aberId === '?' ? '⚠️ não encontrada' : aberId}\n\n`+
+      `Importação cancelada. O PDV e número de abertura são necessários para identificar unicamente o relatório e permitir re-importações com segurança.\n\n`+
+      `Verifique se o arquivo TXT está completo e contém as linhas:\n`+
+      `   "PDV: 001 ..." e "No. Abertura.....: 01"`
+    );
+    return;
+  }
+
   // Procura registro consolidado já existente pra essa data+loja
   const finExistente = db.financeiro.find(x => x.data===dataRelatorio && x.loja==lojaImp);
 
-  // Verifica se esse PDV/abertura específico já foi importado pra essa data+loja
+  // Verifica se esse PDV/abertura específico já foi importado: SUBSTITUI automaticamente (sem popup)
+  let foiSubstituicao = false;
   if(finExistente && Array.isArray(finExistente.pdvs)){
     const pdvJaImportado = finExistente.pdvs.find(p => String(p.pdv)===String(pdvId) && String(p.abertura)===String(aberId));
-    if(pdvJaImportado && pdvId !== '?' && aberId !== '?'){
-      const conf = window.confirm(
-        `⚠️ Já existe um lançamento desse mesmo PDV/abertura:\n\n`+
-        `Loja: ${nomeLoja(Number(lojaImp))}\n`+
-        `Data: ${fmtDate(dataRelatorio)}\n`+
-        `PDV: ${pdvId} · Abertura: ${aberId}\n\n`+
-        `Deseja SUBSTITUIR o lançamento anterior desse PDV?\n\n`+
-        `(OK = substituir, Cancelar = não fazer nada)`
-      );
-      if(!conf) return;
-      // Substitui: remove o PDV antigo do consolidado antes de seguir
+    if(pdvJaImportado){
+      // Substitui sem perguntar: remove o PDV antigo do consolidado antes de seguir
       _removerPdvDoConsolidado(finExistente, pdvId, aberId);
+      foiSubstituicao = true;
     }
   }
 
-  // Confirmação geral
-  const isAdicao = !!finExistente && pdvId !== '?';
-  const msg = isAdicao
-    ? `Adicionar este fechamento aos lançamentos já existentes de ${nomeLoja(Number(lojaImp))} em ${fmtDate(dataRelatorio)}?\n\nPDV ${pdvId} · Abertura ${aberId}`
-    : `Confirma o lançamento do relatório de ${nomeLoja(Number(lojaImp))} em ${fmtDate(dataRelatorio)}?`;
+  // Confirmação geral (única confirmação que resta)
+  const isAdicao = !!finExistente && !foiSubstituicao;
+  let msg;
+  if(foiSubstituicao){
+    msg = `🔄 Substituir o lançamento anterior deste PDV?\n\n`+
+          `Loja: ${nomeLoja(Number(lojaImp))}\n`+
+          `Data: ${fmtDate(dataRelatorio)}\n`+
+          `PDV: ${pdvId} · Abertura: ${aberId}`;
+  } else if(isAdicao){
+    msg = `Adicionar este fechamento aos lançamentos já existentes de ${nomeLoja(Number(lojaImp))} em ${fmtDate(dataRelatorio)}?\n\nPDV ${pdvId} · Abertura ${aberId}`;
+  } else {
+    msg = `Confirma o lançamento do relatório de ${nomeLoja(Number(lojaImp))} em ${fmtDate(dataRelatorio)}?\n\nPDV ${pdvId} · Abertura ${aberId}`;
+  }
   if(!confirm(msg)) return;
 
   const btn = document.getElementById('btn-confirmar-importar');
@@ -2915,6 +3141,7 @@ async function confirmarImportacao(){
 
   // Copos (resultado) — também soma se já existir
   resultado.forEach(r=>{
+    if(r.skipConsumo) return; // ignora marcadores virtuais (categorias como adicional, bebida, mimo)
     const existente = db.relatorios.find(x => x.data===dataRelatorio && x.loja==lojaImp && x.itemId===r.itemId);
     if(existente){
       // só soma se não foi já contado como insumo (insumosList pode ter sobreposição com resultado)
@@ -2934,7 +3161,7 @@ async function confirmarImportacao(){
   });
 
   // ── DB.FINANCEIRO — SOMA por (data, loja), guardando lista de PDVs ───────
-  // PDV info pra registro
+  // PDV info pra registro (inclui breakdown completo pra permitir remoção limpa em re-importações)
   const pdvInfo = {
     pdv: pdvId,
     abertura: aberId,
@@ -2944,6 +3171,16 @@ async function confirmarImportacao(){
     totalGastoInsumos: totalGastoGeral||0,
     totalCustoSabores: totalCustoSabores||0,
     qtdCopos: Object.values(totaisPorTamanho||{}).reduce((a,b)=>a+(b||0),0),
+    // Breakdown pra suportar remoção exata em re-importações
+    sabores: (saboresList||[]).map(s=>({
+      nomeProd: s.nomeProd, tamanho: s.tamanho, qtd: s.qtd,
+      subtotal: s.subtotal, custoInsumos: s.custoInsumos||0,
+    })),
+    insumos: (insumosList||[]).map(ing=>({
+      itemId: ing.itemId, qty: ing.qty,
+    })),
+    porTamanho: {...(totaisPorTamanho||{})},
+    formasPagamento: {...(formasPagamento||{})},
   };
 
   if(finExistente){
@@ -2951,6 +3188,7 @@ async function confirmarImportacao(){
     _somarFinanceiro(finExistente, {
       saboresList, insumosList, totaisPorTamanho,
       totalFaturado, totalCustoSabores, totalGastoGeral,
+      formasPagamento,
     });
     // Anexa info do PDV
     if(!Array.isArray(finExistente.pdvs)) finExistente.pdvs = [];
@@ -2980,6 +3218,7 @@ async function confirmarImportacao(){
       totalFaturado: totalFaturado||0,
       totalCustoSabores: totalCustoSabores||0,
       totalGastoInsumos: totalGastoGeral||0,
+      formasPagamento: {...(formasPagamento||{})},
       custosExtras: [],
       pdvs: [pdvInfo],
     });
@@ -2994,7 +3233,15 @@ async function confirmarImportacao(){
     document.getElementById('btn-pular-fila').style.display='none';
     arquivoAtualNome = null;
     mostrarConfronto(dataRelatorio);
-    showToast(isAdicao ? `✅ Fechamento somado! PDV ${pdvId} adicionado ao dia.` : '✅ Relatório salvo! Veja o confronto abaixo.');
+    let toastMsg;
+    if(foiSubstituicao){
+      toastMsg = `🔄 PDV ${pdvId} substituído! Lançamento anterior foi atualizado.`;
+    } else if(isAdicao){
+      toastMsg = `✅ Fechamento somado! PDV ${pdvId} adicionado ao dia.`;
+    } else {
+      toastMsg = '✅ Relatório salvo! Veja o confronto abaixo.';
+    }
+    showToast(toastMsg);
     // Próximo arquivo da fila (se houver)
     if(filaImportar.length > 0){
       setTimeout(()=> processarProximoDaFila(), 600);
@@ -3009,7 +3256,7 @@ async function confirmarImportacao(){
 
 // Soma os dados de uma nova importação a um registro financeiro existente
 function _somarFinanceiro(reg, novo){
-  const {saboresList, insumosList, totaisPorTamanho, totalFaturado, totalCustoSabores, totalGastoGeral} = novo;
+  const {saboresList, insumosList, totaisPorTamanho, totalFaturado, totalCustoSabores, totalGastoGeral, formasPagamento} = novo;
 
   // porTamanho — soma chave por chave
   if(!reg.porTamanho) reg.porTamanho = {};
@@ -3017,10 +3264,16 @@ function _somarFinanceiro(reg, novo){
     reg.porTamanho[t] = (reg.porTamanho[t]||0) + (q||0);
   });
 
+  // formasPagamento — soma chave por chave
+  if(!reg.formasPagamento) reg.formasPagamento = {};
+  Object.entries(formasPagamento||{}).forEach(([forma,val])=>{
+    reg.formasPagamento[forma] = (reg.formasPagamento[forma]||0) + (Number(val)||0);
+  });
+
   // sabores — soma por (nomeProd, tamanho)
   if(!Array.isArray(reg.sabores)) reg.sabores = [];
   (saboresList||[]).forEach(s=>{
-    const ex = reg.sabores.find(x => x.nomeProd===s.nomeProd && Number(x.tamanho)===Number(s.tamanho));
+    const ex = reg.sabores.find(x => x.nomeProd===s.nomeProd && String(x.tamanho)===String(s.tamanho));
     if(ex){
       ex.qtd = (ex.qtd||0) + (s.qtd||0);
       ex.subtotal = (ex.subtotal||0) + (s.subtotal||0);
@@ -3069,13 +3322,105 @@ function _removerPdvDoConsolidado(reg, pdv, abertura){
   const idx = reg.pdvs.findIndex(p => String(p.pdv)===String(pdv) && String(p.abertura)===String(abertura));
   if(idx === -1) return;
   const pdvRem = reg.pdvs[idx];
+
+  // Subtrai totais agregados
   reg.totalFaturado = Math.max(0, (reg.totalFaturado||0) - (pdvRem.totalFaturado||0));
   reg.totalCustoSabores = Math.max(0, (reg.totalCustoSabores||0) - (pdvRem.totalCustoSabores||0));
   reg.totalGastoInsumos = Math.max(0, (reg.totalGastoInsumos||0) - (pdvRem.totalGastoInsumos||0));
+
+  // Subtrai porTamanho/formasPagamento se o breakdown está disponível (importações pós-v3.8.45)
+  if(pdvRem.porTamanho){
+    if(!reg.porTamanho) reg.porTamanho = {};
+    Object.entries(pdvRem.porTamanho).forEach(([k,v])=>{
+      reg.porTamanho[k] = Math.max(0, (reg.porTamanho[k]||0) - (Number(v)||0));
+    });
+  }
+  if(pdvRem.formasPagamento){
+    if(!reg.formasPagamento) reg.formasPagamento = {};
+    Object.entries(pdvRem.formasPagamento).forEach(([k,v])=>{
+      reg.formasPagamento[k] = Math.max(0, (reg.formasPagamento[k]||0) - (Number(v)||0));
+    });
+  }
+  // Subtrai sabores linha por linha (se breakdown disponível)
+  if(Array.isArray(pdvRem.sabores) && Array.isArray(reg.sabores)){
+    pdvRem.sabores.forEach(sRem => {
+      const ex = reg.sabores.find(x => x.nomeProd===sRem.nomeProd && String(x.tamanho)===String(sRem.tamanho));
+      if(ex){
+        ex.qtd = Math.max(0, (ex.qtd||0) - (sRem.qtd||0));
+        ex.subtotal = Math.max(0, (ex.subtotal||0) - (sRem.subtotal||0));
+        ex.custoInsumos = Math.max(0, (ex.custoInsumos||0) - (sRem.custoInsumos||0));
+      }
+    });
+    // Remove sabores zerados
+    reg.sabores = reg.sabores.filter(s => (s.qtd||0) > 0);
+  }
+  // Subtrai insumos linha por linha (se breakdown disponível)
+  if(Array.isArray(pdvRem.insumos) && Array.isArray(reg.insumos)){
+    pdvRem.insumos.forEach(insRem => {
+      const ex = reg.insumos.find(x => x.itemId === insRem.itemId);
+      if(ex){
+        ex.qty = Math.max(0, (ex.qty||0) - (insRem.qty||0));
+      }
+    });
+    // Remove insumos zerados
+    reg.insumos = reg.insumos.filter(i => (i.qty||0) > 0);
+  }
+
   reg.pdvs.splice(idx, 1);
-  // Se ficou sem nenhum PDV, mantém o registro mas zerado (será sobrescrito pela próxima importação)
-  // Sabores/insumos NÃO são subtraídos linha-a-linha aqui porque não temos breakdown por PDV;
-  // ficam como histórico cumulativo. A próxima importação some normalmente.
+  // ⚠️ Se PDVs antigos (sem breakdown) foram removidos, sabores/insumos podem ficar acumulados.
+  // Use o botão "Reparar" no detalhe do dia se notar inconsistência.
+}
+
+// Repara inconsistências do registro financeiro (lista de sabores ≠ totalFaturado)
+async function repararFinanceiro(idReg, modo){
+  const r = (db.financeiro||[]).find(x => x.id === idReg);
+  if(!r){ showToast('⚠️ Registro não encontrado'); return; }
+
+  const sumSabores = (r.sabores||[]).reduce((s,x)=>s+(Number(x.subtotal)||0), 0);
+  const sumCusto = (r.sabores||[]).reduce((s,x)=>s+(Number(x.custoInsumos)||0), 0);
+  const tFat = Number(r.totalFaturado)||0;
+
+  if(modo === 'fat'){
+    // Recalcula totalFaturado a partir da soma dos sabores
+    const msg = `⚠️ Atenção:\n\n` +
+      `O totalFaturado atual é R$ ${_fmtBRL(tFat)}, mas a soma dos sabores é R$ ${_fmtBRL(sumSabores)}.\n\n` +
+      `Esta ação vai SUBSTITUIR o totalFaturado por R$ ${_fmtBRL(sumSabores)} (valor dos sabores).\n\n` +
+      `⚠️ Faça isso APENAS se você tem certeza de que os sabores estão corretos. Se houve duplicação, use a outra opção.\n\n` +
+      `Continuar?`;
+    if(!confirm(msg)) return;
+    r.totalFaturado = sumSabores;
+    r.totalCustoSabores = sumCusto;
+    const ok = await saveCloud('financeiro');
+    if(ok){
+      showToast('✅ totalFaturado recalculado pelos sabores');
+      renderFinanceiro();
+    } else {
+      showToast('❌ Erro ao salvar');
+    }
+    return;
+  }
+
+  if(modo === 'sabores'){
+    // Limpa lista de sabores/insumos. Mantém totalFaturado e os PDVs.
+    // O usuário precisa reimportar os TXTs depois pra refazer os sabores.
+    const msg = `🧹 Limpar lista de sabores e insumos detalhados\n\n` +
+      `Isso vai APAGAR a lista detalhada de sabores e insumos deste registro, MAS:\n\n` +
+      `✅ Mantém: totalFaturado (R$ ${_fmtBRL(tFat)}), lista de PDVs, todos os totais agregados\n` +
+      `❌ Apaga: tabela "Vendas por sabor" e "Insumos consumidos" (detalhamento)\n\n` +
+      `Você pode reimportar os TXTs depois pra reconstruir os sabores corretamente.\n\n` +
+      `Continuar?`;
+    if(!confirm(msg)) return;
+    r.sabores = [];
+    r.insumos = [];
+    const ok = await saveCloud('financeiro');
+    if(ok){
+      showToast('🧹 Sabores e insumos detalhados removidos');
+      renderFinanceiro();
+    } else {
+      showToast('❌ Erro ao salvar');
+    }
+    return;
+  }
 }
 
 function mostrarConfronto(data){
@@ -3352,11 +3697,11 @@ function renderListaSabores(){
 
 // Estado temporário do sabor em edição
 let _saborEditandoNomeOriginal = null; // null = novo sabor
-let _saborEditandoIngredientes = { 180:[], 300:[], 500:[], 700:[] };
+let _saborEditandoIngredientes = { 180:[], 300:[], 500:[], 700:[], adicional:[], bebida:[], mimo:[] };
 
 function abrirNovoSabor(){
   _saborEditandoNomeOriginal = null;
-  _saborEditandoIngredientes = { 180:[], 300:[], 500:[], 700:[] };
+  _saborEditandoIngredientes = { 180:[], 300:[], 500:[], 700:[], adicional:[], bebida:[], mimo:[] };
   document.getElementById('edit-sabor-nome').value = '';
   document.getElementById('edit-sabor-titulo').textContent = '➕ Novo Sabor';
   renderTodosTamanhos();
@@ -3373,6 +3718,9 @@ function abrirEditarSabor(nome){
     300: JSON.parse(JSON.stringify(r['300'] || [])),
     500: JSON.parse(JSON.stringify(r['500'] || [])),
     700: JSON.parse(JSON.stringify(r['700'] || [])),
+    adicional: JSON.parse(JSON.stringify(r['adicional'] || [])),
+    bebida: JSON.parse(JSON.stringify(r['bebida'] || [])),
+    mimo: JSON.parse(JSON.stringify(r['mimo'] || [])),
   };
   document.getElementById('edit-sabor-nome').value = nome;
   document.getElementById('edit-sabor-titulo').textContent = '✏️ Editar: ' + nome;
@@ -3387,7 +3735,7 @@ function fecharEditarSabor(){
 
 // Renderiza os 3 tamanhos numa tela só (scroll vertical)
 function renderTodosTamanhos(){
-  [180,300,500,700].forEach(tam => renderSecaoTamanho(tam));
+  [180,300,500,700,'adicional','bebida','mimo'].forEach(tam => renderSecaoTamanho(tam));
 }
 
 function renderSecaoTamanho(tam){
@@ -3395,15 +3743,33 @@ function renderSecaoTamanho(tam){
   const container = document.getElementById('sabor-section-'+tam);
   if(!container) return;
 
-  const COR = {180:'#059669',300:'#7c3aed',500:'#db2777',700:'#0369a1'};
+  const cor = _corCat(tam);
+  const isNum = !isNaN(Number(tam));
+  let labelTam, labelBotao;
+  if(isNum){
+    labelTam = `🥤 ${tam}ml`;
+    labelBotao = `➕ Ingrediente ${tam}ml`;
+  } else if(tam === 'adicional'){
+    labelTam = '🍯 Adicional (calda, topping, etc.)';
+    labelBotao = '➕ Ingrediente do adicional';
+  } else if(tam === 'bebida'){
+    labelTam = '🥤 Bebida (água, refrigerante, etc.)';
+    labelBotao = '➕ Ingrediente da bebida';
+  } else if(tam === 'mimo'){
+    labelTam = '🎁 Mimo (canudo, brinde, etc.)';
+    labelBotao = '➕ Ingrediente do mimo';
+  } else {
+    labelTam = `📦 ${tam}`;
+    labelBotao = `➕ Ingrediente`;
+  }
   const optsItems = db.items
     .slice().sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'))
     .map(i=>`<option value="${i.id}">${i.nome}</option>`).join('');
 
   let html = `
-    <div style="margin-bottom:16px;border:2px solid ${COR[tam]}22;border-radius:14px;overflow:hidden">
-      <div style="background:${COR[tam]};color:white;padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
-        <span style="font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800">🥤 ${tam}ml</span>
+    <div style="margin-bottom:16px;border:2px solid ${cor}22;border-radius:14px;overflow:hidden">
+      <div style="background:${cor};color:white;padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800">${labelTam}</span>
         <span style="font-size:.75rem;opacity:.85">${ings.length} ingrediente(s)</span>
       </div>
       <div style="padding:10px 12px;background:white">`;
@@ -3415,25 +3781,25 @@ function renderSecaoTamanho(tam){
   ings.forEach((ing, idx) => {
     html += `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:7px;padding:8px;background:var(--gray-light);border-radius:10px">
-        <select onchange="atualizarIng(${tam},${idx},'itemId',this.value)"
+        <select onchange="atualizarIng('${tam}',${idx},'itemId',this.value)"
           style="flex:1;min-width:0;border:2px solid var(--border);border-radius:8px;padding:5px 6px;font-family:'Nunito',sans-serif;font-size:.78rem">
           <option value="">— Item —</option>${optsItems}
         </select>
         <input type="number" min="0" step="0.01" value="${ing.qty||''}"
-          onchange="atualizarIng(${tam},${idx},'qty',parseFloat(this.value)||0)"
+          onchange="atualizarIng('${tam}',${idx},'qty',parseFloat(this.value)||0)"
           placeholder="Qtd" style="width:60px;border:2px solid var(--border);border-radius:8px;padding:5px;font-family:'Nunito',sans-serif;font-size:.8rem;text-align:center">
         <input type="text" value="${ing.unidade||''}"
-          onchange="atualizarIng(${tam},${idx},'unidade',this.value)"
+          onchange="atualizarIng('${tam}',${idx},'unidade',this.value)"
           placeholder="unid" style="width:52px;border:2px solid var(--border);border-radius:8px;padding:5px;font-family:'Nunito',sans-serif;font-size:.75rem">
-        <button onclick="removerIng(${tam},${idx})"
+        <button onclick="removerIng('${tam}',${idx})"
           style="background:var(--red);color:white;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;font-size:.8rem;flex-shrink:0">✕</button>
       </div>`;
   });
 
   html += `
-        <button onclick="adicionarIng(${tam})"
-          style="width:100%;margin-top:4px;padding:8px;border:2px dashed ${COR[tam]};background:white;border-radius:10px;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;color:${COR[tam]};cursor:pointer">
-          ➕ Ingrediente ${tam}ml
+        <button onclick="adicionarIng('${tam}')"
+          style="width:100%;margin-top:4px;padding:8px;border:2px dashed ${cor};background:white;border-radius:10px;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;color:${cor};cursor:pointer">
+          ${labelBotao}
         </button>
       </div>
     </div>`;
@@ -3478,7 +3844,7 @@ async function salvarSaborEditado(){
   if(!nomeRaw){ showToast('⚠️ Digite o nome do sabor!'); return; }
 
   // Valida que pelo menos um tamanho tem ingredientes
-  const temIng = [180,300,500,700].some(t =>
+  const temIng = [180,300,500,700,'adicional','bebida','mimo'].some(t =>
     (_saborEditandoIngredientes[t]||[]).some(i=>i.itemId && i.qty > 0)
   );
   if(!temIng){ showToast('⚠️ Adicione pelo menos um ingrediente!'); return; }
@@ -3497,6 +3863,9 @@ async function salvarSaborEditado(){
     300: (_saborEditandoIngredientes[300]||[]).filter(i=>i.itemId && i.qty > 0),
     500: (_saborEditandoIngredientes[500]||[]).filter(i=>i.itemId && i.qty > 0),
     700: (_saborEditandoIngredientes[700]||[]).filter(i=>i.itemId && i.qty > 0),
+    adicional: (_saborEditandoIngredientes['adicional']||[]).filter(i=>i.itemId && i.qty > 0),
+    bebida: (_saborEditandoIngredientes['bebida']||[]).filter(i=>i.itemId && i.qty > 0),
+    mimo: (_saborEditandoIngredientes['mimo']||[]).filter(i=>i.itemId && i.qty > 0),
   };
 
   const ok = await saveCloud();
@@ -4798,6 +5167,42 @@ function _fmtBRL(v){
   return (Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 
+// ── Helpers de categorias (milkshakes têm tamanho numérico; outras são strings) ──
+// Ordem de exibição: 180 → 300 → 500 → 700 → adicional → bebida → mimo → outros
+const CATEGORIAS_ORDEM = { adicional: 901, bebida: 902, mimo: 903 };
+function _ordemCat(t){
+  if(t === undefined || t === null) return 9999;
+  const n = Number(t);
+  if(!isNaN(n)) return n; // milkshakes: 180/300/500/700
+  return CATEGORIAS_ORDEM[t] || 950; // categorias conhecidas ou genéricas
+}
+function _labelCat(t){
+  if(t === undefined || t === null) return '';
+  const n = Number(t);
+  if(!isNaN(n)) return `${n}ml`;
+  const labels = { adicional:'adicional', bebida:'bebida', mimo:'mimo' };
+  return labels[t] || t;
+}
+function _labelCatPlural(t){
+  if(t === undefined || t === null) return '';
+  const n = Number(t);
+  if(!isNaN(n)) return `${n}ml`;
+  const labels = { adicional:'adicionais', bebida:'bebidas', mimo:'mimos' };
+  return labels[t] || (t + 's');
+}
+function _corCat(t){
+  const cores = {180:'#059669',300:'#7c3aed',500:'#db2777',700:'#0369a1',adicional:'#92400e',bebida:'#0891b2',mimo:'#db2777'};
+  const n = Number(t);
+  if(!isNaN(n)) return cores[n] || '#374151';
+  return cores[t] || '#374151';
+}
+function _iconCat(t){
+  const n = Number(t);
+  if(!isNaN(n)) return '🥤';
+  const icones = { adicional:'🍯', bebida:'🥤', mimo:'🎁' };
+  return icones[t] || '📦';
+}
+
 // ── Popover customizado de info (substitui title nativo, melhor no mobile) ──
 let _infoPopoverEl = null;
 let _infoPopoverAnchor = null;
@@ -4935,7 +5340,51 @@ function _percRoyalties(loja){
   return isNaN(v) ? 0 : v;
 }
 
+// Lista mestra das formas de pagamento (slug usado como chave técnica)
+const FORMAS_PAGAMENTO = [
+  // Dinheiro / PIX
+  { key:'DINHEIRO',         slug:'DINHEIRO',         label:'💵 Dinheiro' },
+  { key:'PIX POS',          slug:'PIX_POS',          label:'📱 PIX POS' },
+  { key:'QRLINX',           slug:'QRLINX',           label:'📲 QR Linx' },
+  // Bandeiras (Visa/Master/Elo separadas)
+  { key:'VISA CREDITO',     slug:'VISA_CREDITO',     label:'💳 Visa Crédito' },
+  { key:'VISA DEBITO',      slug:'VISA_DEBITO',      label:'💳 Visa Débito' },
+  { key:'MASTER CREDITO',   slug:'MASTER_CREDITO',   label:'💳 Master Crédito' },
+  { key:'MASTER DEBITO',    slug:'MASTER_DEBITO',    label:'💳 Master Débito' },
+  { key:'ELO CREDITO',      slug:'ELO_CREDITO',      label:'💳 Elo Crédito' },
+  { key:'ELO DEBITO',       slug:'ELO_DEBITO',       label:'💳 Elo Débito' },
+  // POS genéricos
+  { key:'DEBITO POS',       slug:'DEBITO_POS',       label:'💳 Débito POS' },
+  { key:'CREDITO POS',      slug:'CREDITO_POS',      label:'💳 Crédito POS' },
+  // Vouchers / Tickets
+  { key:'VOUCHER POS',      slug:'VOUCHER_POS',      label:'🎟️ Voucher POS' },
+  { key:'VOUCHER',          slug:'VOUCHER',          label:'🎟️ Voucher' },
+  { key:'ALELO',            slug:'ALELO',            label:'🍱 Alelo' },
+  { key:'TICKET',           slug:'TICKET',           label:'🎫 Ticket' },
+  // Hanzo
+  { key:'HANZO CREDITO',    slug:'HANZO_CREDITO',    label:'🍔 Hanzo Crédito' },
+  { key:'HANZO DEBITO',     slug:'HANZO_DEBITO',     label:'🍔 Hanzo Débito' },
+  { key:'HANZO CUPOM',      slug:'HANZO_CUPOM',      label:'🍔 Hanzo Cupom' },
+  { key:'HANZO DINHEIRO',   slug:'HANZO_DINHEIRO',   label:'🍔 Hanzo Dinheiro' },
+  { key:'HANZO PIX',        slug:'HANZO_PIX',        label:'🍔 Hanzo PIX' },
+  // Convênios / Delivery / Outros
+  { key:'MOO ADIDAS',       slug:'MOO_ADIDAS',       label:'🐮 Moo Adidas' },
+  { key:'HUB_OUTROS_99FOOD',slug:'HUB_99FOOD',       label:'🛵 99 Food (Hub)' },
+  { key:'HUB_OUTROS_IFOOD', slug:'HUB_IFOOD',        label:'🛵 iFood (Hub)' },
+  { key:'HUB_OUTROS',       slug:'HUB_OUTROS',       label:'🛵 Hub Outros' },
+  { key:'IFOOD_OUTROS',     slug:'IFOOD_OUTROS',     label:'🛵 iFood Outros' },
+  { key:'IFOOD_ONLINE',     slug:'IFOOD_ONLINE',     label:'🛵 iFood Online' },
+  { key:'IFOOD_DESCONTO',   slug:'IFOOD_DESCONTO',   label:'🛵 iFood Desconto' },
+];
+
+function _percTaxaForma(slug, loja){
+  const key = `taxa_${slug}_Loja${Number(loja)}`;
+  const v = parseFloat(db.config?.[key]);
+  return isNaN(v) ? 0 : v;
+}
+
 function _percCartao(loja){
+  // Fallback: % único antigo (usado em importações sem formasPagamento detalhada)
   const key = `cartaoLoja${Number(loja)}`;
   const v = parseFloat(db.config?.[key]);
   return isNaN(v) ? 0 : v;
@@ -4964,9 +5413,34 @@ function royaltiesDoRegistro(r){
 }
 
 function cartaoDoRegistro(r){
+  // Se o registro TEM formasPagamento (importações novas): calcula soma das taxas por forma
+  if(r.formasPagamento && typeof r.formasPagamento === 'object'){
+    let total = 0;
+    FORMAS_PAGAMENTO.forEach(f => {
+      const valor = Number(r.formasPagamento[f.key]) || 0;
+      const perc = _percTaxaForma(f.slug, Number(r.loja));
+      if(valor > 0 && perc > 0) total += valor * perc / 100;
+    });
+    return total;
+  }
+  // Fallback: importações antigas usam % único sobre faturado
   const perc = _percCartao(Number(r.loja));
   if(!perc) return 0;
   return (Number(r.totalFaturado)||0) * perc / 100;
+}
+
+// Retorna detalhamento por forma (pra tooltip): [{label, valor, perc, taxa}]
+function detalheCartaoDoRegistro(r){
+  if(!r.formasPagamento || typeof r.formasPagamento !== 'object') return null;
+  const lista = [];
+  FORMAS_PAGAMENTO.forEach(f => {
+    const valor = Number(r.formasPagamento[f.key]) || 0;
+    if(valor <= 0) return;
+    const perc = _percTaxaForma(f.slug, Number(r.loja));
+    const taxa = valor * perc / 100;
+    lista.push({ label: f.label, slug: f.slug, valor, perc, taxa });
+  });
+  return lista;
 }
 
 function encargosDoRegistro(r){
@@ -5112,6 +5586,40 @@ async function salvarCartao(loja){
   }
 }
 
+async function salvarTaxaForma(loja){
+  const sel = document.getElementById(`forma-select-${loja}`);
+  const inp = document.getElementById(`forma-input-${loja}`);
+  const slug = sel.value;
+  const v = parseFloat(inp.value);
+  if(!slug){ showToast('⚠️ Escolha uma forma de pagamento'); return; }
+  if(isNaN(v) || v < 0){ showToast('⚠️ Percentual inválido'); return; }
+  if(v > 100){ showToast('⚠️ Percentual não pode passar de 100%'); return; }
+  const forma = FORMAS_PAGAMENTO.find(f => f.slug === slug);
+  if(!db.config) db.config = {};
+  db.config[`taxa_${slug}_Loja${loja}`] = v;
+  const ok = await saveCloud();
+  if(ok){
+    renderListaCustos();
+    renderFinanceiro();
+    showToast(`✅ ${forma.label}: ${v}%`);
+  } else {
+    showToast('❌ Erro ao salvar');
+  }
+}
+
+async function apagarTaxaForma(loja, slug){
+  if(!db.config) return;
+  delete db.config[`taxa_${slug}_Loja${loja}`];
+  const ok = await saveCloud();
+  if(ok){
+    renderListaCustos();
+    renderFinanceiro();
+    showToast('🗑️ Taxa removida');
+  } else {
+    showToast('❌ Erro ao remover');
+  }
+}
+
 function abrirGerenciarCustos(){
   renderListaCustos();
   document.getElementById('modal-custos').style.display = 'flex';
@@ -5214,7 +5722,12 @@ function renderListaCustos(){
   const percFranq = _percFranqueadora(lojaFiltro);
   const percRoy = _percRoyalties(lojaFiltro);
   const percCart = _percCartao(lojaFiltro);
-  const percTotal = percImp + percFranq + percRoy + percCart;
+  const percFixosTotal = percImp + percFranq + percRoy; // sem cartão (que varia por forma)
+  const percTotal = percFixosTotal + percCart;
+  // Quais formas de pagamento têm taxa configurada (>0)
+  const formasConfiguradas = FORMAS_PAGAMENTO
+    .map(f => ({ ...f, perc: _percTaxaForma(f.slug, lojaFiltro) }))
+    .filter(f => f.perc > 0);
   const cardImposto = `
     <div class="card" style="margin-bottom:14px;padding:12px 14px;background:#eff6ff;border:1.5px solid #bfdbfe">
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
@@ -5255,17 +5768,46 @@ function renderListaCustos(){
       </div>
 
       <div style="margin-bottom:8px">
-        <div style="font-size:.7rem;color:#1e40af;font-weight:700;margin-bottom:4px">💳 Taxa de Cartão</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <div style="font-size:.7rem;color:#1e40af;font-weight:700">💳 Taxa por Forma de Pagamento</div>
+          <span style="font-size:.62rem;background:#dbeafe;color:#1e3a8a;border-radius:6px;padding:1px 7px;font-weight:700">${formasConfiguradas.length}/${FORMAS_PAGAMENTO.length}</span>
+        </div>
+        <div style="background:white;border:1px solid #bfdbfe;border-radius:10px;padding:8px 10px">
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+            <select id="forma-select-${lojaFiltro}" style="flex:1;border:1.5px solid #bfdbfe;border-radius:8px;padding:6px 8px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;color:#1e40af;background:white">
+              <option value="">— escolha uma forma —</option>
+              ${FORMAS_PAGAMENTO.map(f => `<option value="${f.slug}">${f.label}</option>`).join('')}
+            </select>
+            <input id="forma-input-${lojaFiltro}" type="number" min="0" max="100" step="0.01" placeholder="%" style="width:64px;border:1.5px solid #bfdbfe;border-radius:8px;padding:6px 8px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:700;color:#1e40af;text-align:right">
+            <button onclick="salvarTaxaForma(${lojaFiltro})" style="background:#1e40af;color:white;border:none;border-radius:8px;padding:6px 12px;font-family:'Baloo 2',cursive;font-size:.74rem;font-weight:700;cursor:pointer">Salvar</button>
+          </div>
+          ${formasConfiguradas.length === 0
+            ? `<div style="font-size:.68rem;color:var(--gray);font-style:italic;text-align:center;padding:6px">Nenhuma forma de pagamento configurada ainda.</div>`
+            : `<div style="display:flex;flex-direction:column;gap:4px">${formasConfiguradas.map(fc => `
+              <div style="display:flex;align-items:center;gap:6px;font-size:.72rem;background:#eff6ff;border-radius:6px;padding:4px 8px">
+                <span style="flex:1;font-weight:700;color:#1e40af">${fc.label}</span>
+                <span style="font-weight:800;color:#1e3a8a">${fc.perc}%</span>
+                <button onclick="apagarTaxaForma(${lojaFiltro},'${fc.slug}')" style="background:transparent;color:#dc2626;border:none;cursor:pointer;font-size:.85rem;padding:0 4px" title="Remover">🗑️</button>
+              </div>`).join('')}</div>`}
+        </div>
+        <div style="font-size:.66rem;color:#1e3a8a;margin-top:5px;line-height:1.4;padding:0 4px">
+          💡 Cada forma de pagamento desconta sua taxa apenas sobre o valor recebido daquela forma. Lançamentos antigos (sem detalhamento) usam o % de cartão antigo abaixo como fallback.
+        </div>
+      </div>
+
+      <div style="margin-bottom:8px">
+        <div style="font-size:.7rem;color:#1e40af;font-weight:700;margin-bottom:4px">💳 Taxa de Cartão (fallback antigo)</div>
         <div style="display:flex;gap:8px;align-items:center;background:white;border:1px solid #bfdbfe;border-radius:10px;padding:7px 10px">
           <input id="cart-input-${lojaFiltro}" type="number" min="0" max="100" step="0.01" value="${percCart}"
             style="flex:1;border:1.5px solid #bfdbfe;border-radius:8px;padding:6px 10px;font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:700;color:#1e40af;text-align:right">
           <div style="font-size:.95rem;font-weight:800;color:#1e40af">%</div>
           <button onclick="salvarCartao(${lojaFiltro})" style="background:#1e40af;color:white;border:none;border-radius:8px;padding:6px 12px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer">Salvar</button>
         </div>
+        <div style="font-size:.66rem;color:#92400e;margin-top:4px;padding:0 4px;font-style:italic">⚠️ Esse % só é usado em lançamentos antigos. Importações novas usam as taxas por forma acima.</div>
       </div>
 
       <div style="font-size:.7rem;color:#1e3a8a;margin-top:8px;line-height:1.5;background:white;border:1px dashed #bfdbfe;border-radius:8px;padding:8px 10px">
-        💡 <strong>Total: ${percTotal.toLocaleString('pt-BR',{maximumFractionDigits:2})}%</strong> · Faturado R$ 4.000 × ${percTotal||10}% = R$ ${_fmtBRL(4000*(percTotal||10)/100)} de encargos
+        💡 <strong>Encargos fixos: ${percFixosTotal.toLocaleString('pt-BR',{maximumFractionDigits:2})}%</strong> · Faturado R$ 4.000 × ${percFixosTotal||10}% = R$ ${_fmtBRL(4000*(percFixosTotal||10)/100)} (sem taxa de cartão, que varia por forma)
       </div>
     </div>`;
 
@@ -5760,6 +6302,7 @@ function renderFinanceiro(){
     if(!encPorLoja[lj]) encPorLoja[lj] = {
       faturado: 0,
       imposto: 0, franq: 0, roy: 0, cart: 0,
+      cartPorForma: {}, // { slug: {label, valor, taxa, perc} }
       percImp: _percImposto(lj), percFranq: _percFranqueadora(lj), percRoy: _percRoyalties(lj), percCart: _percCartao(lj),
     };
     encPorLoja[lj].faturado += (r.totalFaturado||0);
@@ -5767,6 +6310,18 @@ function renderFinanceiro(){
     encPorLoja[lj].franq += franq;
     encPorLoja[lj].roy += roy;
     encPorLoja[lj].cart += cart;
+    // Acumula detalhamento por forma de pagamento (se houver)
+    const det = detalheCartaoDoRegistro(r);
+    if(det){
+      det.forEach(d => {
+        if(d.taxa <= 0) return;
+        if(!encPorLoja[lj].cartPorForma[d.slug]){
+          encPorLoja[lj].cartPorForma[d.slug] = { label:d.label, valor:0, taxa:0, perc:d.perc };
+        }
+        encPorLoja[lj].cartPorForma[d.slug].valor += d.valor;
+        encPorLoja[lj].cartPorForma[d.slug].taxa += d.taxa;
+      });
+    }
   });
   const totImpostos = Object.values(encPorLoja).reduce((s,v)=>s+v.imposto+v.franq+v.roy+v.cart, 0);
 
@@ -5790,7 +6345,18 @@ function renderFinanceiro(){
       if(v.imposto > 0) linhas.push(`  🧾 Impostos ${v.percImp}%: R$ ${_fmtBRL(v.imposto)}`);
       if(v.franq > 0) linhas.push(`  📣 Fundo de Marketing ${v.percFranq}%: R$ ${_fmtBRL(v.franq)}`);
       if(v.roy > 0) linhas.push(`  👑 Royalties ${v.percRoy}%: R$ ${_fmtBRL(v.roy)}`);
-      if(v.cart > 0) linhas.push(`  💳 Taxa de Cartão ${v.percCart}%: R$ ${_fmtBRL(v.cart)}`);
+      if(v.cart > 0){
+        const formas = Object.values(v.cartPorForma||{}).sort((a,b)=>b.taxa-a.taxa);
+        if(formas.length > 0){
+          linhas.push(`  💳 Taxa por forma de pagamento:`);
+          formas.forEach(f => {
+            linhas.push(`     ${f.label}: ${f.perc}% × R$ ${_fmtBRL(f.valor)} = R$ ${_fmtBRL(f.taxa)}`);
+          });
+          linhas.push(`     Subtotal cartão: R$ ${_fmtBRL(v.cart)}`);
+        } else {
+          linhas.push(`  💳 Taxa de Cartão (antigo) ${v.percCart}%: R$ ${_fmtBRL(v.cart)}`);
+        }
+      }
       const subt = v.imposto + v.franq + v.roy + v.cart;
       return `${nomeLoja(Number(lj))} (faturado R$ ${_fmtBRL(v.faturado)}):\n${linhas.join('\n')}\n  Subtotal: R$ ${_fmtBRL(subt)}`;
     }).join('\n\n');
@@ -5913,8 +6479,20 @@ function renderFinanceiro(){
       if(impTotal > 0) linhas.push(`🧾 Impostos: ${impPerc}% = R$ ${_fmtBRL(impTotal)}`);
       if(franqTotal > 0) linhas.push(`📣 Fundo de Marketing: ${franqPerc}% = R$ ${_fmtBRL(franqTotal)}`);
       if(royTotal > 0) linhas.push(`👑 Royalties: ${royPerc}% = R$ ${_fmtBRL(royTotal)}`);
-      if(cartTotal > 0) linhas.push(`💳 Taxa de Cartão: ${cartPerc}% = R$ ${_fmtBRL(cartTotal)}`);
-      const titulo = `Encargos sobre R$ ${_fmtBRL(r.totalFaturado)} (faturado do sistema):\n\n${linhas.join('\n')}\n─────\nTotal: ${encargosPerc.toLocaleString('pt-BR',{maximumFractionDigits:2})}% = R$ ${_fmtBRL(encargosTotal)}\n\n(Vendas externas não pagam encargos)`;
+      // Cartão: se tem detalhamento por forma, mostra; senão usa o % fallback
+      const detCart = detalheCartaoDoRegistro(r);
+      if(cartTotal > 0){
+        if(detCart && detCart.length > 0){
+          linhas.push(`💳 Taxa por forma de pagamento:`);
+          detCart.forEach(d => {
+            if(d.taxa > 0) linhas.push(`   ${d.label}: ${d.perc}% × R$ ${_fmtBRL(d.valor)} = R$ ${_fmtBRL(d.taxa)}`);
+          });
+          linhas.push(`   Subtotal cartão: R$ ${_fmtBRL(cartTotal)}`);
+        } else {
+          linhas.push(`💳 Taxa de Cartão (antigo): ${cartPerc}% = R$ ${_fmtBRL(cartTotal)}`);
+        }
+      }
+      const titulo = `Encargos sobre R$ ${_fmtBRL(r.totalFaturado)} (faturado do sistema):\n\n${linhas.join('\n')}\n─────\nTotal: R$ ${_fmtBRL(encargosTotal)}\n\n(Vendas externas não pagam encargos)`;
       impTooltipAttr = ` data-tooltip="${titulo.replace(/"/g,'&quot;')}" onclick="showInfoTooltip(this,event)"`;
     }
     // Tooltip de Faturado (sistema + externas)
@@ -5972,6 +6550,26 @@ function renderFinanceiro(){
 function _renderFinDetalhe(r){
   let html = `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);">`;
 
+  // ── Aviso de inconsistência: subtotal dos sabores vs totalFaturado do registro ──
+  const sumSabores = (r.sabores||[]).reduce((s,x)=>s+(Number(x.subtotal)||0), 0);
+  const tFat = Number(r.totalFaturado)||0;
+  // Tolerância: 1 centavo
+  if(sumSabores > 0 && Math.abs(sumSabores - tFat) > 0.01){
+    const dif = sumSabores - tFat;
+    html += `<div style="margin-bottom:14px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;">
+      <div style="font-size:.78rem;font-weight:800;color:#991b1b;margin-bottom:4px">⚠️ Inconsistência detectada</div>
+      <div style="font-size:.72rem;color:#7f1d1d;line-height:1.5">
+        Total faturado registrado: <strong>R$ ${_fmtBRL(tFat)}</strong><br>
+        Soma dos sabores listados: <strong>R$ ${_fmtBRL(sumSabores)}</strong><br>
+        Diferença: <strong>R$ ${_fmtBRL(Math.abs(dif))}</strong> ${dif>0?'(sabores acumulados de re-importações)':'(faltam sabores)'}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        <button onclick="repararFinanceiro('${r.id}','fat')" style="background:#16a34a;color:white;border:none;border-radius:8px;padding:6px 10px;font-size:.7rem;font-weight:700;cursor:pointer">📐 Recalcular totalFaturado pelos sabores</button>
+        <button onclick="repararFinanceiro('${r.id}','sabores')" style="background:#1e40af;color:white;border:none;border-radius:8px;padding:6px 10px;font-size:.7rem;font-weight:700;cursor:pointer">🧹 Limpar sabores e reimportar PDVs</button>
+      </div>
+    </div>`;
+  }
+
   // Lista de PDVs que compõem este registro consolidado
   if(Array.isArray(r.pdvs) && r.pdvs.length > 0){
     html += `<div style="margin-bottom:14px;">`;
@@ -5997,17 +6595,70 @@ function _renderFinDetalhe(r){
     html += `</div></div>`;
   }
 
+  // Tabela de formas de pagamento (se houver detalhamento por forma)
+  if(r.formasPagamento && Object.keys(r.formasPagamento).length > 0){
+    const formasComValor = FORMAS_PAGAMENTO
+      .map(f => {
+        const valor = Number(r.formasPagamento[f.key]) || 0;
+        if(valor <= 0) return null;
+        const perc = _percTaxaForma(f.slug, Number(r.loja));
+        const taxa = valor * perc / 100;
+        const liquido = valor - taxa;
+        return { label:f.label, slug:f.slug, valor, perc, taxa, liquido };
+      })
+      .filter(x => x);
+    if(formasComValor.length > 0){
+      const totBruto = formasComValor.reduce((s,x)=>s+x.valor, 0);
+      const totTaxa = formasComValor.reduce((s,x)=>s+x.taxa, 0);
+      const totLiq = formasComValor.reduce((s,x)=>s+x.liquido, 0);
+      html += `<div style="margin-bottom:14px">`;
+      html += `<div style="font-size:.74rem;font-weight:800;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">💰 Formas de pagamento</div>`;
+      html += `<div style="background:white;border-radius:10px;border:1px solid var(--border);overflow-x:auto;">`;
+      html += `<div style="min-width:420px">`;
+      html += `<div style="display:grid;grid-template-columns:1fr 90px 60px 90px 90px;background:#f9fafb;padding:6px 10px;font-size:.65rem;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">
+        <span>Forma</span>
+        <span style="text-align:right">Bruto</span>
+        <span style="text-align:right">Taxa%</span>
+        <span style="text-align:right">Taxa R$</span>
+        <span style="text-align:right">Líquido</span>
+      </div>`;
+      formasComValor.forEach((f,idx) => {
+        const bg = idx%2===0 ? 'white' : '#fafafa';
+        html += `<div style="display:grid;grid-template-columns:1fr 90px 60px 90px 90px;padding:5px 10px;font-size:.72rem;background:${bg};border-bottom:1px solid #f3f4f6;align-items:center;">
+          <span style="font-weight:700">${f.label}</span>
+          <span style="text-align:right">R$&nbsp;${_fmtBRL(f.valor)}</span>
+          <span style="text-align:right;color:${f.perc>0?'#1e40af':'#d1d5db'};font-weight:700">${f.perc>0?f.perc.toFixed(2):'—'}</span>
+          <span style="text-align:right;color:${f.taxa>0?'#dc2626':'#d1d5db'}">${f.taxa>0?'R$&nbsp;'+_fmtBRL(f.taxa):'—'}</span>
+          <span style="text-align:right;font-weight:700;color:#166534">R$&nbsp;${_fmtBRL(f.liquido)}</span>
+        </div>`;
+      });
+      html += `<div style="display:grid;grid-template-columns:1fr 90px 60px 90px 90px;padding:7px 10px;background:#f0fdf4;border-top:2px solid #bbf7d0;font-size:.74rem;font-weight:800;">
+        <span>TOTAL</span>
+        <span style="text-align:right">R$&nbsp;${_fmtBRL(totBruto)}</span>
+        <span></span>
+        <span style="text-align:right;color:#dc2626">R$&nbsp;${_fmtBRL(totTaxa)}</span>
+        <span style="text-align:right;color:#166534">R$&nbsp;${_fmtBRL(totLiq)}</span>
+      </div>`;
+      html += `</div></div></div>`;
+    }
+  }
+
   // Chips de resumo por tamanho
   const chips = Object.entries(r.porTamanho||{})
     .filter(([t,q])=> q>0)
-    .map(([t,q])=> `<span style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:8px;padding:4px 10px;font-size:.75rem;font-weight:700;color:#6b21a8;">${t}ml: <strong>${q}</strong></span>`)
+    .sort((a,b)=> _ordemCat(a[0]) - _ordemCat(b[0]))
+    .map(([t,q])=> {
+      const isNumerico = !isNaN(Number(t));
+      const label = isNumerico ? `${t}ml: <strong>${q}</strong>` : `${_labelCatPlural(t)}: <strong>${q}</strong>`;
+      return `<span style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:8px;padding:4px 10px;font-size:.75rem;font-weight:700;color:#6b21a8;">${label}</span>`;
+    })
     .join('');
   if(chips){
     html += `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">${chips}</div>`;
   }
 
   // Tabela de sabores
-  const sabores = (r.sabores||[]).slice().sort((a,b)=> (a.tamanho||0) - (b.tamanho||0) || (a.nomeProd||'').localeCompare(b.nomeProd||'','pt-BR'));
+  const sabores = (r.sabores||[]).slice().sort((a,b)=> _ordemCat(a.tamanho) - _ordemCat(b.tamanho) || (a.nomeProd||'').localeCompare(b.nomeProd||'','pt-BR'));
   if(sabores.length){
     const totalQtd = sabores.reduce((s,x)=>s+(x.qtd||0),0);
     const totalFat = sabores.reduce((s,x)=>s+(x.subtotal||0),0);
@@ -6030,7 +6681,7 @@ function _renderFinDetalhe(r){
         ? `R$&nbsp;${_fmtBRL(s.custoInsumos)}`
         : '<span style="color:#d1d5db">—</span>';
       html += `<div style="display:grid;grid-template-columns:1fr 50px 90px 90px 90px;padding:5px 10px;font-size:.72rem;background:${bg};border-bottom:1px solid #f3f4f6;align-items:center;">
-        <span style="font-weight:700">${s.nomeProd}<br><span style="font-size:.62rem;color:var(--gray);font-weight:400">${s.tamanho}ml</span></span>
+        <span style="font-weight:700">${s.nomeProd}<br><span style="font-size:.62rem;color:var(--gray);font-weight:400">${_labelCat(s.tamanho)}</span></span>
         <span style="text-align:center;font-weight:800;color:#0369a1">${s.qtd}</span>
         <span style="text-align:right">R$&nbsp;${_fmtBRL(s.subtotal)}</span>
         <span style="text-align:right">${custoCell}</span>
