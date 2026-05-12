@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.71</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.74</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1259,7 +1259,24 @@ async function doLogin(){
   const p=document.getElementById('lp').value;
   const err=document.getElementById('login-error');
   const btn=document.getElementById('btn-login');
+  if(!u || !p){
+    err.textContent='⚠️ Preencha usuário e senha.';
+    err.style.display='block';
+    return;
+  }
   btn.disabled=true; btn.textContent='Entrando...';
+  try {
+    await _doLoginInterno(u, p, err, btn);
+  } catch(e){
+    console.error('doLogin erro:', e);
+    err.textContent='❌ Erro: '+(e.message||e)+'. Recarregue a página (Ctrl+Shift+R).';
+    err.style.display='block';
+    btn.disabled=false;
+    btn.textContent='Entrar →';
+  }
+}
+
+async function _doLoginInterno(u, p, err, btn){
   // Carrega dados do Firebase antes de validar (garante senhas atualizadas)
   const r=await cloudGet();
   if(r){
@@ -1403,6 +1420,14 @@ function atualizarBadgesTabs(){
 
 // Renderiza o card vermelho fixo no topo (só pra admin, só se houver pendências)
 function renderAlertaEntradasPendentes(){
+  try {
+    return _renderAlertaEntradasPendentesInterno();
+  } catch(err){
+    console.error('Erro em renderAlertaEntradasPendentes:', err);
+  }
+}
+
+function _renderAlertaEntradasPendentesInterno(){
   const cont = document.getElementById('alerta-entradas-pendentes');
   if(!cont) return;
   if(currentUser?.role !== 'admin'){
@@ -2367,6 +2392,16 @@ async function salvarPerdas(){
 }
 
 function renderEntradas(){
+  try {
+    return _renderEntradasInterno();
+  } catch(err){
+    console.error('Erro em renderEntradas:', err);
+    const el = document.getElementById('entrada-lista');
+    if(el) el.innerHTML = `<div class="empty"><span class="ej">⚠️</span><p>Erro ao renderizar. Recarregue a página.<br><span style="font-size:.7rem;color:var(--gray)">${err.message||err}</span></p></div>`;
+  }
+}
+
+function _renderEntradasInterno(){
   toggleNoLoja('sec-entradas', !lojaE);
   if(!lojaE){ document.getElementById('entrada-lista').innerHTML = mensagemSelecioneLoja(false); return; }
   if(!Array.isArray(db.items) || db.items.length === 0){
@@ -2400,7 +2435,7 @@ function renderEntradas(){
     </div>`;
   } else {
     banner = `<div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;margin-bottom:8px">
-      <strong>📅 Planejamento de Entradas</strong>Você vê a data selecionada (${_fmtDataBr(dt)}) e datas futuras planejadas. ${isFutura ? '<br>Lançando para data futura.' : ''}
+      <strong>📅 Planejamento de Entradas</strong>Data atual: ${_fmtDataBr(dt)}. Lance novos itens ou atualize os existentes — campos vazios <strong>preservam</strong> o que já está salvo. Digite <strong>0</strong> pra remover um item planejado.
     </div>`;
   }
   const bannerEl = document.getElementById('entrada-banner-info');
@@ -2780,56 +2815,69 @@ async function salvarEntrada(){
   const btn=document.getElementById('btn-sv-entrada');btn.disabled=true;
   const timestamp=new Date().toISOString();
   const itensEntrada=[];
-  // Coleta validações existentes pra preservar (não perder o trabalho da funcionária)
-  const validacoesAtuais = {};
-  db.entradas.filter(e=>e.data===dt&&e.loja==lojaE).forEach(e=>{
-    if(e.qtdValidada !== undefined && e.qtdValidada !== null){
-      validacoesAtuais[e.itemId] = {
-        qtdValidada: e.qtdValidada,
-        validadoPor: e.validadoPor,
-        validadoData: e.validadoData,
-        validadoEm: e.validadoEm,
-      };
-    }
-  });
-  // Remove entradas anteriores dessa data+loja e re-insere
-  db.entradas=db.entradas.filter(e=>!(e.data===dt&&e.loja==lojaE));
   const respEnt = (currentUser?.label||currentUser?.login||'—');
+
+  // MODO SOMAR: lê só inputs com valor > 0. Inputs vazios são IGNORADOS
+  // (mantém o que já está salvo). Pra cada item, atualiza se existir ou cria nova.
   db.items.forEach(item=>{
-    // Tenta o novo formato com data; fallback pro antigo (sem data)
     let el = document.getElementById(`ent-${dt}-${item.id}`);
     if(!el) el = document.getElementById('ent-'+item.id);
     if(!el) return;
-    const val=parseFloat(el.value);
-    if(!isNaN(val)&&val>0){
-      const entrada = {
+    const raw = el.value.trim();
+    if(raw === '') return; // input VAZIO: ignora, não mexe no que já tem
+    const val = parseFloat(raw);
+    if(isNaN(val) || val < 0) return;
+
+    // Procura entrada existente desse item/data/loja
+    const idx = db.entradas.findIndex(e => e.data===dt && e.loja==lojaE && e.itemId===item.id);
+    if(idx >= 0){
+      // Já existe: atualiza qtdPlanejada (preserva validação se houver)
+      const e = db.entradas[idx];
+      if(val === 0){
+        // Valor 0 significa: admin quer remover esse item (zerar)
+        // Se já foi validado, apenas zera o planejado (mantém validação)
+        if(e.qtdValidada !== undefined && e.qtdValidada !== null){
+          e.qtdPlanejada = 0;
+          e.qty = 0;
+        } else {
+          // Não foi validado: remove a entrada inteira
+          db.entradas.splice(idx, 1);
+        }
+      } else {
+        e.qtdPlanejada = val;
+        e.qty = val; // mantém pra compatibilidade
+        e.usuario = respEnt;
+        e.ts = timestamp;
+      }
+      itensEntrada.push({nome:item.nome, qty:val, unidade:item.unidade});
+    } else if(val > 0){
+      // Não existe: cria nova
+      db.entradas.push({
         data: dt,
         loja: lojaE,
         itemId: item.id,
-        qty: val,              // mantém pra compatibilidade
-        qtdPlanejada: val,     // novo: valor planejado pelo admin
+        qty: val,
+        qtdPlanejada: val,
         usuario: respEnt,
         ts: timestamp,
-      };
-      // Preserva validação se já existia (não apaga o que a funcionária validou)
-      const valExist = validacoesAtuais[item.id];
-      if(valExist){
-        entrada.qtdValidada = valExist.qtdValidada;
-        entrada.validadoPor = valExist.validadoPor;
-        entrada.validadoData = valExist.validadoData;
-        entrada.validadoEm = valExist.validadoEm;
-      }
-      db.entradas.push(entrada);
-      itensEntrada.push({nome:item.nome,qty:val,unidade:item.unidade});
+      });
+      itensEntrada.push({nome:item.nome, qty:val, unidade:item.unidade});
     }
   });
+
+  if(itensEntrada.length === 0){
+    showToast('⚠️ Nada para salvar. Preencha pelo menos um item.');
+    btn.disabled=false;
+    return;
+  }
+
   const ok=await saveCloud('entradas');
   if(ok){
     renderProjetado();
     renderEntradas();
-    gerarCompras(); // atualiza lista de Compras: itens planejados saem da seção "Comprar"
+    gerarCompras();
     atualizarBadgesTabs();
-    showToast(`🛍️ Entrada planejada salva! ${itensEntrada.length} item(ns) registrado(s).`);
+    showToast(`🛍️ ${itensEntrada.length} item(ns) salvo(s)! Os demais foram mantidos.`);
   } else {
     showToast('⚠️ Erro ao salvar!');
   }
