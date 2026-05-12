@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.66</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.68</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -262,6 +262,9 @@
       <button class="tabs-scroll-btn right" id="tabs-scroll-right" onclick="scrollTabs(1)" title="Próximo">▶</button>
     </div>
   <div class="app-main">
+
+    <!-- Card vermelho fixo: pendências de validação de entrada (só admin) -->
+    <div id="alerta-entradas-pendentes" style="display:none;background:linear-gradient(135deg,#fef2f2,#fee2e2);border:2px solid #fca5a5;border-radius:14px;padding:12px 14px;margin:8px 0 12px;box-shadow:0 4px 12px rgba(220,38,38,.15)"></div>
 
     <div id="sec-consumo" class="section">
       <div class="top-row">
@@ -777,7 +780,7 @@
         <div class="date-bar"><label>📅</label><input type="date" id="data-entrada"></div>
       </div>
       <div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;">
-        <strong>🛍️ Entrada de Compras</strong>Itens comprados. <strong>Somados ao estoque</strong> na hora.
+        <strong>🛍️ Entradas de Compras</strong>Admin planeja itens a receber. Funcionárias validam quando chegarem.
       </div>
       <div class="loja-sel">
         <button class="loja-dd-btn is-empty" id="ddbtn-e" onclick="toggleLojaDD('e')">
@@ -803,7 +806,9 @@
         </select>
         <button class="filtro-clear" onclick="limparFiltro('ent')" title="Limpar filtros">✕</button>
       </div>
+      <div id="entrada-banner-info"></div>
       <div id="entrada-lista"></div>
+      <button class="btn btn-pink" id="btn-validar-tudo" onclick="validarTudoOK()" style="display:none;background:#16a34a;box-shadow:0 4px 14px rgba(22,163,74,.4);margin-bottom:8px">✓ Validar tudo conforme planejado</button>
       <button class="btn btn-pink" id="btn-sv-entrada" onclick="salvarEntrada()" style="background:var(--orange);box-shadow:0 4px 14px rgba(244,162,97,.4)">🛍️ Confirmar Entrada de Compra</button>
     </div>
 
@@ -1349,7 +1354,7 @@ function renderTabs(){
     {id:'importar',   label:'📥 Importar',      adminOnly:true},
     {id:'divergencia',label:'⚠️ Divergência',  adminOnly:true},
     {id:'compras',    label:'🛒 Compras',       adminOnly:true},
-    {id:'entradas',   label:'🛍️ Entradas',      adminOnly:true},
+    {id:'entradas',   label:'🛍️ Entradas',      adminOnly:false},
     {id:'historico',  label:'📜 Histórico',     adminOnly:true},
     {id:'financeiro', label:'💰 Financeiro',    adminOnly:true},
     {id:'config',     label:'⚙️ Config',        adminOnly:true, hideViewer:true},
@@ -1361,14 +1366,145 @@ function renderTabs(){
     return !t.adminOnly;
   });
   document.getElementById('tabs-container').innerHTML=visible.map((t,i)=>
-    `<button class="tab${i===0?' active':''}" onclick="showTab('${t.id}',this)">${t.label}</button>`
+    `<button class="tab${i===0?' active':''}" data-tab-id="${t.id}" onclick="showTab('${t.id}',this)">${t.label}</button>`
   ).join('');
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.getElementById('sec-'+visible[0].id).classList.add('active');
   // Esconde botões de lojas que o usuário não tem acesso
   ajustarBotoesLoja();
+  // Atualiza badges (ex: divergências em Entradas pro admin)
+  atualizarBadgesTabs();
   // Inicializa controle de scroll das tabs (desktop)
   setTimeout(setupTabsScroll, 50);
+}
+
+// Atualiza badges nas abas (ex: "🛍️ Entradas ⚠️3")
+function atualizarBadgesTabs(){
+  if(!currentUser) return;
+  const isAdmin = currentUser.role === 'admin';
+  document.querySelectorAll('.tab[data-tab-id]').forEach(btn => {
+    const tabId = btn.getAttribute('data-tab-id');
+    // Limpa o label original (label vem do allTabs)
+    const labelBase = btn.textContent.replace(/\s*⚠️\d+\s*$/, '');
+    btn.textContent = labelBase;
+    // Badge de divergências em Entradas (só pra admin)
+    if(tabId === 'entradas' && isAdmin){
+      const divs = _entradasComDivergencia();
+      const pend = _entradasPendentesValidacao();
+      const total = divs.length + pend.reduce((s,g)=>s+g.itens.length,0);
+      if(total > 0){
+        btn.textContent = `${labelBase.trim()} ⚠️${total}`;
+      }
+    }
+  });
+  // Atualiza também o card vermelho fixo
+  renderAlertaEntradasPendentes();
+}
+
+// Renderiza o card vermelho fixo no topo (só pra admin, só se houver pendências)
+function renderAlertaEntradasPendentes(){
+  const cont = document.getElementById('alerta-entradas-pendentes');
+  if(!cont) return;
+  if(currentUser?.role !== 'admin'){
+    cont.style.display = 'none';
+    return;
+  }
+  const grupos = _entradasPendentesValidacao();
+  if(grupos.length === 0){
+    cont.style.display = 'none';
+    return;
+  }
+  const totalItens = grupos.reduce((s,g)=> s + g.itens.length, 0);
+  let html = `<div style="display:flex;align-items:flex-start;gap:10px">
+    <div style="font-size:1.5rem;flex-shrink:0">⚠️</div>
+    <div style="flex:1">
+      <div style="font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;color:#991b1b;margin-bottom:2px">Entradas planejadas no estoque, mas não validadas</div>
+      <div style="font-size:.75rem;color:#7f1d1d;margin-bottom:8px">${totalItens} item(ns) em ${grupos.length} pedido(s). Esses valores já estão sendo considerados no estoque pelo valor que você planejou. Confirme abaixo ou postergue a data.</div>
+      <div style="display:flex;flex-direction:column;gap:6px">`;
+  grupos.forEach(g => {
+    const dataFmt = _fmtDataBr(g.data);
+    const lojaNm = nomeLoja(g.loja);
+    const itensTxt = g.itens.slice(0,3).map(i => `${i.nome} (${i.qtd} ${i.unidade})`).join(', ');
+    const maisTxt = g.itens.length > 3 ? ` +${g.itens.length-3} item(ns)` : '';
+    html += `<div style="background:white;border:1px solid #fecaca;border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.78rem;font-weight:800;color:#1f2937">${lojaIcon(g.loja)} ${lojaNm} · 📅 ${dataFmt}</div>
+          <div style="font-size:.7rem;color:var(--gray);margin-top:2px;line-height:1.3">${itensTxt}${maisTxt}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="aceitarPendencia(${g.loja},'${g.data}')" style="flex:1;min-width:120px;background:#16a34a;color:white;border:none;border-radius:8px;padding:7px 10px;font-size:.74rem;font-weight:800;cursor:pointer">✅ Aceitar como está</button>
+        <button onclick="postergarPendencia(${g.loja},'${g.data}')" style="flex:1;min-width:120px;background:#1e40af;color:white;border:none;border-radius:8px;padding:7px 10px;font-size:.74rem;font-weight:800;cursor:pointer">📅 Postergar data</button>
+      </div>
+    </div>`;
+  });
+  html += `</div></div></div>`;
+  cont.innerHTML = html;
+  cont.style.display = 'block';
+}
+
+// Aceita uma pendência: marca todos os itens daquele pedido como "auto-aceita pelo admin"
+async function aceitarPendencia(loja, data){
+  if(!confirm(`Confirmar todos os itens deste pedido como recebidos?\n\nLoja: ${nomeLoja(loja)}\nData: ${_fmtDataBr(data)}\n\nIsso vai marcar como "auto-aceito pelo admin" (sem validação da funcionária).`)) return;
+  const ts = new Date().toISOString();
+  const dataHoje = hoje();
+  const respAdm = currentUser?.label || currentUser?.name || 'Admin';
+  let count = 0;
+  db.entradas.forEach(e => {
+    if(Number(e.loja) !== Number(loja) || e.data !== data) return;
+    if(e.qtdValidada !== undefined && e.qtdValidada !== null) return; // já validado
+    const planejada = e.qtdPlanejada !== undefined ? Number(e.qtdPlanejada) : Number(e.qty)||0;
+    if(planejada <= 0) return;
+    if(e.qtdPlanejada === undefined) e.qtdPlanejada = planejada;
+    e.qtdValidada = planejada;
+    e.validadoPor = respAdm;
+    e.validadoData = dataHoje;
+    e.validadoEm = ts;
+    e.autoAceito = true; // marcação especial: auto-aceito pelo admin (não foi a funcionária)
+    count++;
+  });
+  if(count === 0){ showToast('⚠️ Nada para aceitar'); return; }
+  const ok = await saveCloud('entradas');
+  if(ok){
+    renderAlertaEntradasPendentes();
+    renderEntradas();
+    renderProjetado();
+    atualizarBadgesTabs();
+    showToast(`✅ ${count} item(ns) auto-aceito(s) pelo admin`);
+  } else {
+    showToast('❌ Erro ao aceitar');
+  }
+}
+
+// Posterga uma pendência: pede nova data e move todos os itens
+async function postergarPendencia(loja, data){
+  const dataAtual = _fmtDataBr(data);
+  const novaIso = prompt(`Postergar pedido de ${nomeLoja(loja)} de ${dataAtual} para qual data?\n\nDigite no formato AAAA-MM-DD (ex: 2026-05-20):`, hoje());
+  if(!novaIso) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(novaIso)){ showToast('⚠️ Formato inválido. Use AAAA-MM-DD'); return; }
+  if(novaIso === data){ showToast('⚠️ Mesma data atual'); return; }
+  // Confirma
+  if(!confirm(`Mover este pedido para ${_fmtDataBr(novaIso)}?\n\nLoja: ${nomeLoja(loja)}\nData atual: ${dataAtual}\nNova data: ${_fmtDataBr(novaIso)}`)) return;
+
+  let count = 0;
+  db.entradas.forEach(e => {
+    if(Number(e.loja) !== Number(loja) || e.data !== data) return;
+    if(e.qtdValidada !== undefined && e.qtdValidada !== null) return; // não posterga validados
+    e.data = novaIso;
+    count++;
+  });
+  if(count === 0){ showToast('⚠️ Nada para postergar'); return; }
+  const ok = await saveCloud('entradas');
+  if(ok){
+    renderAlertaEntradasPendentes();
+    renderEntradas();
+    renderProjetado();
+    atualizarBadgesTabs();
+    showToast(`📅 ${count} item(ns) postergado(s) para ${_fmtDataBr(novaIso)}`);
+  } else {
+    showToast('❌ Erro ao postergar');
+  }
 }
 
 function setupTabsScroll(){
@@ -1480,6 +1616,55 @@ async function carregarDados(){
   renderConsumo();renderInv();renderProjetado();renderConfig();
   renderEntradas();renderPerdas();gerarCompras();renderDivergencia();renderImportar();
   setLoad(false);
+  // Alerta admin sobre divergências de entrada (não-vistas) ao abrir o app
+  if(currentUser?.role === 'admin'){
+    renderAlertaEntradasPendentes();
+    setTimeout(()=>{
+      const divs = _entradasComDivergencia();
+      if(divs.length > 0){
+        showToast(`⚠️ ${divs.length} divergência(s) na aba Entradas! Verifique.`);
+      }
+    }, 1500);
+  }
+}
+
+// Retorna lista de entradas com divergência (planejado != validado)
+function _entradasComDivergencia(){
+  return (db.entradas||[]).filter(e => {
+    if(e.qtdValidada === undefined || e.qtdValidada === null) return false;
+    const planejada = e.qtdPlanejada !== undefined ? Number(e.qtdPlanejada) : Number(e.qty)||0;
+    return Number(e.qtdValidada) !== planejada;
+  });
+}
+
+// Retorna lista de entradas pendentes de validação (data planejada < hoje E não validada)
+// Agrupa por loja+data pra exibir no alerta
+function _entradasPendentesValidacao(){
+  const dataHoje = hoje();
+  const pendentes = (db.entradas||[]).filter(e => {
+    // Pula se já foi validada
+    if(e.qtdValidada !== undefined && e.qtdValidada !== null) return false;
+    // Só pendentes com data passada (data planejada < hoje)
+    if(!e.data || e.data >= dataHoje) return false;
+    // Tem quantidade planejada > 0
+    const planejada = e.qtdPlanejada !== undefined ? Number(e.qtdPlanejada) : Number(e.qty)||0;
+    return planejada > 0;
+  });
+  // Agrupa por loja+data: {chave: {loja, data, itens:[{itemId, nome, qtd, unidade}]}}
+  const grupos = {};
+  pendentes.forEach(e => {
+    const chave = `${e.loja}|${e.data}`;
+    if(!grupos[chave]) grupos[chave] = { loja: Number(e.loja), data: e.data, itens: [] };
+    const item = db.items.find(i => i.id === e.itemId);
+    const planejada = e.qtdPlanejada !== undefined ? Number(e.qtdPlanejada) : Number(e.qty)||0;
+    grupos[chave].itens.push({
+      itemId: e.itemId,
+      nome: item?.nome || e.itemId,
+      qtd: planejada,
+      unidade: item?.unidade || '',
+    });
+  });
+  return Object.values(grupos).sort((a,b)=> (a.data+a.loja).localeCompare(b.data+b.loja));
 }
 
 function isViewer(){
@@ -1851,6 +2036,18 @@ function ultimoInventario(loja,ateData){
   return{data:dataInv,inv};
 }
 
+// Retorna a quantidade efetiva de uma entrada e a data em que ela conta no estoque:
+// - Se foi validada: usa qtdValidada e validadoData (dia em que chegou de fato)
+// - Senão: usa qtdPlanejada (ou qty antigo) na data planejada (e.data)
+function _entradaEfetiva(e){
+  const planejada = Number(e.qtdPlanejada);
+  const qty = !isNaN(planejada) ? planejada : (Number(e.qty)||0);
+  if(e.qtdValidada !== undefined && e.qtdValidada !== null){
+    return { qtd: Number(e.qtdValidada)||0, data: e.validadoData || e.data };
+  }
+  return { qtd: qty, data: e.data };
+}
+
 function calcProjetado(loja,ateData){
   const base=ultimoInventario(loja,ateData);if(!base)return null;
   const proj={};db.items.forEach(item=>{proj[item.id]=base.inv[item.id]??null;});
@@ -1859,10 +2056,13 @@ function calcProjetado(loja,ateData){
     if(proj[c.itemId]==null) proj[c.itemId]=0;
     proj[c.itemId]=(proj[c.itemId]||0)-c.qty;
   });
-  // Soma entradas de compra posteriores ao inventário
-  (db.entradas||[]).filter(e=>e.loja==loja&&e.data>=base.data&&e.data<=ateData).forEach(e=>{
-    if(proj[e.itemId]==null) proj[e.itemId]=0;
-    proj[e.itemId]=(proj[e.itemId]||0)+e.qty;
+  // Soma entradas: usa qtdValidada se existe, senão qtdPlanejada; usa data validada se existe, senão data planejada
+  (db.entradas||[]).filter(e=>e.loja==loja).forEach(e=>{
+    const ef = _entradaEfetiva(e);
+    if(ef.data >= base.data && ef.data <= ateData){
+      if(proj[e.itemId]==null) proj[e.itemId]=0;
+      proj[e.itemId]=(proj[e.itemId]||0)+ef.qtd;
+    }
   });
   // Desconta perdas/erros (mesmo que item não esteja no inventário base)
   (db.perdas||[]).filter(p=>p.loja==loja&&p.data>=base.data&&p.data<=ateData).forEach(p=>{
@@ -2167,30 +2367,245 @@ async function salvarPerdas(){
 function renderEntradas(){
   toggleNoLoja('sec-entradas', !lojaE);
   if(!lojaE){ document.getElementById('entrada-lista').innerHTML = mensagemSelecioneLoja(false); return; }
-  const dt=document.getElementById('data-entrada').value;
+  if(!Array.isArray(db.items) || db.items.length === 0){
+    document.getElementById('entrada-lista').innerHTML = `<div class="empty"><span class="ej">⏳</span><p>Carregando itens do estoque...</p></div>`;
+    return;
+  }
+  const dt = document.getElementById('data-entrada').value;
+  const isAdmin = currentUser?.role === 'admin';
+  const dataHoje = hoje();
+  const isFutura = dt > dataHoje;
+
+  // Mostra/esconde botão de salvar conforme perfil
+  const btnSalvar = document.getElementById('btn-sv-entrada');
+  if(btnSalvar){
+    btnSalvar.style.display = isAdmin ? 'block' : 'none';
+  }
+
+  // Banner informativo conforme perfil
+  let banner = '';
+  if(!isAdmin){
+    banner = `<div class="info-box" style="background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a;margin-bottom:8px">
+      <strong>📦 Validação de Entrega</strong>O administrador planejou estes itens. Confirme o que chegou.
+      Use <strong>✓ OK</strong> se está igual, ou digite o valor real recebido. ${isFutura ? '<br>📅 <strong>Data prevista:</strong> '+_fmtDataBr(dt) : ''}
+    </div>`;
+  } else if(isFutura){
+    banner = `<div class="info-box" style="background:#fef3c7;border-color:#fde68a;color:#92400e;margin-bottom:8px">
+      <strong>📅 Entrada Planejada</strong>Você está editando uma entrada com data futura (${_fmtDataBr(dt)}). As funcionárias podem validar quando o pedido chegar.
+    </div>`;
+  }
+  // Insere banner antes da lista
+  const bannerEl = document.getElementById('entrada-banner-info');
+  if(bannerEl) bannerEl.innerHTML = banner;
+
   const cats=[...new Set(db.items.map(i=>i.cat))];
-  document.getElementById('entrada-lista').innerHTML=cats.map(cat=>{
-    const its=db.items.filter(i=>i.cat===cat);if(!its.length)return'';
-    return`<div class="card" data-cat="${cat}"><div class="card-title"><span>${CAT_ICONS[cat]}</span>${CAT_LABELS[cat]}</div>
-      <div class="row-hdr"><div class="rh-name">Item</div><div class="rh-col">Qtd. comprada</div></div>
-      ${its.map(item=>{
-        const prev=db.entradas.filter(e=>e.data===dt&&e.loja==lojaE&&e.itemId===item.id).reduce((s,e)=>s+e.qty,0);
-        return`<div class="item-row" data-nome="${item.nome.toLowerCase()}"><div class="item-info"><div class="item-name">${item.nome}</div><div class="item-unit">${item.unidade}</div></div>
-          <div><input class="qty-input" type="number" min="0" step="1" id="ent-${item.id}" placeholder="0" value="${prev||''}">
-          <div style="font-size:.65rem;color:var(--gray);text-align:center">${item.unidade}</div></div></div>`;
-      }).join('')}</div>`;
+  document.getElementById('entrada-lista').innerHTML = cats.map(cat=>{
+    const its=db.items.filter(i=>i.cat===cat);
+    if(!its.length) return '';
+    let rowsHtml = '';
+    let temItem = false;
+    its.forEach(item=>{
+      const ents = db.entradas.filter(e=>e.data===dt && e.loja==lojaE && e.itemId===item.id);
+      // Compatibilidade: entradas antigas sem qtdPlanejada usam .qty
+      const planejada = ents.reduce((s,e)=>s + (Number(e.qtdPlanejada)||Number(e.qty)||0), 0);
+      // Validação: usa qtdValidada da entrada mais recente (se existir)
+      const validadasArr = ents.filter(e => e.qtdValidada !== undefined && e.qtdValidada !== null);
+      let qtdValidada = null, validadoPor = '', validadoData = '', autoAceito = false;
+      if(validadasArr.length > 0){
+        // Soma todas as qtdValidada (geralmente é 1 entrada agregada, mas suporta múltiplas)
+        qtdValidada = validadasArr.reduce((s,e)=> s + (Number(e.qtdValidada)||0), 0);
+        const ultimo = validadasArr.sort((a,b)=> (b.validadoEm||'').localeCompare(a.validadoEm||''))[0];
+        validadoPor = ultimo.validadoPor || '';
+        validadoData = ultimo.validadoData || '';
+        autoAceito = !!ultimo.autoAceito;
+      }
+      const temDivergencia = qtdValidada !== null && qtdValidada !== planejada;
+
+      // Renderiza apenas se admin OU se tem algo planejado
+      if(!isAdmin && planejada === 0) return; // funcionária só vê o que admin planejou
+      temItem = true;
+
+      if(isAdmin){
+        // ADMIN: input editável + ao lado mostra valor validado (se houver)
+        let validadoHtml = '';
+        if(qtdValidada !== null){
+          if(autoAceito){
+            validadoHtml = `<div style="font-size:.66rem;margin-top:3px;color:#7c2d12;font-weight:700;background:#fef3c7;border:1px solid #fde68a;border-radius:6px;padding:2px 6px;display:inline-block">🤖 Auto-aceito: ${qtdValidada} ${item.unidade}</div>`;
+          } else if(temDivergencia){
+            validadoHtml = `<div style="font-size:.66rem;margin-top:3px;color:#dc2626;font-weight:700">⚠️ Validado: ${qtdValidada} ${item.unidade}${validadoPor?' por '+validadoPor:''}</div>`;
+          } else {
+            validadoHtml = `<div style="font-size:.66rem;margin-top:3px;color:#16a34a;font-weight:700">✓ Validado: ${qtdValidada} ${item.unidade}${validadoPor?' por '+validadoPor:''}</div>`;
+          }
+        } else if(planejada > 0){
+          validadoHtml = `<div style="font-size:.66rem;margin-top:3px;color:var(--gray);font-style:italic">⏳ Aguardando validação</div>`;
+        }
+        rowsHtml += `<div class="item-row" data-nome="${item.nome.toLowerCase()}">
+          <div class="item-info">
+            <div class="item-name">${item.nome}</div>
+            <div class="item-unit">${item.unidade}</div>
+            ${validadoHtml}
+          </div>
+          <div>
+            <input class="qty-input" type="number" min="0" step="1" id="ent-${item.id}" placeholder="0" value="${planejada||''}">
+            <div style="font-size:.65rem;color:var(--gray);text-align:center">planejado</div>
+          </div>
+        </div>`;
+      } else {
+        // FUNCIONÁRIA: vê planejado (read-only) + botão OK + input pra valor diferente
+        // Pode revalidar SE foi validado hoje (mesmo dia)
+        const podeEditar = qtdValidada === null || validadoData === dataHoje;
+        const valorValidadoInput = qtdValidada !== null ? qtdValidada : '';
+        const statusBadge = qtdValidada !== null
+          ? (temDivergencia
+              ? `<span style="background:#fee2e2;color:#991b1b;border-radius:6px;padding:1px 7px;font-size:.62rem;font-weight:800">⚠️ DIVERGENTE</span>`
+              : `<span style="background:#dcfce7;color:#166534;border-radius:6px;padding:1px 7px;font-size:.62rem;font-weight:800">✓ VALIDADO</span>`)
+          : `<span style="background:#fef3c7;color:#92400e;border-radius:6px;padding:1px 7px;font-size:.62rem;font-weight:800">⏳ PENDENTE</span>`;
+        const inputDisabled = !podeEditar ? 'disabled' : '';
+        const inputStyle = !podeEditar ? 'background:#f3f4f6;color:#9ca3af' : '';
+        rowsHtml += `<div class="item-row" data-nome="${item.nome.toLowerCase()}" style="${temDivergencia?'background:#fef2f2':''}">
+          <div class="item-info">
+            <div class="item-name">${item.nome} ${statusBadge}</div>
+            <div class="item-unit">${item.unidade}</div>
+            <div style="font-size:.7rem;margin-top:3px;color:#374151;font-weight:700">📋 Planejado: <strong>${planejada}</strong> ${item.unidade}</div>
+            ${qtdValidada !== null && validadoPor ? `<div style="font-size:.62rem;color:var(--gray);margin-top:1px">Validado${validadoData?' em '+_fmtDataBr(validadoData):''}${validadoPor?' por '+validadoPor:''}</div>` : ''}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:stretch;min-width:96px">
+            ${podeEditar ? `<button onclick="validarEntradaOK('${item.id}', ${planejada})" style="background:#16a34a;color:white;border:none;border-radius:8px;padding:5px 6px;font-size:.7rem;font-weight:800;cursor:pointer">✓ OK</button>` : ''}
+            <input class="qty-input" type="number" min="0" step="1" id="val-${item.id}" placeholder="Diferente?" value="${valorValidadoInput}" ${inputDisabled} onchange="validarEntradaInput('${item.id}')" style="${inputStyle};font-size:.85rem">
+            <div style="font-size:.6rem;color:var(--gray);text-align:center">${podeEditar ? 'recebido' : 'travado'}</div>
+          </div>
+        </div>`;
+      }
+    });
+    if(!temItem) return '';
+    const lbl = isAdmin ? 'Qtd. planejada' : 'Validação';
+    return `<div class="card" data-cat="${cat}">
+      <div class="card-title"><span>${CAT_ICONS[cat]}</span>${CAT_LABELS[cat]}</div>
+      <div class="row-hdr"><div class="rh-name">Item</div><div class="rh-col">${lbl}</div></div>
+      ${rowsHtml}
+    </div>`;
   }).join('');
+
+  // Se for funcionária e não tem nada planejado, mostra mensagem
+  if(!isAdmin && document.getElementById('entrada-lista').innerHTML.trim() === ''){
+    document.getElementById('entrada-lista').innerHTML = `<div class="empty"><span class="ej">📭</span><p>Nenhuma entrada planejada para esta data.<br>O administrador ainda não lançou itens para receber em ${_fmtDataBr(dt)}.</p></div>`;
+  }
+
   aplicarFiltroBusca('ent');
+  // Mostra/esconde botão "Validar tudo" pra funcionária
+  const btnValidarTudo = document.getElementById('btn-validar-tudo');
+  if(btnValidarTudo){
+    btnValidarTudo.style.display = !isAdmin ? 'block' : 'none';
+  }
+}
+
+function _fmtDataBr(iso){
+  if(!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso || '';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+// Valida 1 item da entrada (botão ✓ OK ou ao mudar o input)
+async function validarEntradaOK(itemId, qtdValidada){
+  const dt = document.getElementById('data-entrada').value;
+  const respValidador = currentUser?.label || currentUser?.name || '—';
+  const dataHoje = hoje();
+  const ts = new Date().toISOString();
+
+  // Acha a entrada planejada deste item/data/loja
+  const idx = db.entradas.findIndex(e => e.data===dt && e.loja==lojaE && e.itemId===itemId);
+  if(idx === -1){ showToast('⚠️ Entrada não encontrada'); return; }
+
+  const e = db.entradas[idx];
+  // Trava revalidação fora do mesmo dia
+  if(e.validadoData && e.validadoData !== dataHoje){
+    showToast('🔒 Validação só pode ser alterada no mesmo dia');
+    return;
+  }
+  // Atualiza: marca como validado com a quantidade indicada
+  if(e.qtdPlanejada === undefined) e.qtdPlanejada = Number(e.qty)||0;
+  e.qtdValidada = Number(qtdValidada)||0;
+  e.validadoPor = respValidador;
+  e.validadoData = dataHoje;
+  e.validadoEm = ts;
+
+  const ok = await saveCloud('entradas');
+  if(ok){
+    renderEntradas();
+    renderProjetado();
+    atualizarBadgesTabs();
+    const planejada = Number(e.qtdPlanejada)||0;
+    if(Number(qtdValidada) === planejada){
+      showToast('✅ Validado: bate com o planejado');
+    } else {
+      showToast(`⚠️ Validado com divergência: ${qtdValidada} (planejado: ${planejada})`);
+    }
+  } else {
+    showToast('❌ Erro ao validar');
+  }
+}
+
+// Pra funcionária: lê o input e dispara validação
+async function validarEntradaInput(itemId){
+  const inp = document.getElementById('val-'+itemId);
+  if(!inp) return;
+  const v = parseFloat(inp.value);
+  if(isNaN(v) || v < 0){ showToast('⚠️ Valor inválido'); return; }
+  await validarEntradaOK(itemId, v);
+}
+
+// Validar TODOS os itens com o valor planejado de uma vez (botão "✓ Validar tudo")
+async function validarTudoOK(){
+  const dt = document.getElementById('data-entrada').value;
+  const respValidador = currentUser?.label || currentUser?.name || '—';
+  const dataHoje = hoje();
+  const ts = new Date().toISOString();
+  if(!confirm('Confirmar que TODOS os itens chegaram exatamente conforme planejado?')) return;
+  let count = 0;
+  db.entradas.forEach(e => {
+    if(e.data===dt && e.loja==lojaE){
+      // Pula se já foi validado fora do dia
+      if(e.validadoData && e.validadoData !== dataHoje) return;
+      if(e.qtdPlanejada === undefined) e.qtdPlanejada = Number(e.qty)||0;
+      e.qtdValidada = Number(e.qtdPlanejada)||0;
+      e.validadoPor = respValidador;
+      e.validadoData = dataHoje;
+      e.validadoEm = ts;
+      count++;
+    }
+  });
+  if(count === 0){ showToast('⚠️ Nada pra validar'); return; }
+  const ok = await saveCloud('entradas');
+  if(ok){
+    renderEntradas();
+    renderProjetado();
+    atualizarBadgesTabs();
+    showToast(`✅ ${count} item(ns) validado(s) conforme planejado`);
+  }
 }
 
 async function salvarEntrada(){
-  const dt=document.getElementById('data-entrada').value;
-  if(currentUser.role!=='admin' && dt<hoje()){
-    showToast('⚠️ Não é permitido alterar entradas de datas anteriores!');return;
+  // Só admin pode salvar planejamento de entrada
+  if(currentUser?.role !== 'admin'){
+    showToast('🔒 Apenas o administrador pode planejar entradas');
+    return;
   }
+  const dt=document.getElementById('data-entrada').value;
   const btn=document.getElementById('btn-sv-entrada');btn.disabled=true;
   const timestamp=new Date().toISOString();
   const itensEntrada=[];
+  // Coleta validações existentes pra preservar (não perder o trabalho da funcionária)
+  const validacoesAtuais = {};
+  db.entradas.filter(e=>e.data===dt&&e.loja==lojaE).forEach(e=>{
+    if(e.qtdValidada !== undefined && e.qtdValidada !== null){
+      validacoesAtuais[e.itemId] = {
+        qtdValidada: e.qtdValidada,
+        validadoPor: e.validadoPor,
+        validadoData: e.validadoData,
+        validadoEm: e.validadoEm,
+      };
+    }
+  });
   // Remove entradas anteriores dessa data+loja e re-insere
   db.entradas=db.entradas.filter(e=>!(e.data===dt&&e.loja==lojaE));
   const respEnt = (currentUser?.label||currentUser?.login||'—');
@@ -2198,14 +2613,33 @@ async function salvarEntrada(){
     const el=document.getElementById('ent-'+item.id);if(!el)return;
     const val=parseFloat(el.value);
     if(!isNaN(val)&&val>0){
-      db.entradas.push({data:dt,loja:lojaE,itemId:item.id,qty:val,usuario:respEnt,ts:timestamp});
+      const entrada = {
+        data: dt,
+        loja: lojaE,
+        itemId: item.id,
+        qty: val,              // mantém pra compatibilidade
+        qtdPlanejada: val,     // novo: valor planejado pelo admin
+        usuario: respEnt,
+        ts: timestamp,
+      };
+      // Preserva validação se já existia (não apaga o que a funcionária validou)
+      const valExist = validacoesAtuais[item.id];
+      if(valExist){
+        entrada.qtdValidada = valExist.qtdValidada;
+        entrada.validadoPor = valExist.validadoPor;
+        entrada.validadoData = valExist.validadoData;
+        entrada.validadoEm = valExist.validadoEm;
+      }
+      db.entradas.push(entrada);
       itensEntrada.push({nome:item.nome,qty:val,unidade:item.unidade});
     }
   });
   const ok=await saveCloud('entradas');
   if(ok){
-    renderProjetado(); // atualiza Estoque (entradas somam ao projetado)
-    showToast(`🛍️ Entrada registrada! ${itensEntrada.length} item(ns) adicionados ao estoque.`);
+    renderProjetado();
+    renderEntradas();
+    atualizarBadgesTabs();
+    showToast(`🛍️ Entrada planejada salva! ${itensEntrada.length} item(ns) registrado(s).`);
   } else {
     showToast('⚠️ Erro ao salvar!');
   }
