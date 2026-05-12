@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.68</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.71</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1470,6 +1470,7 @@ async function aceitarPendencia(loja, data){
     renderAlertaEntradasPendentes();
     renderEntradas();
     renderProjetado();
+    gerarCompras();
     atualizarBadgesTabs();
     showToast(`✅ ${count} item(ns) auto-aceito(s) pelo admin`);
   } else {
@@ -1500,6 +1501,7 @@ async function postergarPendencia(loja, data){
     renderAlertaEntradasPendentes();
     renderEntradas();
     renderProjetado();
+    gerarCompras();
     atualizarBadgesTabs();
     showToast(`📅 ${count} item(ns) postergado(s) para ${_fmtDataBr(novaIso)}`);
   } else {
@@ -2371,6 +2373,13 @@ function renderEntradas(){
     document.getElementById('entrada-lista').innerHTML = `<div class="empty"><span class="ej">⏳</span><p>Carregando itens do estoque...</p></div>`;
     return;
   }
+  // PRESERVA valores digitados nos inputs antes de re-render (evita perda ao auto-refresh)
+  // Agora IDs incluem data: ent-{data}-{itemId}, val-{data}-{itemId}
+  const valoresDigitados = {};
+  document.querySelectorAll('#entrada-lista input[id^="ent-"], #entrada-lista input[id^="val-"]').forEach(inp => {
+    valoresDigitados[inp.id] = inp.value;
+  });
+
   const dt = document.getElementById('data-entrada').value;
   const isAdmin = currentUser?.role === 'admin';
   const dataHoje = hoje();
@@ -2386,116 +2395,289 @@ function renderEntradas(){
   let banner = '';
   if(!isAdmin){
     banner = `<div class="info-box" style="background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a;margin-bottom:8px">
-      <strong>📦 Validação de Entrega</strong>O administrador planejou estes itens. Confirme o que chegou.
-      Use <strong>✓ OK</strong> se está igual, ou digite o valor real recebido. ${isFutura ? '<br>📅 <strong>Data prevista:</strong> '+_fmtDataBr(dt) : ''}
+      <strong>📦 Validação de Entrega</strong>Você vê TODOS os pedidos planejados aguardando validação. Confirme conforme chegarem.
+      Use <strong>✓ OK</strong> se está igual, ou digite o valor real recebido.
     </div>`;
-  } else if(isFutura){
-    banner = `<div class="info-box" style="background:#fef3c7;border-color:#fde68a;color:#92400e;margin-bottom:8px">
-      <strong>📅 Entrada Planejada</strong>Você está editando uma entrada com data futura (${_fmtDataBr(dt)}). As funcionárias podem validar quando o pedido chegar.
+  } else {
+    banner = `<div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;margin-bottom:8px">
+      <strong>📅 Planejamento de Entradas</strong>Você vê a data selecionada (${_fmtDataBr(dt)}) e datas futuras planejadas. ${isFutura ? '<br>Lançando para data futura.' : ''}
     </div>`;
   }
-  // Insere banner antes da lista
   const bannerEl = document.getElementById('entrada-banner-info');
   if(bannerEl) bannerEl.innerHTML = banner;
 
-  const cats=[...new Set(db.items.map(i=>i.cat))];
-  document.getElementById('entrada-lista').innerHTML = cats.map(cat=>{
-    const its=db.items.filter(i=>i.cat===cat);
-    if(!its.length) return '';
-    let rowsHtml = '';
-    let temItem = false;
-    its.forEach(item=>{
-      const ents = db.entradas.filter(e=>e.data===dt && e.loja==lojaE && e.itemId===item.id);
-      // Compatibilidade: entradas antigas sem qtdPlanejada usam .qty
-      const planejada = ents.reduce((s,e)=>s + (Number(e.qtdPlanejada)||Number(e.qty)||0), 0);
-      // Validação: usa qtdValidada da entrada mais recente (se existir)
-      const validadasArr = ents.filter(e => e.qtdValidada !== undefined && e.qtdValidada !== null);
-      let qtdValidada = null, validadoPor = '', validadoData = '', autoAceito = false;
-      if(validadasArr.length > 0){
-        // Soma todas as qtdValidada (geralmente é 1 entrada agregada, mas suporta múltiplas)
-        qtdValidada = validadasArr.reduce((s,e)=> s + (Number(e.qtdValidada)||0), 0);
-        const ultimo = validadasArr.sort((a,b)=> (b.validadoEm||'').localeCompare(a.validadoEm||''))[0];
-        validadoPor = ultimo.validadoPor || '';
-        validadoData = ultimo.validadoData || '';
-        autoAceito = !!ultimo.autoAceito;
-      }
-      const temDivergencia = qtdValidada !== null && qtdValidada !== planejada;
+  // ── Determina quais DATAS aparecem na tela ─────────────────────────────────
+  // Admin: data selecionada + futuras com entradas planejadas
+  // Funcionária: TODAS datas com entradas não-validadas (passado, hoje, futuro)
+  const datasComEntradas = new Set();
+  if(isAdmin){
+    datasComEntradas.add(dt); // sempre mostra a data atual (mesmo vazia, pra poder lançar)
+    (db.entradas||[]).forEach(e => {
+      if(Number(e.loja) !== Number(lojaE)) return;
+      if(!e.data || e.data <= dt) return; // só datas posteriores à selecionada
+      const planejada = e.qtdPlanejada !== undefined ? Number(e.qtdPlanejada) : Number(e.qty)||0;
+      if(planejada > 0) datasComEntradas.add(e.data);
+    });
+  } else {
+    // Funcionária: tudo planejado não-validado
+    (db.entradas||[]).forEach(e => {
+      if(Number(e.loja) !== Number(lojaE)) return;
+      if(!e.data) return;
+      if(e.qtdValidada !== undefined && e.qtdValidada !== null) return; // já validado
+      const planejada = e.qtdPlanejada !== undefined ? Number(e.qtdPlanejada) : Number(e.qty)||0;
+      if(planejada > 0) datasComEntradas.add(e.data);
+    });
+    // Também inclui datas com entradas validadas hoje (pra poder revisar)
+    (db.entradas||[]).forEach(e => {
+      if(Number(e.loja) !== Number(lojaE)) return;
+      if(!e.data) return;
+      if(e.qtdValidada === undefined || e.qtdValidada === null) return;
+      if(e.validadoData !== dataHoje) return; // só validados hoje
+      datasComEntradas.add(e.data);
+    });
+  }
+  const datasOrdenadas = [...datasComEntradas].sort();
 
-      // Renderiza apenas se admin OU se tem algo planejado
-      if(!isAdmin && planejada === 0) return; // funcionária só vê o que admin planejou
-      temItem = true;
+  // ── Calcula itens "necessário comprar" (só admin, só na data selecionada) ──
+  const itensPrecisaComprar = new Set();
+  if(isAdmin){
+    const pr = calcProjetado(Number(lojaE), dataHoje);
+    if(pr){
+      db.items.forEach(item => {
+        const qtdAtual = pr.proj[item.id];
+        const minimo = (db.minimos||{})[item.id];
+        if(minimo === undefined || minimo === null || minimo <= 0) return;
+        if(qtdAtual === null || qtdAtual === undefined) return;
+        if(Number(qtdAtual) >= Number(minimo)) return;
+        let qtdPlanejadoOutras = 0;
+        (db.entradas||[]).forEach(e => {
+          if(Number(e.loja) !== Number(lojaE)) return;
+          if(e.itemId !== item.id) return;
+          if(!e.data || e.data < dataHoje) return;
+          if(e.data === dt) return; // exclui data sendo editada
+          if(e.qtdValidada !== undefined && e.qtdValidada !== null) return;
+          const p = e.qtdPlanejada !== undefined ? Number(e.qtdPlanejada) : Number(e.qty)||0;
+          if(p > 0) qtdPlanejadoOutras += p;
+        });
+        if(Number(qtdAtual) + qtdPlanejadoOutras >= Number(minimo)) return;
+        itensPrecisaComprar.add(item.id);
+      });
+    }
+  }
 
-      if(isAdmin){
-        // ADMIN: input editável + ao lado mostra valor validado (se houver)
-        let validadoHtml = '';
-        if(qtdValidada !== null){
-          if(autoAceito){
-            validadoHtml = `<div style="font-size:.66rem;margin-top:3px;color:#7c2d12;font-weight:700;background:#fef3c7;border:1px solid #fde68a;border-radius:6px;padding:2px 6px;display:inline-block">🤖 Auto-aceito: ${qtdValidada} ${item.unidade}</div>`;
-          } else if(temDivergencia){
-            validadoHtml = `<div style="font-size:.66rem;margin-top:3px;color:#dc2626;font-weight:700">⚠️ Validado: ${qtdValidada} ${item.unidade}${validadoPor?' por '+validadoPor:''}</div>`;
-          } else {
-            validadoHtml = `<div style="font-size:.66rem;margin-top:3px;color:#16a34a;font-weight:700">✓ Validado: ${qtdValidada} ${item.unidade}${validadoPor?' por '+validadoPor:''}</div>`;
-          }
-        } else if(planejada > 0){
-          validadoHtml = `<div style="font-size:.66rem;margin-top:3px;color:var(--gray);font-style:italic">⏳ Aguardando validação</div>`;
+  // Constrói linha de UM item, para UMA data específica
+  function _construirLinhaItem(item, dataAlvo, contextoSugestaoCompra){
+    const ents = db.entradas.filter(e=>e.data===dataAlvo && e.loja==lojaE && e.itemId===item.id);
+    const planejada = ents.reduce((s,e)=>s + (Number(e.qtdPlanejada)||Number(e.qty)||0), 0);
+    const validadasArr = ents.filter(e => e.qtdValidada !== undefined && e.qtdValidada !== null);
+    let qtdValidada = null, validadoPor = '', validadoData = '', autoAceito = false;
+    if(validadasArr.length > 0){
+      qtdValidada = validadasArr.reduce((s,e)=> s + (Number(e.qtdValidada)||0), 0);
+      const ultimo = validadasArr.sort((a,b)=> (b.validadoEm||'').localeCompare(a.validadoEm||''))[0];
+      validadoPor = ultimo.validadoPor || '';
+      validadoData = ultimo.validadoData || '';
+      autoAceito = !!ultimo.autoAceito;
+    }
+    const temDivergencia = qtdValidada !== null && qtdValidada !== planejada;
+
+    // Funcionária: só vê se tem planejado
+    if(!isAdmin && planejada === 0) return '';
+
+    if(isAdmin){
+      let validadoHtml = '';
+      if(qtdValidada !== null){
+        if(autoAceito){
+          validadoHtml = `<div style="font-size:.66rem;margin-top:3px;color:#7c2d12;font-weight:700;background:#fef3c7;border:1px solid #fde68a;border-radius:6px;padding:2px 6px;display:inline-block">🤖 Auto-aceito: ${qtdValidada} ${item.unidade}</div>`;
+        } else if(temDivergencia){
+          validadoHtml = `<div style="font-size:.66rem;margin-top:3px;color:#dc2626;font-weight:700">⚠️ Validado: ${qtdValidada} ${item.unidade}${validadoPor?' por '+validadoPor:''}</div>`;
+        } else {
+          validadoHtml = `<div style="font-size:.66rem;margin-top:3px;color:#16a34a;font-weight:700">✓ Validado: ${qtdValidada} ${item.unidade}${validadoPor?' por '+validadoPor:''}</div>`;
         }
-        rowsHtml += `<div class="item-row" data-nome="${item.nome.toLowerCase()}">
+      } else if(planejada > 0){
+        validadoHtml = `<div style="font-size:.66rem;margin-top:3px;color:var(--gray);font-style:italic">⏳ Aguardando validação</div>`;
+      }
+      let sugestaoCompra = '';
+      if(contextoSugestaoCompra && itensPrecisaComprar.has(item.id) && planejada === 0){
+        const pr = calcProjetado(Number(lojaE), dataHoje);
+        const qtdAtual = pr?.proj[item.id] ?? 0;
+        const minimo = (db.minimos||{})[item.id] || 0;
+        const sugerido = Math.max(0, Math.ceil(minimo * 2 - qtdAtual));
+        sugestaoCompra = `<div style="font-size:.6rem;margin-top:2px;color:#9a3412">💡 Sugestão: ${sugerido} ${item.unidade} (atual ${qtdAtual}, mín ${minimo})</div>`;
+      }
+      // Admin pode editar SÓ a data selecionada (pra evitar confusão de IDs)
+      const editavel = dataAlvo === dt;
+      const inpId = `ent-${dataAlvo}-${item.id}`;
+      const valorMostrar = planejada || '';
+      if(editavel){
+        return `<div class="item-row" data-nome="${item.nome.toLowerCase()}">
           <div class="item-info">
             <div class="item-name">${item.nome}</div>
             <div class="item-unit">${item.unidade}</div>
             ${validadoHtml}
+            ${sugestaoCompra}
           </div>
           <div>
-            <input class="qty-input" type="number" min="0" step="1" id="ent-${item.id}" placeholder="0" value="${planejada||''}">
+            <input class="qty-input" type="number" min="0" step="1" id="${inpId}" placeholder="0" value="${valorMostrar}">
             <div style="font-size:.65rem;color:var(--gray);text-align:center">planejado</div>
           </div>
         </div>`;
       } else {
-        // FUNCIONÁRIA: vê planejado (read-only) + botão OK + input pra valor diferente
-        // Pode revalidar SE foi validado hoje (mesmo dia)
-        const podeEditar = qtdValidada === null || validadoData === dataHoje;
-        const valorValidadoInput = qtdValidada !== null ? qtdValidada : '';
-        const statusBadge = qtdValidada !== null
-          ? (temDivergencia
-              ? `<span style="background:#fee2e2;color:#991b1b;border-radius:6px;padding:1px 7px;font-size:.62rem;font-weight:800">⚠️ DIVERGENTE</span>`
-              : `<span style="background:#dcfce7;color:#166534;border-radius:6px;padding:1px 7px;font-size:.62rem;font-weight:800">✓ VALIDADO</span>`)
-          : `<span style="background:#fef3c7;color:#92400e;border-radius:6px;padding:1px 7px;font-size:.62rem;font-weight:800">⏳ PENDENTE</span>`;
-        const inputDisabled = !podeEditar ? 'disabled' : '';
-        const inputStyle = !podeEditar ? 'background:#f3f4f6;color:#9ca3af' : '';
-        rowsHtml += `<div class="item-row" data-nome="${item.nome.toLowerCase()}" style="${temDivergencia?'background:#fef2f2':''}">
+        // Datas futuras (não-editáveis nessa view) — só leitura, mostra "Editar"
+        return `<div class="item-row" data-nome="${item.nome.toLowerCase()}">
           <div class="item-info">
-            <div class="item-name">${item.nome} ${statusBadge}</div>
+            <div class="item-name">${item.nome}</div>
             <div class="item-unit">${item.unidade}</div>
-            <div style="font-size:.7rem;margin-top:3px;color:#374151;font-weight:700">📋 Planejado: <strong>${planejada}</strong> ${item.unidade}</div>
-            ${qtdValidada !== null && validadoPor ? `<div style="font-size:.62rem;color:var(--gray);margin-top:1px">Validado${validadoData?' em '+_fmtDataBr(validadoData):''}${validadoPor?' por '+validadoPor:''}</div>` : ''}
+            <div style="font-size:.7rem;margin-top:3px;color:#1e40af;font-weight:700">📋 Planejado: ${planejada} ${item.unidade}</div>
+            ${validadoHtml}
           </div>
-          <div style="display:flex;flex-direction:column;gap:4px;align-items:stretch;min-width:96px">
-            ${podeEditar ? `<button onclick="validarEntradaOK('${item.id}', ${planejada})" style="background:#16a34a;color:white;border:none;border-radius:8px;padding:5px 6px;font-size:.7rem;font-weight:800;cursor:pointer">✓ OK</button>` : ''}
-            <input class="qty-input" type="number" min="0" step="1" id="val-${item.id}" placeholder="Diferente?" value="${valorValidadoInput}" ${inputDisabled} onchange="validarEntradaInput('${item.id}')" style="${inputStyle};font-size:.85rem">
-            <div style="font-size:.6rem;color:var(--gray);text-align:center">${podeEditar ? 'recebido' : 'travado'}</div>
+          <div style="display:flex;flex-direction:column;align-items:stretch;min-width:80px">
+            <button onclick="abrirEntradaData('${dataAlvo}')" style="background:#1e40af;color:white;border:none;border-radius:8px;padding:5px 8px;font-size:.7rem;font-weight:700;cursor:pointer">✏️ Editar</button>
           </div>
         </div>`;
       }
-    });
-    if(!temItem) return '';
-    const lbl = isAdmin ? 'Qtd. planejada' : 'Validação';
-    return `<div class="card" data-cat="${cat}">
-      <div class="card-title"><span>${CAT_ICONS[cat]}</span>${CAT_LABELS[cat]}</div>
-      <div class="row-hdr"><div class="rh-name">Item</div><div class="rh-col">${lbl}</div></div>
-      ${rowsHtml}
-    </div>`;
-  }).join('');
-
-  // Se for funcionária e não tem nada planejado, mostra mensagem
-  if(!isAdmin && document.getElementById('entrada-lista').innerHTML.trim() === ''){
-    document.getElementById('entrada-lista').innerHTML = `<div class="empty"><span class="ej">📭</span><p>Nenhuma entrada planejada para esta data.<br>O administrador ainda não lançou itens para receber em ${_fmtDataBr(dt)}.</p></div>`;
+    } else {
+      // FUNCIONÁRIA
+      const podeEditar = qtdValidada === null || validadoData === dataHoje;
+      const valorValidadoInput = qtdValidada !== null ? qtdValidada : '';
+      const statusBadge = qtdValidada !== null
+        ? (temDivergencia
+            ? `<span style="background:#fee2e2;color:#991b1b;border-radius:6px;padding:1px 7px;font-size:.62rem;font-weight:800">⚠️ DIVERGENTE</span>`
+            : `<span style="background:#dcfce7;color:#166534;border-radius:6px;padding:1px 7px;font-size:.62rem;font-weight:800">✓ VALIDADO</span>`)
+        : `<span style="background:#fef3c7;color:#92400e;border-radius:6px;padding:1px 7px;font-size:.62rem;font-weight:800">⏳ PENDENTE</span>`;
+      const inputDisabled = !podeEditar ? 'disabled' : '';
+      const inputStyle = !podeEditar ? 'background:#f3f4f6;color:#9ca3af' : '';
+      const inpId = `val-${dataAlvo}-${item.id}`;
+      return `<div class="item-row" data-nome="${item.nome.toLowerCase()}" style="${temDivergencia?'background:#fef2f2':''}">
+        <div class="item-info">
+          <div class="item-name">${item.nome} ${statusBadge}</div>
+          <div class="item-unit">${item.unidade}</div>
+          <div style="font-size:.7rem;margin-top:3px;color:#374151;font-weight:700">📋 Planejado: <strong>${planejada}</strong> ${item.unidade}</div>
+          ${qtdValidada !== null && validadoPor ? `<div style="font-size:.62rem;color:var(--gray);margin-top:1px">Validado${validadoData?' em '+_fmtDataBr(validadoData):''}${validadoPor?' por '+validadoPor:''}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:stretch;min-width:96px">
+          ${podeEditar ? `<button onclick="validarEntradaOK('${item.id}', ${planejada}, '${dataAlvo}')" style="background:#16a34a;color:white;border:none;border-radius:8px;padding:5px 6px;font-size:.7rem;font-weight:800;cursor:pointer">✓ OK</button>` : ''}
+          <input class="qty-input" type="number" min="0" step="1" id="${inpId}" placeholder="Diferente?" value="${valorValidadoInput}" ${inputDisabled} onchange="validarEntradaInput('${item.id}','${dataAlvo}')" style="${inputStyle};font-size:.85rem">
+          <div style="font-size:.6rem;color:var(--gray);text-align:center">${podeEditar ? 'recebido' : 'travado'}</div>
+        </div>
+      </div>`;
+    }
   }
 
+  // ── Constrói lista de itens de UMA data ────────────────────────────────────
+  function _itensDeUmaData(dataAlvo, isDataSelecionada){
+    // Quais itens mostrar nesta data?
+    // - Para data selecionada (admin): TODOS os itens (pra poder lançar novos)
+    // - Para outras datas: só os que tem entrada planejada
+    let itensAlvo;
+    if(isAdmin && isDataSelecionada){
+      itensAlvo = db.items;
+    } else {
+      const ids = new Set();
+      (db.entradas||[]).forEach(e => {
+        if(Number(e.loja) === Number(lojaE) && e.data === dataAlvo) ids.add(e.itemId);
+      });
+      itensAlvo = db.items.filter(i => ids.has(i.id));
+    }
+    return itensAlvo;
+  }
+
+  // ── Monta HTML por data ────────────────────────────────────────────────────
+  let html = '';
+
+  // Seção "Necessário comprar" — só na data atualmente selecionada do admin
+  if(isAdmin && itensPrecisaComprar.size > 0){
+    const itensCompra = db.items
+      .filter(i => itensPrecisaComprar.has(i.id))
+      .sort((a,b) => a.nome.localeCompare(b.nome,'pt-BR'));
+    const rowsCompra = itensCompra.map(i => _construirLinhaItem(i, dt, true)).filter(x=>x).join('');
+    html += `<div class="card" style="background:linear-gradient(135deg,#fff7ed,#fed7aa);border:2px solid #fb923c">
+      <div class="card-title" style="color:#9a3412"><span>🛒</span>Necessário comprar <span style="font-size:.7rem;background:#fb923c;color:white;border-radius:8px;padding:2px 8px;font-weight:800">${itensCompra.length}</span></div>
+      <div style="font-size:.7rem;color:#7c2d12;margin-bottom:8px;padding:0 4px">Estes itens estão abaixo do estoque mínimo. Planeje a compra deles para a data selecionada (${_fmtDataBr(dt)}).</div>
+      <div class="row-hdr"><div class="rh-name">Item</div><div class="rh-col">Qtd. planejada</div></div>
+      ${rowsCompra}
+    </div>`;
+  }
+
+  // Renderiza cada data com seus itens
+  datasOrdenadas.forEach(dataAlvo => {
+    const isDataSelecionada = dataAlvo === dt;
+    const itensAlvo = _itensDeUmaData(dataAlvo, isDataSelecionada);
+    // Pula se for data sem nada e não for a selecionada
+    if(itensAlvo.length === 0 && !isDataSelecionada) return;
+
+    // Para a data selecionada (admin), os itens "necessário comprar" já foram listados acima
+    const itensFiltrados = (isAdmin && isDataSelecionada)
+      ? itensAlvo.filter(i => !itensPrecisaComprar.has(i.id))
+      : itensAlvo;
+
+    // Agrupa por categoria
+    const cats = [...new Set(itensFiltrados.map(i=>i.cat))];
+    let blocosCat = '';
+    cats.forEach(cat => {
+      const its = itensFiltrados.filter(i => i.cat === cat);
+      let rowsHtml = '';
+      let temItem = false;
+      its.forEach(item => {
+        const linha = _construirLinhaItem(item, dataAlvo, false);
+        if(linha) { rowsHtml += linha; temItem = true; }
+      });
+      if(!temItem) return;
+      blocosCat += `<div style="font-size:.74rem;font-weight:800;color:var(--gray);margin:6px 0 4px;padding-top:6px;border-top:1px dashed #e5e7eb">${CAT_ICONS[cat]} ${CAT_LABELS[cat]}</div>${rowsHtml}`;
+    });
+
+    if(blocosCat.trim() === '' && !isDataSelecionada) return;
+
+    // Header da data
+    const dataFmt = _fmtDataBr(dataAlvo);
+    const diaSem = (()=>{
+      const [a,m,d] = dataAlvo.split('-');
+      return ['dom.','seg.','ter.','qua.','qui.','sex.','sáb.'][new Date(+a,+m-1,+d).getDay()];
+    })();
+    const isPast = dataAlvo < dataHoje;
+    const isToday = dataAlvo === dataHoje;
+    let bgHeader, corHeader, etiqueta;
+    if(isPast){ bgHeader='#fee2e2'; corHeader='#991b1b'; etiqueta=' · atrasado'; }
+    else if(isToday){ bgHeader='#dcfce7'; corHeader='#166534'; etiqueta=' · hoje'; }
+    else if(isDataSelecionada){ bgHeader='#fef3c7'; corHeader='#92400e'; etiqueta=' · selecionada'; }
+    else { bgHeader='#dbeafe'; corHeader='#1e40af'; etiqueta=' · futuro'; }
+
+    const lblCol = isAdmin ? 'Qtd. planejada' : 'Validação';
+    html += `<div class="card" style="border-left:4px solid ${corHeader}">
+      <div class="card-title" style="background:${bgHeader};color:${corHeader};border-radius:8px;padding:6px 10px;margin-bottom:8px;font-size:.85rem"><span>📅</span>${diaSem} ${dataFmt}<span style="font-size:.65rem;opacity:.85;font-weight:600">${etiqueta}</span></div>
+      ${blocosCat || `<div style="font-size:.78rem;color:var(--gray);font-style:italic;padding:8px 4px">Sem itens lançados para esta data ainda. Use o formulário abaixo.</div>`}
+    </div>`;
+  });
+
+  document.getElementById('entrada-lista').innerHTML = html;
+
+  // Se for funcionária e não tem nada planejado, mostra mensagem
+  if(!isAdmin && html.trim() === ''){
+    document.getElementById('entrada-lista').innerHTML = `<div class="empty"><span class="ej">📭</span><p>Nenhum pedido planejado aguardando validação.<br>Quando o administrador planejar uma entrada, ela aparecerá aqui.</p></div>`;
+  }
+
+  // RESTAURA valores digitados que estavam nos inputs antes do re-render
+  Object.entries(valoresDigitados).forEach(([id, val])=>{
+    const inp = document.getElementById(id);
+    if(inp && val !== '' && (inp.value === '' || inp.value === '0')){
+      inp.value = val;
+    }
+  });
+
   aplicarFiltroBusca('ent');
-  // Mostra/esconde botão "Validar tudo" pra funcionária
   const btnValidarTudo = document.getElementById('btn-validar-tudo');
   if(btnValidarTudo){
     btnValidarTudo.style.display = !isAdmin ? 'block' : 'none';
+  }
+}
+
+// Helper: ao clicar em "Editar" numa data futura, troca o campo data e re-renderiza
+function abrirEntradaData(novaData){
+  const inp = document.getElementById('data-entrada');
+  if(inp){
+    inp.value = novaData;
+    renderEntradas();
+    // Scroll pro topo da aba
+    window.scrollTo({top:0, behavior:'smooth'});
   }
 }
 
@@ -2506,8 +2688,10 @@ function _fmtDataBr(iso){
 }
 
 // Valida 1 item da entrada (botão ✓ OK ou ao mudar o input)
-async function validarEntradaOK(itemId, qtdValidada){
-  const dt = document.getElementById('data-entrada').value;
+async function validarEntradaOK(itemId, qtdValidada, dataAlvo){
+  // dataAlvo: se passado, valida nessa data específica (suporta visão multi-data);
+  // se não, usa a data do campo (compatibilidade com chamadas antigas)
+  const dt = dataAlvo || document.getElementById('data-entrada').value;
   const respValidador = currentUser?.label || currentUser?.name || '—';
   const dataHoje = hoje();
   const ts = new Date().toISOString();
@@ -2522,7 +2706,6 @@ async function validarEntradaOK(itemId, qtdValidada){
     showToast('🔒 Validação só pode ser alterada no mesmo dia');
     return;
   }
-  // Atualiza: marca como validado com a quantidade indicada
   if(e.qtdPlanejada === undefined) e.qtdPlanejada = Number(e.qty)||0;
   e.qtdValidada = Number(qtdValidada)||0;
   e.validadoPor = respValidador;
@@ -2533,6 +2716,7 @@ async function validarEntradaOK(itemId, qtdValidada){
   if(ok){
     renderEntradas();
     renderProjetado();
+    gerarCompras();
     atualizarBadgesTabs();
     const planejada = Number(e.qtdPlanejada)||0;
     if(Number(qtdValidada) === planejada){
@@ -2546,44 +2730,46 @@ async function validarEntradaOK(itemId, qtdValidada){
 }
 
 // Pra funcionária: lê o input e dispara validação
-async function validarEntradaInput(itemId){
-  const inp = document.getElementById('val-'+itemId);
+async function validarEntradaInput(itemId, dataAlvo){
+  const inpId = dataAlvo ? `val-${dataAlvo}-${itemId}` : 'val-'+itemId;
+  const inp = document.getElementById(inpId);
   if(!inp) return;
   const v = parseFloat(inp.value);
   if(isNaN(v) || v < 0){ showToast('⚠️ Valor inválido'); return; }
-  await validarEntradaOK(itemId, v);
+  await validarEntradaOK(itemId, v, dataAlvo);
 }
 
-// Validar TODOS os itens com o valor planejado de uma vez (botão "✓ Validar tudo")
+// Validar TODOS os itens pendentes (todas as datas) com o valor planejado
 async function validarTudoOK(){
-  const dt = document.getElementById('data-entrada').value;
   const respValidador = currentUser?.label || currentUser?.name || '—';
   const dataHoje = hoje();
   const ts = new Date().toISOString();
-  if(!confirm('Confirmar que TODOS os itens chegaram exatamente conforme planejado?')) return;
+  if(!confirm('Confirmar que TODOS os itens pendentes chegaram exatamente conforme planejado?')) return;
   let count = 0;
   db.entradas.forEach(e => {
-    if(e.data===dt && e.loja==lojaE){
-      // Pula se já foi validado fora do dia
-      if(e.validadoData && e.validadoData !== dataHoje) return;
-      if(e.qtdPlanejada === undefined) e.qtdPlanejada = Number(e.qty)||0;
-      e.qtdValidada = Number(e.qtdPlanejada)||0;
-      e.validadoPor = respValidador;
-      e.validadoData = dataHoje;
-      e.validadoEm = ts;
-      count++;
-    }
+    if(Number(e.loja) !== Number(lojaE)) return;
+    if(e.qtdValidada !== undefined && e.qtdValidada !== null) return; // já validado
+    // Pula se já foi validado fora do dia atual
+    if(e.validadoData && e.validadoData !== dataHoje) return;
+    if(e.qtdPlanejada === undefined) e.qtdPlanejada = Number(e.qty)||0;
+    if(!e.qtdPlanejada || e.qtdPlanejada <= 0) return;
+    e.qtdValidada = Number(e.qtdPlanejada)||0;
+    e.validadoPor = respValidador;
+    e.validadoData = dataHoje;
+    e.validadoEm = ts;
+    count++;
   });
   if(count === 0){ showToast('⚠️ Nada pra validar'); return; }
   const ok = await saveCloud('entradas');
   if(ok){
     renderEntradas();
     renderProjetado();
+    gerarCompras();
     atualizarBadgesTabs();
     showToast(`✅ ${count} item(ns) validado(s) conforme planejado`);
   }
 }
-
+  if(!confirm('Confirmar que TODOS os itens chegaram exatamente conforme planejado?')) return;
 async function salvarEntrada(){
   // Só admin pode salvar planejamento de entrada
   if(currentUser?.role !== 'admin'){
@@ -2610,7 +2796,10 @@ async function salvarEntrada(){
   db.entradas=db.entradas.filter(e=>!(e.data===dt&&e.loja==lojaE));
   const respEnt = (currentUser?.label||currentUser?.login||'—');
   db.items.forEach(item=>{
-    const el=document.getElementById('ent-'+item.id);if(!el)return;
+    // Tenta o novo formato com data; fallback pro antigo (sem data)
+    let el = document.getElementById(`ent-${dt}-${item.id}`);
+    if(!el) el = document.getElementById('ent-'+item.id);
+    if(!el) return;
     const val=parseFloat(el.value);
     if(!isNaN(val)&&val>0){
       const entrada = {
@@ -2638,6 +2827,7 @@ async function salvarEntrada(){
   if(ok){
     renderProjetado();
     renderEntradas();
+    gerarCompras(); // atualiza lista de Compras: itens planejados saem da seção "Comprar"
     atualizarBadgesTabs();
     showToast(`🛍️ Entrada planejada salva! ${itensEntrada.length} item(ns) registrado(s).`);
   } else {
@@ -2659,29 +2849,57 @@ function gerarCompras(){
   }
   const hj=hoje();
   const cats=[...new Set(db.items.map(i=>i.cat))];
-  let comprar=[], okList=[];
+  let comprar=[], okList=[], planejados=[];
+
+  // Helper: soma qtd PLANEJADA (ainda não validada) por loja+item, considerando entradas em datas hoje OU futuras
+  // Entradas com data passada e não-validadas viram pendências do admin (auto-aceitar/postergar), então
+  // aqui só considera as que ainda fazem sentido como "futuro" (data >= hoje, não validadas).
+  function qtdPlanejadaPendente(itemId, loja){
+    let soma = 0;
+    (db.entradas||[]).forEach(e => {
+      if(Number(e.loja) !== Number(loja)) return;
+      if(e.itemId !== itemId) return;
+      if(!e.data || e.data < hj) return; // entradas passadas não contam aqui
+      if(e.qtdValidada !== undefined && e.qtdValidada !== null) return; // já validadas não contam
+      const p = e.qtdPlanejada !== undefined ? Number(e.qtdPlanejada) : Number(e.qty)||0;
+      if(p > 0) soma += p;
+    });
+    return soma;
+  }
 
   db.items.forEach(item=>{
     lojasAtivas.forEach(loja=>{
       const res=calcProjetado(loja,hj); if(!res) return;
       const est=res.proj[item.id]; if(est===null||est===undefined) return;
       const min=db.minimos[item.id]||0; if(min<=0) return; // sem mínimo definido, ignora
-      const precisaComprar = est < min;
-      const qtdComprar = Math.ceil(min - est); // quanto falta para atingir o mínimo
-      if(precisaComprar){
-        comprar.push({item, loja, est, min, qtdComprar});
+      const qtdPlan = qtdPlanejadaPendente(item.id, loja);
+      const estComPlano = est + qtdPlan; // estoque hipotético se as entradas planejadas chegarem
+      const precisaCompararRealmente = est < min; // está abaixo do mínimo no estoque atual
+      const planoCobre = estComPlano >= min; // mas o que admin já planejou cobre o gap
+
+      if(precisaCompararRealmente && !planoCobre){
+        // Precisa comprar MAIS além do que já planejou
+        const qtdComprar = Math.ceil(min - estComPlano);
+        comprar.push({item, loja, est, min, qtdComprar, qtdPlan});
+      } else if(precisaCompararRealmente && planoCobre){
+        // Estoque baixo, mas plano de compra existente cobre — fica em "Já planejado"
+        planejados.push({item, loja, est, min, qtdPlan, estComPlano});
       } else {
-        okList.push({item, loja, est, min});
+        // OK ou tem plano (acima do mínimo)
+        okList.push({item, loja, est, min, qtdPlan});
       }
     });
   });
 
   // chips de resumo
-  document.getElementById('compras-chips').innerHTML=`
-    <div class="chip chip-r">🛒 ${comprar.length} item(ns) para comprar</div>
-    <div class="chip chip-g">✅ ${okList.length} em dia</div>`;
+  let chipsHtml = `<div class="chip chip-r">🛒 ${comprar.length} item(ns) para comprar</div>`;
+  if(planejados.length > 0){
+    chipsHtml += `<div class="chip chip-b" style="background:#dbeafe;color:#1e40af">📅 ${planejados.length} já planejado(s)</div>`;
+  }
+  chipsHtml += `<div class="chip chip-g">✅ ${okList.length} em dia</div>`;
+  document.getElementById('compras-chips').innerHTML = chipsHtml;
 
-  if(!comprar.length && !okList.length){
+  if(!comprar.length && !okList.length && !planejados.length){
     document.getElementById('compras-lista').innerHTML=`<div class="empty"><span class="ej">📭</span><p>Defina o estoque mínimo dos itens em ⚙️ Config para gerar a lista.</p></div>`;
     return;
   }
@@ -2703,11 +2921,43 @@ function gerarCompras(){
         const ci=its.filter(x=>x.item.cat===cat); if(!ci.length) return;
         html+=`<div style="font-size:.74rem;font-weight:700;color:var(--gray);margin:8px 0 3px">${CAT_ICONS[cat]} ${CAT_LABELS[cat]}</div>`;
         ci.forEach(x=>{
+          // Se tem plano parcial, mostra info adicional
+          const planInfo = x.qtdPlan > 0
+            ? `<br><span style="font-size:.62rem;color:#1e40af;font-weight:700">📅 Já planejado: ${fmtQ(x.qtdPlan)}</span>`
+            : '';
           html+=`<div class="proj-row" data-nome="${x.item.nome.toLowerCase()}">
-            <div class="proj-name">${x.item.nome}<br><span style="font-size:.66rem;color:var(--gray)">${x.item.unidade}</span></div>
+            <div class="proj-name">${x.item.nome}<br><span style="font-size:.66rem;color:var(--gray)">${x.item.unidade}</span>${planInfo}</div>
             <div class="proj-col" style="color:var(--red);font-weight:800">${fmtQ(x.est)}</div>
             <div class="proj-col" style="color:var(--gray)">${fmtQ(x.min)}</div>
             <div class="proj-col" style="color:var(--pink-dark);font-weight:800;font-size:1rem">+${fmtQ(x.qtdComprar)}</div>
+          </div>`;
+        });
+      });
+      html+=`</div>`;
+    });
+  }
+
+  if(planejados.length){
+    html+=`<div class="sec-div" style="color:#1e40af">📅 Já Planejado <span style="font-size:.65rem;font-weight:600;color:var(--gray);text-transform:none;letter-spacing:0">(aguardando entrega)</span></div>`;
+    lojasAtivas.forEach(loja=>{
+      const its=planejados.filter(x=>x.loja===loja); if(!its.length) return;
+      html+=`<div class="card" style="background:#eff6ff;border-color:#bfdbfe"><div class="card-title" style="color:#1e3a8a"><span>${lojaIcon(loja)}</span>${nomeLoja(loja)}</div>
+        <div style="font-size:.7rem;color:#1e40af;margin-bottom:6px;padding:0 4px">Estes itens estão baixos, mas você já planejou a compra. Aguardando entrega/validação.</div>
+        <div class="row-hdr">
+          <div class="rh-name">Item</div>
+          <div class="rh-col">Atual</div>
+          <div class="rh-col">Mínimo</div>
+          <div class="rh-col" style="color:#1e40af">Vindo</div>
+        </div>`;
+      cats.forEach(cat=>{
+        const ci=its.filter(x=>x.item.cat===cat); if(!ci.length) return;
+        html+=`<div style="font-size:.74rem;font-weight:700;color:var(--gray);margin:8px 0 3px">${CAT_ICONS[cat]} ${CAT_LABELS[cat]}</div>`;
+        ci.forEach(x=>{
+          html+=`<div class="proj-row" data-nome="${x.item.nome.toLowerCase()}">
+            <div class="proj-name">${x.item.nome}<br><span style="font-size:.66rem;color:var(--gray)">${x.item.unidade}</span></div>
+            <div class="proj-col" style="color:#9a3412;font-weight:700">${fmtQ(x.est)}</div>
+            <div class="proj-col" style="color:var(--gray)">${fmtQ(x.min)}</div>
+            <div class="proj-col" style="color:#1e40af;font-weight:800">+${fmtQ(x.qtdPlan)}</div>
           </div>`;
         });
       });
@@ -2726,8 +2976,9 @@ function gerarCompras(){
           <div class="rh-col">Mínimo</div>
         </div>`;
       its.forEach(x=>{
+        const planLabel = x.qtdPlan > 0 ? `<br><span style="font-size:.62rem;color:#1e40af;font-weight:700">📅 Vindo: +${fmtQ(x.qtdPlan)}</span>` : '';
         html+=`<div class="proj-row" data-nome="${x.item.nome.toLowerCase()}">
-          <div class="proj-name">${x.item.nome}<br><span style="font-size:.66rem;color:var(--gray)">${x.item.unidade}</span></div>
+          <div class="proj-name">${x.item.nome}<br><span style="font-size:.66rem;color:var(--gray)">${x.item.unidade}</span>${planLabel}</div>
           <div class="proj-col" style="color:var(--teal-dark);font-weight:800">${fmtQ(x.est)}</div>
           <div class="proj-col" style="color:var(--gray)">${fmtQ(x.min)}</div>
         </div>`;
