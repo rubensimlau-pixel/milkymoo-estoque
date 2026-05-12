@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.75</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.76</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -2536,7 +2536,7 @@ function _renderEntradasInterno(){
         const pr = calcProjetado(Number(lojaE), dataHoje);
         const qtdAtual = pr?.proj[item.id] ?? 0;
         const minimo = (db.minimos||{})[item.id] || 0;
-        const sugerido = Math.max(0, Math.ceil(minimo * 2 - qtdAtual));
+        const sugerido = Math.max(0, Math.ceil(minimo - qtdAtual));
         sugestaoCompra = `<div style="font-size:.6rem;margin-top:2px;color:#9a3412">💡 Sugestão: ${sugerido} ${item.unidade} (atual ${qtdAtual}, mín ${minimo})</div>`;
       }
       // Admin pode editar SÓ a data selecionada (pra evitar confusão de IDs)
@@ -2624,12 +2624,21 @@ function _renderEntradasInterno(){
     const itensCompra = db.items
       .filter(i => itensPrecisaComprar.has(i.id))
       .sort((a,b) => a.nome.localeCompare(b.nome,'pt-BR'));
-    const rowsCompra = itensCompra.map(i => _construirLinhaItem(i, dt, true)).filter(x=>x).join('');
+    // Agrupa por categoria
+    const catsCompra = [...new Set(itensCompra.map(i => i.cat))];
+    let blocosCompra = '';
+    catsCompra.forEach(cat => {
+      const its = itensCompra.filter(i => i.cat === cat);
+      if(!its.length) return;
+      const rows = its.map(i => _construirLinhaItem(i, dt, true)).filter(x=>x).join('');
+      if(!rows) return;
+      blocosCompra += `<div style="font-size:.74rem;font-weight:800;color:#7c2d12;margin:8px 0 4px;padding-top:6px;border-top:1px dashed #fdba74">${CAT_ICONS[cat]||'📦'} ${CAT_LABELS[cat]||cat}</div>${rows}`;
+    });
     html += `<div class="card" style="background:linear-gradient(135deg,#fff7ed,#fed7aa);border:2px solid #fb923c">
       <div class="card-title" style="color:#9a3412"><span>🛒</span>Necessário comprar <span style="font-size:.7rem;background:#fb923c;color:white;border-radius:8px;padding:2px 8px;font-weight:800">${itensCompra.length}</span></div>
       <div style="font-size:.7rem;color:#7c2d12;margin-bottom:8px;padding:0 4px">Estes itens estão abaixo do estoque mínimo. Planeje a compra deles para a data selecionada (${_fmtDataBr(dt)}).</div>
       <div class="row-hdr"><div class="rh-name">Item</div><div class="rh-col">Qtd. planejada</div></div>
-      ${rowsCompra}
+      ${blocosCompra}
     </div>`;
   }
 
@@ -3236,11 +3245,6 @@ const COPO_MAP = {
 };
 
 let importacaoPendente = null;
-
-function renderImportar(){
-  document.getElementById('importar-preview').innerHTML='';
-  document.getElementById('btn-confirmar-importar').style.display='none';
-}
 
 // ── FILA DE ARQUIVOS PARA IMPORTAÇÃO ──────────────────────────────────────
 // Cada item: { nome: 'arquivo.txt', conteudo: '...' }
