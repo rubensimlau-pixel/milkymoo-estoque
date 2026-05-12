@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.63</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.66</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -821,9 +821,9 @@
             <label class="field-label" style="margin-bottom:4px;">Loja</label>
             <select id="hist-filtro-loja" onchange="onHistFiltroLojaChange()" style="width:100%;border:2px solid var(--border);border-radius:10px;padding:8px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:600;background:white;">
               <option value="">Todas</option>
-              <option value="1">🏪 Cajamar</option>
-              <option value="2">🏬 Iguatemi</option>
-              <option value="3">🏗️ Carapicuíba</option>
+              <option value="1" id="hist-opt-loja-1">🏪 Cajamar</option>
+              <option value="2" id="hist-opt-loja-2">🏬 Iguatemi</option>
+              <option value="3" id="hist-opt-loja-3">🏗️ Carapicuíba</option>
             </select>
           </div>
           <div>
@@ -882,9 +882,9 @@
           <label class="field-label" style="margin-bottom:4px;">Loja</label>
           <select id="fin-filtro-loja" onchange="onFinFiltroLojaChange()" style="width:100%;border:2px solid var(--border);border-radius:10px;padding:8px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:600;background:white;">
             <option value="">Todas</option>
-            <option value="1">🏪 Cajamar</option>
-            <option value="2">🏬 Iguatemi</option>
-            <option value="3">🏗️ Carapicuíba</option>
+            <option value="1" id="fin-opt-loja-1">🏪 Cajamar</option>
+            <option value="2" id="fin-opt-loja-2">🏬 Iguatemi</option>
+            <option value="3" id="fin-opt-loja-3">🏗️ Carapicuíba</option>
           </select>
         </div>
         <div>
@@ -897,10 +897,12 @@
             <button class="fin-per-btn fin-btn-tudo active" onclick="setFinPeriodo('tudo',this)" style="flex:0 0 auto;border:2px solid var(--pink);background:var(--pink);color:white;border-radius:10px;padding:8px 12px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;" title="Limpar filtros e mostrar tudo">✕</button>
           </div>
           <div style="display:flex;gap:6px;align-items:center;position:relative;">
-            <button class="fin-per-btn" data-per="mes" onclick="toggleSeletorMes(event)" style="flex:0 0 auto;border:2px solid var(--border);background:white;border-radius:10px;padding:7px 12px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px" title="Escolher mês"><span>📅</span><span id="fin-btn-mes-label">Mês</span><span style="font-size:.65rem;opacity:.6">▾</span></button>
-            <div id="fin-mes-menu" style="display:none;position:absolute;top:42px;left:0;background:white;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:60;min-width:140px;max-height:300px;overflow-y:auto"></div>
             <button class="fin-per-btn" data-per="dia" onclick="toggleSeletorDia(event)" style="flex:0 0 auto;border:2px solid var(--border);background:white;border-radius:10px;padding:7px 12px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px" title="Escolher dia"><span>📆</span><span id="fin-btn-dia-label">Dia</span><span style="font-size:.65rem;opacity:.6">▾</span></button>
-            <div id="fin-dia-menu" style="display:none;position:absolute;top:42px;left:120px;background:white;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:60;min-width:160px;max-height:300px;overflow-y:auto"></div>
+            <div id="fin-dia-menu" style="display:none;position:absolute;top:42px;left:0;background:white;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:60;min-width:160px;max-height:300px;overflow-y:auto"></div>
+            <button class="fin-per-btn" data-per="mes" onclick="toggleSeletorMes(event)" style="flex:0 0 auto;border:2px solid var(--border);background:white;border-radius:10px;padding:7px 12px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px" title="Escolher mês"><span>📅</span><span id="fin-btn-mes-label">Mês</span><span style="font-size:.65rem;opacity:.6">▾</span></button>
+            <div id="fin-mes-menu" style="display:none;position:absolute;top:42px;left:120px;background:white;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:60;min-width:140px;max-height:300px;overflow-y:auto"></div>
+            <button class="fin-per-btn" data-per="ano" onclick="toggleSeletorAno(event)" style="flex:0 0 auto;border:2px solid var(--border);background:white;border-radius:10px;padding:7px 12px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px" title="Escolher ano"><span>🗓️</span><span id="fin-btn-ano-label">Ano</span><span style="font-size:.65rem;opacity:.6">▾</span></button>
+            <div id="fin-ano-menu" style="display:none;position:absolute;top:42px;left:240px;background:white;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:60;min-width:120px;max-height:300px;overflow-y:auto"></div>
             <span style="font-size:.72rem;color:var(--gray);font-weight:700;">De:</span>
             <input type="date" id="fin-filtro-de" onchange="setFinFaixaData()" style="flex:1;min-width:0;border:2px solid var(--border);background:white;border-radius:10px;padding:7px 8px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;color:#333;">
             <span style="font-size:.72rem;color:var(--gray);font-weight:700;">Até:</span>
@@ -1813,16 +1815,25 @@ function selLojaCompras(n){ pickLoja('comp',n); }
 function nomeLoja(n){return n===1?(db.config.nomeLoja1||'Cajamar'):n===2?(db.config.nomeLoja2||'Iguatemi'):(db.config.nomeLoja3||'Carapicuíba');}
 function lojaIcon(n){return n===1?'🏪':n===2?'🏬':'🏗️';}
 function aplicarNomes(){
+  const ICONES_LOJA = {1:'🏪', 2:'🏬', 3:'🏗️'};
   [1,2,3].forEach(n=>{
     const nm=nomeLoja(n);
-    // Atualiza labels dentro de cada dropdown (id pattern: ddln-{ctx}-{n})
+    // Atualiza labels dentro de cada dropdown customizado (id pattern: ddln-{ctx}-{n})
     ['c','i','p','d','e','pr','imp','comp'].forEach(ctx=>{
       const el=document.getElementById(`ddln-${ctx}-${n}`);
       if(el) el.textContent=nm;
     });
+    // Atualiza os <option> dos selects nativos do Histórico e Financeiro
+    const optHist = document.getElementById(`hist-opt-loja-${n}`);
+    if(optHist) optHist.textContent = `${ICONES_LOJA[n]} ${nm}`;
+    const optFin = document.getElementById(`fin-opt-loja-${n}`);
+    if(optFin) optFin.textContent = `${ICONES_LOJA[n]} ${nm}`;
   });
   // Re-renderiza os labels dos botões caso uma loja já esteja selecionada
   atualizarTodosLojaDD();
+  // Re-renderiza a aba atual pra que cards e listas reflitam os novos nomes
+  // (ex: card do Financeiro com "Cajamar · 10/05" precisa virar "Anhanguera Parque · 10/05")
+  if(typeof _renderAbaAtual === 'function') _renderAbaAtual();
 }
 
 function ultimoInventario(loja,ateData){
@@ -5452,9 +5463,10 @@ async function apagarHistGrupo(tipo, dia, loja /* null = todas as lojas */){
 //  FINANCEIRO
 // ════════════════════════════════════════════════════════════
 
-let finPeriodo = 'tudo'; // ontem | hoje | 7 | 30 | mes | dia | tudo | faixa
+let finPeriodo = 'tudo'; // ontem | hoje | 7 | 30 | mes | dia | ano | tudo | faixa
 let finMesRef = ''; // 'YYYY-MM' usado quando finPeriodo === 'mes' (vazio = mês corrente)
 let finDiaRef = ''; // 'YYYY-MM-DD' usado quando finPeriodo === 'dia'
+let finAnoRef = ''; // 'YYYY' usado quando finPeriodo === 'ano'
 let finDataDe = '';   // YYYY-MM-DD inicio (inclusive)
 let finDataAte = '';  // YYYY-MM-DD fim (inclusive)
 let finExpandidos = {};  // {id: true} controla quais cards estão abertos
@@ -5501,6 +5513,12 @@ function setFinPeriodo(p, btn){
     finDiaRef = '';
     const lblD = document.getElementById('fin-btn-dia-label');
     if(lblD) lblD.textContent = 'Dia';
+  }
+  // Se trocou pra qualquer período que NÃO seja "ano", reseta finAnoRef e label
+  if(p !== 'ano'){
+    finAnoRef = '';
+    const lblA = document.getElementById('fin-btn-ano-label');
+    if(lblA) lblA.textContent = 'Ano';
   }
   // Limpa os inputs de data
   const inpDe = document.getElementById('fin-filtro-de');
@@ -5568,6 +5586,7 @@ function selecionarMes(mesRef, ev){
   finPeriodo = 'mes';
   finMesRef = mesRef;
   finDiaRef = '';
+  finAnoRef = '';
   finDataDe = '';
   finDataAte = '';
   // Limpa inputs de data
@@ -5592,6 +5611,9 @@ function selecionarMes(mesRef, ev){
   // Reseta label do botão Dia (não está mais ativo)
   const lblDia = document.getElementById('fin-btn-dia-label');
   if(lblDia) lblDia.textContent = 'Dia';
+  // Reseta label do botão Ano (não está mais ativo)
+  const lblAno = document.getElementById('fin-btn-ano-label');
+  if(lblAno) lblAno.textContent = 'Ano';
   const lbl = document.getElementById('fin-btn-mes-label');
   if(lbl){
     const [ano, mesNum] = mesRef.split('-');
@@ -5660,6 +5682,7 @@ function selecionarDia(diaRef, ev){
   finPeriodo = 'dia';
   finDiaRef = diaRef;
   finMesRef = '';
+  finAnoRef = '';
   finDataDe = '';
   finDataAte = '';
   // Limpa inputs de data
@@ -5689,6 +5712,9 @@ function selecionarDia(diaRef, ev){
   // Reseta label do botão Mês (não está ativo agora)
   const lblMes = document.getElementById('fin-btn-mes-label');
   if(lblMes) lblMes.textContent = 'Mês';
+  // Reseta label do botão Ano (não está ativo agora)
+  const lblAno = document.getElementById('fin-btn-ano-label');
+  if(lblAno) lblAno.textContent = 'Ano';
   // Fecha o menu
   const menu = document.getElementById('fin-dia-menu');
   if(menu) menu.style.display = 'none';
@@ -5700,6 +5726,93 @@ function selecionarDia(diaRef, ev){
 document.addEventListener('click', function(ev){
   const menu = document.getElementById('fin-dia-menu');
   const btn = document.querySelector('.fin-per-btn[data-per="dia"]');
+  if(!menu || menu.style.display !== 'block') return;
+  if(menu.contains(ev.target) || (btn && btn.contains(ev.target))) return;
+  menu.style.display = 'none';
+});
+
+// ─── Seletor de Ano (lista os anos com dados financeiros) ────────────────────
+function toggleSeletorAno(ev){
+  ev?.stopPropagation?.();
+  const menu = document.getElementById('fin-ano-menu');
+  if(!menu) return;
+  const aberto = menu.style.display === 'block';
+  if(aberto){
+    menu.style.display = 'none';
+    return;
+  }
+  // Lista anos com dados (descendente — mais recente primeiro)
+  const anos = _anosComDadosFinanceiro();
+  if(anos.length === 0){
+    menu.innerHTML = `<div style="padding:14px;font-size:.78rem;color:var(--gray);text-align:center;font-style:italic">Nenhum dado financeiro registrado.</div>`;
+  } else {
+    menu.innerHTML = anos.map(a=>{
+      const isSel = (finPeriodo === 'ano' && finAnoRef === a);
+      const bg = isSel ? '#fdf2f8' : 'white';
+      const cor = isSel ? '#9d174d' : '#333';
+      return `<button onclick="selecionarAno('${a}',event)" style="display:block;width:100%;text-align:left;background:${bg};border:none;border-bottom:1px solid #f3f4f6;padding:10px 14px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:${isSel?'800':'700'};color:${cor};cursor:pointer" onmouseover="this.style.background='#fdf2f8'" onmouseout="this.style.background='${bg}'">${a}${isSel?' ✓':''}</button>`;
+    }).join('');
+  }
+  menu.style.display = 'block';
+}
+
+function _anosComDadosFinanceiro(){
+  // Retorna lista de "YYYY" presentes em db.financeiro, ordenado desc
+  const anosSet = new Set();
+  (db.financeiro || []).forEach(r => {
+    if(r.data && typeof r.data === 'string' && r.data.length >= 4){
+      anosSet.add(r.data.slice(0,4));
+    }
+  });
+  return [...anosSet].sort().reverse();
+}
+
+function selecionarAno(anoRef, ev){
+  ev?.stopPropagation?.();
+  // Aplica filtro do ano escolhido (01/01 até 31/12)
+  finPeriodo = 'ano';
+  finAnoRef = anoRef;
+  finMesRef = '';
+  finDiaRef = '';
+  finDataDe = '';
+  finDataAte = '';
+  // Limpa inputs de data
+  const inpDe = document.getElementById('fin-filtro-de');
+  const inpAte = document.getElementById('fin-filtro-ate');
+  if(inpDe) inpDe.value = '';
+  if(inpAte) inpAte.value = '';
+  // Marca o botão Ano como ativo e atualiza label
+  document.querySelectorAll('.fin-per-btn').forEach(b=>{
+    b.classList.remove('active');
+    b.style.background = 'white';
+    b.style.color = '#333';
+    b.style.borderColor = 'var(--border)';
+  });
+  const btnAno = document.querySelector('.fin-per-btn[data-per="ano"]');
+  if(btnAno){
+    btnAno.classList.add('active');
+    btnAno.style.background = 'var(--pink)';
+    btnAno.style.color = 'white';
+    btnAno.style.borderColor = 'var(--pink)';
+  }
+  const lbl = document.getElementById('fin-btn-ano-label');
+  if(lbl) lbl.textContent = anoRef;
+  // Reseta labels dos botões Mês e Dia
+  const lblMes = document.getElementById('fin-btn-mes-label');
+  if(lblMes) lblMes.textContent = 'Mês';
+  const lblDia = document.getElementById('fin-btn-dia-label');
+  if(lblDia) lblDia.textContent = 'Dia';
+  // Fecha o menu
+  const menu = document.getElementById('fin-ano-menu');
+  if(menu) menu.style.display = 'none';
+  // Re-renderiza
+  renderFinanceiro();
+}
+
+// Fecha o seletor de ano ao clicar fora
+document.addEventListener('click', function(ev){
+  const menu = document.getElementById('fin-ano-menu');
+  const btn = document.querySelector('.fin-per-btn[data-per="ano"]');
   if(!menu || menu.style.display !== 'block') return;
   if(menu.contains(ev.target) || (btn && btn.contains(ev.target))) return;
   menu.style.display = 'none';
@@ -5763,6 +5876,13 @@ function _finDataLimite(){
       de: `${y}-${mm}-01`,
       ate: `${y}-${mm}-${String(ultimoDia).padStart(2,'0')}`,
     };
+  }
+  if(finPeriodo === 'ano'){
+    // Ano específico escolhido (01/01 até 31/12)
+    if(finAnoRef && /^\d{4}$/.test(finAnoRef)){
+      return { de: `${finAnoRef}-01-01`, ate: `${finAnoRef}-12-31` };
+    }
+    return null;
   }
   if(finPeriodo === 'dia'){
     // Dia específico escolhido (de = ate = dia)
