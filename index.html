@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.53</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.58</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -819,7 +819,7 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
           <div>
             <label class="field-label" style="margin-bottom:4px;">Loja</label>
-            <select id="hist-filtro-loja" onchange="renderHistorico()" style="width:100%;border:2px solid var(--border);border-radius:10px;padding:8px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:600;background:white;">
+            <select id="hist-filtro-loja" onchange="onHistFiltroLojaChange()" style="width:100%;border:2px solid var(--border);border-radius:10px;padding:8px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:600;background:white;">
               <option value="">Todas</option>
               <option value="1">🏪 Cajamar</option>
               <option value="2">🏬 Iguatemi</option>
@@ -890,13 +890,15 @@
         <div>
           <label class="field-label" style="margin-bottom:4px;">Período</label>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
-            <button class="fin-per-btn" data-per="hoje" onclick="setFinPeriodo('hoje',this)" style="flex:1;min-width:64px;border:2px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">Hoje</button>
-            <button class="fin-per-btn" data-per="7" onclick="setFinPeriodo('7',this)" style="flex:1;min-width:64px;border:2px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">7 dias</button>
-            <button class="fin-per-btn" data-per="30" onclick="setFinPeriodo('30',this)" style="flex:1;min-width:64px;border:2px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;">30 dias</button>
+            <button class="fin-per-btn" data-per="ontem" onclick="setFinPeriodo('ontem',this)" style="flex:1;min-width:50px;border:2px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.74rem;font-weight:700;cursor:pointer;">Ontem</button>
+            <button class="fin-per-btn" data-per="hoje" onclick="setFinPeriodo('hoje',this)" style="flex:1;min-width:50px;border:2px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.74rem;font-weight:700;cursor:pointer;">Hoje</button>
+            <button class="fin-per-btn" data-per="7" onclick="setFinPeriodo('7',this)" style="flex:1;min-width:50px;border:2px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.74rem;font-weight:700;cursor:pointer;">7 dias</button>
+            <button class="fin-per-btn" data-per="30" onclick="setFinPeriodo('30',this)" style="flex:1;min-width:50px;border:2px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-family:'Nunito',sans-serif;font-size:.74rem;font-weight:700;cursor:pointer;">30 dias</button>
             <button class="fin-per-btn fin-btn-tudo active" onclick="setFinPeriodo('tudo',this)" style="flex:0 0 auto;border:2px solid var(--pink);background:var(--pink);color:white;border-radius:10px;padding:8px 12px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;" title="Limpar filtros e mostrar tudo">✕</button>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;">
-            <button class="fin-per-btn" data-per="mes" onclick="setFinPeriodo('mes',this)" style="flex:0 0 auto;border:2px solid var(--border);background:white;border-radius:10px;padding:7px 12px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;" title="Mês corrente (dia 1 até o último dia)">📅 Mês</button>
+          <div style="display:flex;gap:6px;align-items:center;position:relative;">
+            <button class="fin-per-btn" data-per="mes" onclick="toggleSeletorMes(event)" style="flex:0 0 auto;border:2px solid var(--border);background:white;border-radius:10px;padding:7px 12px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px" title="Escolher mês"><span>📅</span><span id="fin-btn-mes-label">Mês</span><span style="font-size:.65rem;opacity:.6">▾</span></button>
+            <div id="fin-mes-menu" style="display:none;position:absolute;top:42px;left:0;background:white;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:60;min-width:140px;max-height:300px;overflow-y:auto"></div>
             <span style="font-size:.72rem;color:var(--gray);font-weight:700;">De:</span>
             <input type="date" id="fin-filtro-de" onchange="setFinFaixaData()" style="flex:1;min-width:0;border:2px solid var(--border);background:white;border-radius:10px;padding:7px 8px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;color:#333;">
             <span style="font-size:.72rem;color:var(--gray);font-weight:700;">Até:</span>
@@ -1600,6 +1602,65 @@ function ctxSetSingle(ctx,n){
   else if(ctx==='imp') lojaImp=n;
 }
 
+// Aplica a mesma loja em TODAS as abas (single + multi + filtros Financeiro/Histórico)
+// n = número da loja (1,2,3) ou null pra limpar tudo
+function sincronizarLojaGlobal(n){
+  // Funcionária: só permite a própria loja
+  if(currentUser?.role==='loja'){
+    if(n !== null && n !== currentUser.loja) return;
+  }
+  // Viewer: só permite lojas autorizadas
+  if(currentUser?.role==='viewer' && n !== null){
+    const lojasV = Array.isArray(currentUser.lojas) ? currentUser.lojas : [];
+    if(!lojasV.includes(n)) return;
+  }
+
+  // 1) Single-selects: aplica em todos
+  lojaC = lojaI = lojaPr = lojaE = lojaImp = n;
+
+  // 2) Multi-selects: se n=null, esvazia; senão, fica só com aquela loja
+  if(n === null){
+    projLojasFiltro = new Set();
+    divLojasFiltro = new Set();
+    comprasLojasFiltro = new Set();
+  } else {
+    projLojasFiltro = new Set([n]);
+    divLojasFiltro = new Set([n]);
+    comprasLojasFiltro = new Set([n]);
+  }
+
+  // 3) Filtros Financeiro e Histórico
+  const finSel = document.getElementById('fin-filtro-loja');
+  if(finSel) finSel.value = n ? String(n) : '';
+  const histSel = document.getElementById('hist-filtro-loja');
+  if(histSel) histSel.value = n ? String(n) : '';
+
+  // 4) Atualiza UI de todos os dropdowns
+  atualizarTodosLojaDD();
+
+  // 5) Re-renderiza todas as abas afetadas (cada uma vai mostrar a loja certa quando aberta)
+  // Não chama tudo: só as funções existentes que estão visíveis ou serão re-acessadas
+  // Para evitar trabalho desnecessário, deixamos as funções de render rodarem quando a tab abrir.
+  // Mas a tab ATUAL deve ser re-renderizada agora:
+  const tabAtiva = document.querySelector('.tab-content.active')?.id;
+  if(tabAtiva){
+    const renderMap = {
+      'sec-consumo':'renderConsumo',
+      'sec-inv':'renderInv',
+      'sec-projetado':'renderProjetado',
+      'sec-divergencia':'renderDivergencia',
+      'sec-entradas':'renderEntradas',
+      'sec-perdas':'renderPerdas',
+      'sec-compras':'gerarCompras',
+      'sec-importar':'renderImportar',
+      'sec-historico':'renderHistorico',
+      'sec-financeiro':'renderFinanceiro',
+    };
+    const fn = renderMap[tabAtiva];
+    if(fn && typeof window[fn] === 'function') window[fn]();
+  }
+}
+
 function toggleLojaDD(ctx){
   // Abre/fecha o menu dropdown
   const menu = document.getElementById('ddmenu-'+ctx);
@@ -1623,26 +1684,33 @@ function pickLoja(ctx,n){
     // Multi-select: toggle
     const set = ctx==='p'?projLojasFiltro:ctx==='d'?divLojasFiltro:comprasLojasFiltro;
     if(set.has(n)) set.delete(n); else set.add(n);
+    // 🔄 Sincronização: se ficou com EXATAMENTE 1 loja, propaga pra todas as outras abas
+    if(set.size === 1){
+      const unicaLoja = [...set][0];
+      sincronizarLojaGlobal(unicaLoja);
+      return; // sincronizarLojaGlobal já chamou atualizarTodosLojaDD e re-render
+    }
+    // 2+ lojas ou 0: não sincroniza, apenas atualiza esse dropdown
+    atualizarLojaDD(ctx);
+    const renderFn = CTX_RENDER[ctx];
+    if(renderFn && typeof window[renderFn]==='function') window[renderFn]();
   } else {
     // Single-select: troca; clicar na mesma desmarca (deixa vazio)
-    // Lê var diretamente (let não fica em window[nome])
     let atual = null;
     if(ctx==='c') atual = lojaC;
     else if(ctx==='i') atual = lojaI;
     else if(ctx==='pr') atual = lojaPr;
     else if(ctx==='e') atual = lojaE;
     else if(ctx==='imp') atual = lojaImp;
-    ctxSetSingle(ctx, atual===n ? null : n);
-    // Single: fecha o menu após escolher
+    const novaLoja = atual===n ? null : n;
+    // Fecha o menu após escolher (se diferente do atual)
     if(atual!==n){
       document.getElementById('ddmenu-'+ctx)?.classList.remove('is-open');
       document.getElementById('ddbtn-'+ctx)?.classList.remove('is-open');
     }
+    // 🔄 Sincronização: single-select sempre sincroniza com as outras abas
+    sincronizarLojaGlobal(novaLoja);
   }
-  atualizarLojaDD(ctx);
-  // Re-renderiza
-  const renderFn = CTX_RENDER[ctx];
-  if(renderFn && typeof window[renderFn]==='function') window[renderFn]();
 }
 
 function atualizarLojaDD(ctx){
@@ -2041,6 +2109,7 @@ async function salvarPerdas(){
   const ok = await saveCloud('perdas');
   if(ok){
     renderPerdas();
+    renderProjetado(); // atualiza Estoque (perdas descontam do projetado)
     showToast(`💔 ${totalItens} perda(s) registrada(s) e descontada(s) do estoque!`);
   } else {
     showToast('⚠️ Erro ao salvar!');
@@ -2087,7 +2156,12 @@ async function salvarEntrada(){
     }
   });
   const ok=await saveCloud('entradas');
-  showToast(ok?`🛍️ Entrada registrada! ${itensEntrada.length} item(ns) adicionados ao estoque.`:'⚠️ Erro ao salvar!');
+  if(ok){
+    renderProjetado(); // atualiza Estoque (entradas somam ao projetado)
+    showToast(`🛍️ Entrada registrada! ${itensEntrada.length} item(ns) adicionados ao estoque.`);
+  } else {
+    showToast('⚠️ Erro ao salvar!');
+  }
   btn.disabled=false;
 }
 
@@ -3239,6 +3313,8 @@ async function confirmarImportacao(){
     document.getElementById('btn-pular-fila').style.display='none';
     arquivoAtualNome = null;
     mostrarConfronto(dataRelatorio);
+    // Re-renderiza Estoque (importação criou novos consumos que afetam o projetado)
+    renderProjetado();
     let toastMsg;
     if(foiSubstituicao){
       toastMsg = `🔄 PDV ${pdvId} substituído! Lançamento anterior foi atualizado.`;
@@ -3948,9 +4024,11 @@ function gerarRelatorioMensal(){
     return;
   }
 
-  // Determina o mês corrente baseado no filtro de período (ou usa o mês atual)
+  // Determina o mês baseado em (1) finMesRef do seletor, (2) finDataDe da faixa, (3) mês atual
   let mesRef;
-  if(finDataDe){
+  if(finPeriodo === 'mes' && finMesRef){
+    mesRef = finMesRef; // YYYY-MM escolhido no seletor
+  } else if(finDataDe){
     mesRef = finDataDe.slice(0,7); // YYYY-MM
   } else {
     const hoje = new Date();
@@ -5338,20 +5416,36 @@ async function apagarHistGrupo(tipo, dia, loja /* null = todas as lojas */){
 //  FINANCEIRO
 // ════════════════════════════════════════════════════════════
 
-let finPeriodo = 'tudo'; // hoje | 7 | 30 | tudo | faixa
+let finPeriodo = 'tudo'; // ontem | hoje | 7 | 30 | mes | tudo | faixa
+let finMesRef = ''; // 'YYYY-MM' usado quando finPeriodo === 'mes' (vazio = mês corrente)
 let finDataDe = '';   // YYYY-MM-DD inicio (inclusive)
 let finDataAte = '';  // YYYY-MM-DD fim (inclusive)
 let finExpandidos = {};  // {id: true} controla quais cards estão abertos
 
 function onFinFiltroLojaChange(){
-  // Ao trocar a loja: se foi escolhida uma loja (não vazio), abre o mês corrente.
-  // Se voltou pra "Todas" (vazio), apenas re-renderiza com o filtro atual.
+  // Ao trocar a loja: sincroniza com TODAS as outras abas (se loja específica).
+  // "Todas" (vazio) não sincroniza — mantém estado nas outras abas.
   const val = document.getElementById('fin-filtro-loja').value;
   if(val){
+    const n = Number(val);
+    sincronizarLojaGlobal(n);
+    // Abre o mês corrente automaticamente quando escolhe loja específica
     const btnMes = document.querySelector('.fin-per-btn[data-per="mes"]');
-    setFinPeriodo('mes', btnMes);
+    if(btnMes) setFinPeriodo('mes', btnMes);
+    else renderFinanceiro();
   } else {
     renderFinanceiro();
+  }
+}
+
+function onHistFiltroLojaChange(){
+  // Ao trocar a loja no Histórico: sincroniza com TODAS as outras abas (se loja específica).
+  // "Todas" (vazio) não sincroniza.
+  const val = document.getElementById('hist-filtro-loja').value;
+  if(val){
+    sincronizarLojaGlobal(Number(val));
+  } else {
+    renderHistorico();
   }
 }
 
@@ -5359,6 +5453,8 @@ function setFinPeriodo(p, btn){
   finPeriodo = p;
   finDataDe = '';
   finDataAte = '';
+  // Se trocou pra qualquer período que NÃO seja "mes", reseta finMesRef
+  if(p !== 'mes') finMesRef = '';
   // Limpa os inputs de data
   const inpDe = document.getElementById('fin-filtro-de');
   const inpAte = document.getElementById('fin-filtro-ate');
@@ -5377,8 +5473,99 @@ function setFinPeriodo(p, btn){
     btn.style.color = 'white';
     btn.style.borderColor = 'var(--pink)';
   }
+  // Se trocou pra qualquer período que NÃO seja "mes", reseta o label do botão Mês
+  if(p !== 'mes'){
+    const lbl = document.getElementById('fin-btn-mes-label');
+    if(lbl) lbl.textContent = 'Mês';
+  }
   renderFinanceiro();
 }
+
+// ─── Seletor de Mês (lista os meses que têm dados financeiros) ────────────────
+function toggleSeletorMes(ev){
+  ev?.stopPropagation?.();
+  const menu = document.getElementById('fin-mes-menu');
+  if(!menu) return;
+  const aberto = menu.style.display === 'block';
+  if(aberto){
+    menu.style.display = 'none';
+    return;
+  }
+  // Lista meses com dados (descendente — mais recente primeiro)
+  const meses = _mesesComDadosFinanceiro();
+  if(meses.length === 0){
+    menu.innerHTML = `<div style="padding:14px;font-size:.78rem;color:var(--gray);text-align:center;font-style:italic">Nenhum dado financeiro registrado.</div>`;
+  } else {
+    // Identifica mês selecionado atualmente (se finPeriodo === 'mes' + finMesRef)
+    menu.innerHTML = meses.map(m=>{
+      const isSel = (finPeriodo === 'mes' && finMesRef === m);
+      const bg = isSel ? '#fdf2f8' : 'white';
+      const cor = isSel ? '#9d174d' : '#333';
+      const [ano, mesNum] = m.split('-');
+      const label = `${mesNum}/${ano}`;
+      return `<button onclick="selecionarMes('${m}',event)" style="display:block;width:100%;text-align:left;background:${bg};border:none;border-bottom:1px solid #f3f4f6;padding:10px 14px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:${isSel?'800':'700'};color:${cor};cursor:pointer" onmouseover="this.style.background='#fdf2f8'" onmouseout="this.style.background='${bg}'">${label}${isSel?' ✓':''}</button>`;
+    }).join('');
+  }
+  menu.style.display = 'block';
+}
+
+function _mesesComDadosFinanceiro(){
+  // Retorna lista única de "YYYY-MM" presentes em db.financeiro, ordenado desc
+  const mesesSet = new Set();
+  (db.financeiro || []).forEach(r => {
+    if(r.data && typeof r.data === 'string' && r.data.length >= 7){
+      mesesSet.add(r.data.slice(0,7));
+    }
+  });
+  return [...mesesSet].sort().reverse();
+}
+
+function selecionarMes(mesRef, ev){
+  ev?.stopPropagation?.();
+  // Aplica filtro do mês escolhido (dia 1 até último dia)
+  finPeriodo = 'mes';
+  finMesRef = mesRef;
+  finDataDe = '';
+  finDataAte = '';
+  // Limpa inputs de data
+  const inpDe = document.getElementById('fin-filtro-de');
+  const inpAte = document.getElementById('fin-filtro-ate');
+  if(inpDe) inpDe.value = '';
+  if(inpAte) inpAte.value = '';
+  // Marca o botão Mês como ativo (cor rosa) e atualiza label
+  document.querySelectorAll('.fin-per-btn').forEach(b=>{
+    b.classList.remove('active');
+    b.style.background = 'white';
+    b.style.color = '#333';
+    b.style.borderColor = 'var(--border)';
+  });
+  const btnMes = document.querySelector('.fin-per-btn[data-per="mes"]');
+  if(btnMes){
+    btnMes.classList.add('active');
+    btnMes.style.background = 'var(--pink)';
+    btnMes.style.color = 'white';
+    btnMes.style.borderColor = 'var(--pink)';
+  }
+  const lbl = document.getElementById('fin-btn-mes-label');
+  if(lbl){
+    const [ano, mesNum] = mesRef.split('-');
+    lbl.textContent = `${mesNum}/${ano}`;
+  }
+  // Fecha o menu
+  const menu = document.getElementById('fin-mes-menu');
+  if(menu) menu.style.display = 'none';
+  // Re-renderiza
+  renderFinanceiro();
+}
+
+// Fecha o seletor de mês ao clicar fora
+document.addEventListener('click', function(ev){
+  const menu = document.getElementById('fin-mes-menu');
+  const btn = document.querySelector('.fin-per-btn[data-per="mes"]');
+  if(!menu || menu.style.display !== 'block') return;
+  if(menu.contains(ev.target) || (btn && btn.contains(ev.target))) return;
+  menu.style.display = 'none';
+});
 
 function setFinFaixaData(){
   const inpDe = document.getElementById('fin-filtro-de');
@@ -5421,16 +5608,34 @@ function _finDataLimite(){
     return { de: finDataDe || null, ate: finDataAte || null };
   }
   if(finPeriodo === 'mes'){
-    // Mês corrente: dia 1 até último dia do mês atual
-    const hj = new Date();
-    const y = hj.getFullYear();
-    const m = hj.getMonth(); // 0-based
+    // Mês escolhido (finMesRef='YYYY-MM') ou mês corrente se vazio
+    let y, m;
+    if(finMesRef && /^\d{4}-\d{2}$/.test(finMesRef)){
+      const partes = finMesRef.split('-');
+      y = parseInt(partes[0]);
+      m = parseInt(partes[1]) - 1; // 0-based
+    } else {
+      const hj = new Date();
+      y = hj.getFullYear();
+      m = hj.getMonth();
+    }
     const ultimoDia = new Date(y, m+1, 0).getDate();
     const mm = String(m+1).padStart(2,'0');
     return {
       de: `${y}-${mm}-01`,
       ate: `${y}-${mm}-${String(ultimoDia).padStart(2,'0')}`,
     };
+  }
+  if(finPeriodo === 'ontem'){
+    // Apenas o dia anterior (de = ate = ontem)
+    const hj = new Date();
+    hj.setHours(0,0,0,0);
+    hj.setDate(hj.getDate() - 1);
+    const y = hj.getFullYear();
+    const m = String(hj.getMonth()+1).padStart(2,'0');
+    const d = String(hj.getDate()).padStart(2,'0');
+    const dataOntem = `${y}-${m}-${d}`;
+    return { de: dataOntem, ate: dataOntem };
   }
   // hoje / 7 / 30 — calcula data inicial relativa
   const hj = new Date();
@@ -6725,32 +6930,40 @@ function renderFinanceiro(){
     return;
   }
 
-  // % de lucro sobre faturado total
+  // % de cada card sobre o faturado total (Faturado = 100%, demais = proporção)
   const percLucro = totFat > 0 ? (totDif / totFat * 100) : 0;
   const percLucroFmt = percLucro.toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1});
+  const percVex = totFat > 0 ? (totVendaExt / totFat * 100) : 0;
+  const percVexFmt = percVex.toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1});
+  const percIns = totFat > 0 ? (totCustoIns / totFat * 100) : 0;
+  const percInsFmt = percIns.toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1});
+  const percCfix = totFat > 0 ? (totCustoFix / totFat * 100) : 0;
+  const percCfixFmt = percCfix.toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1});
+  const percEnc = totFat > 0 ? (totImpostos / totFat * 100) : 0;
+  const percEncFmt = percEnc.toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1});
 
   resumo.textContent = `${registros.length} registro${registros.length===1?'':'s'} · período somado abaixo`;
   tots.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <div${fatTopTooltip}${fatTopTooltip?' class="has-info-tooltip"':''} style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:10px;text-align:center;">
         <div style="font-size:.65rem;color:#166534;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">💰 Faturado${fatTopTooltip?' ℹ️':''}</div>
-        <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#166534;margin-top:2px;">R$ ${_fmtBRL(totFat)}</div>
+        <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#166534;margin-top:2px;">R$ ${_fmtBRL(totFat)} <span style="font-size:.75rem;opacity:.75">(100%)</span></div>
       </div>
       <div${vexTopTooltip}${totVendaExt>0?' class="has-info-tooltip"':''} style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:12px;padding:10px;text-align:center;">
         <div style="font-size:.65rem;color:#065f46;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">💵 Vendas Externas${totVendaExt>0?' ℹ️':''}</div>
-        <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#065f46;margin-top:2px;">R$ ${_fmtBRL(totVendaExt)}</div>
+        <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#065f46;margin-top:2px;">R$ ${_fmtBRL(totVendaExt)} <span style="font-size:.75rem;opacity:.75">(${percVexFmt}%)</span></div>
       </div>
       <div${insTopTooltip}${insTopTooltip?' class="has-info-tooltip"':''} style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px;text-align:center;">
         <div style="font-size:.65rem;color:#9a3412;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">📦 Custo Insumos${insTopTooltip?' ℹ️':''}</div>
-        <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#9a3412;margin-top:2px;">R$ ${_fmtBRL(totCustoIns)}</div>
+        <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#9a3412;margin-top:2px;">R$ ${_fmtBRL(totCustoIns)} <span style="font-size:.75rem;opacity:.75">(${percInsFmt}%)</span></div>
       </div>
       <div${cfTopTooltip}${totCustoFix>0?' class="has-info-tooltip"':''} style="background:#fef3c7;border:1px solid #fde68a;border-radius:12px;padding:10px;text-align:center;">
         <div style="font-size:.65rem;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">💸 Custos Fixos${totCustoFix>0?' ℹ️':''}</div>
-        <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#92400e;margin-top:2px;">R$ ${_fmtBRL(totCustoFix)}</div>
+        <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#92400e;margin-top:2px;">R$ ${_fmtBRL(totCustoFix)} <span style="font-size:.75rem;opacity:.75">(${percCfixFmt}%)</span></div>
       </div>
       <div${impTopTooltip}${totImpostos>0?' class="has-info-tooltip"':''} style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:10px;text-align:center;">
         <div style="font-size:.65rem;color:#1e40af;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">🧾 Encargos${totImpostos>0?' ℹ️':''}</div>
-        <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#1e40af;margin-top:2px;">R$ ${_fmtBRL(totImpostos)}</div>
+        <div style="font-family:'Baloo 2',cursive;font-size:1.05rem;font-weight:800;color:#1e40af;margin-top:2px;">R$ ${_fmtBRL(totImpostos)} <span style="font-size:.75rem;opacity:.75">(${percEncFmt}%)</span></div>
       </div>
       <div style="background:${totDif>=0?'#f0f9ff':'#fef2f2'};border:1px solid ${totDif>=0?'#7dd3fc':'#fecaca'};border-radius:12px;padding:10px;text-align:center;">
         <div style="font-size:.65rem;color:${totDif>=0?'#0c4a6e':'#991b1b'};font-weight:700;text-transform:uppercase;letter-spacing:.5px;">📊 Lucro</div>
@@ -6892,12 +7105,19 @@ function renderFinanceiro(){
     // Resumo financeiro sempre visível (5 colunas: Fat / Insumos / Fixos / Encargos / Lucro)
     const fatTemTooltip = !!fatTooltipAttr;
     const insTemTooltip = !!insTooltipAttr;
+    // % de cada componente sobre o faturado total do dia
+    const _pFmt = v => v.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
+    const pIns = fatTotal > 0 ? (insumosTotal / fatTotal * 100) : 0;
+    const pCf  = fatTotal > 0 ? (cfTotal / fatTotal * 100) : 0;
+    const pEnc = fatTotal > 0 ? (encargosTotal / fatTotal * 100) : 0;
+    const pLuc = fatTotal > 0 ? (dif / fatTotal * 100) : 0;
+    const _pSpan = (p) => `<div style="font-size:.58rem;color:var(--gray);font-weight:700;margin-top:1px;opacity:.75">(${_pFmt(p)}%)</div>`;
     html += `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:8px;font-size:.65rem;text-align:center;">`;
-    html += `<div${fatTooltipAttr}${fatTemTooltip?' class="has-info-tooltip"':''}><div style="color:var(--gray);font-weight:600;">Faturado${fatTemTooltip?' ℹ️':''}</div><div style="font-weight:800;color:#166534;font-size:.74rem;">R$ ${_fmtBRL(fatTotal)}${vexList.length?'<span style="color:#15803d;font-size:.6rem;font-weight:700"> +ext</span>':''}</div></div>`;
-    html += `<div${insTooltipAttr}${insTemTooltip?' class="has-info-tooltip"':''}><div style="color:var(--gray);font-weight:600;">Insumos${insTemTooltip?' ℹ️':''}</div><div style="font-weight:800;color:#9a3412;font-size:.74rem;">R$ ${_fmtBRL(insumosTotal)}</div></div>`;
-    html += `<div${cfTooltipAttr}${cfList.length?' class="has-info-tooltip"':''}><div style="color:var(--gray);font-weight:600;">Fixos${cfList.length?' ℹ️':''}</div><div style="font-weight:800;color:#92400e;font-size:.74rem;">R$ ${_fmtBRL(cfTotal)}</div></div>`;
-    html += `<div${impTooltipAttr}${encargosTotal>0?' class="has-info-tooltip"':''}><div style="color:var(--gray);font-weight:600;">Encargos${encargosTotal>0?' ℹ️':''}</div><div style="font-weight:800;color:#1e3a8a;font-size:.74rem;">R$ ${_fmtBRL(encargosTotal)}</div></div>`;
-    html += `<div><div style="color:var(--gray);font-weight:600;">Lucro</div><div style="font-weight:800;color:${dif>=0?'#1e40af':'#991b1b'};font-size:.74rem;">R$ ${_fmtBRL(dif)}</div></div>`;
+    html += `<div${fatTooltipAttr}${fatTemTooltip?' class="has-info-tooltip"':''}><div style="color:var(--gray);font-weight:600;">Faturado${fatTemTooltip?' ℹ️':''}</div><div style="font-weight:800;color:#166534;font-size:.74rem;">R$ ${_fmtBRL(fatTotal)}${vexList.length?'<span style="color:#15803d;font-size:.6rem;font-weight:700"> +ext</span>':''}</div><div style="font-size:.58rem;color:var(--gray);font-weight:700;margin-top:1px;opacity:.75">(100%)</div></div>`;
+    html += `<div${insTooltipAttr}${insTemTooltip?' class="has-info-tooltip"':''}><div style="color:var(--gray);font-weight:600;">Insumos${insTemTooltip?' ℹ️':''}</div><div style="font-weight:800;color:#9a3412;font-size:.74rem;">R$ ${_fmtBRL(insumosTotal)}</div>${_pSpan(pIns)}</div>`;
+    html += `<div${cfTooltipAttr}${cfList.length?' class="has-info-tooltip"':''}><div style="color:var(--gray);font-weight:600;">Fixos${cfList.length?' ℹ️':''}</div><div style="font-weight:800;color:#92400e;font-size:.74rem;">R$ ${_fmtBRL(cfTotal)}</div>${_pSpan(pCf)}</div>`;
+    html += `<div${impTooltipAttr}${encargosTotal>0?' class="has-info-tooltip"':''}><div style="color:var(--gray);font-weight:600;">Encargos${encargosTotal>0?' ℹ️':''}</div><div style="font-weight:800;color:#1e3a8a;font-size:.74rem;">R$ ${_fmtBRL(encargosTotal)}</div>${_pSpan(pEnc)}</div>`;
+    html += `<div><div style="color:var(--gray);font-weight:600;">Lucro</div><div style="font-weight:800;color:${dif>=0?'#1e40af':'#991b1b'};font-size:.74rem;">R$ ${_fmtBRL(dif)}</div>${_pSpan(pLuc)}</div>`;
     html += `</div>`;
 
     // Detalhamento (expansível)
