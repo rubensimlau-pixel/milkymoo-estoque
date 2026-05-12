@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.61</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.63</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1646,11 +1646,11 @@ function sincronizarLojaGlobal(n){
   // Não chama tudo: só as funções existentes que estão visíveis ou serão re-acessadas
   // Para evitar trabalho desnecessário, deixamos as funções de render rodarem quando a tab abrir.
   // Mas a tab ATUAL deve ser re-renderizada agora:
-  const tabAtiva = document.querySelector('.tab-content.active')?.id;
+  const tabAtiva = document.querySelector('.section.active')?.id;
   if(tabAtiva){
     const renderMap = {
       'sec-consumo':'renderConsumo',
-      'sec-inv':'renderInv',
+      'sec-inventario':'renderInv',
       'sec-projetado':'renderProjetado',
       'sec-divergencia':'renderDivergencia',
       'sec-entradas':'renderEntradas',
@@ -1692,7 +1692,8 @@ function pickLoja(ctx,n){
     if(set.size === 1){
       const unicaLoja = [...set][0];
       sincronizarLojaGlobal(unicaLoja);
-      return; // sincronizarLojaGlobal já chamou atualizarTodosLojaDD e re-render
+      _renderAbaAtual();
+      return;
     }
     // 2+ lojas ou 0: não sincroniza, apenas atualiza esse dropdown
     atualizarLojaDD(ctx);
@@ -1714,7 +1715,26 @@ function pickLoja(ctx,n){
     }
     // 🔄 Sincronização: single-select sempre sincroniza com as outras abas
     sincronizarLojaGlobal(novaLoja);
+    _renderAbaAtual();
   }
+}
+
+// Helper: re-renderiza a aba ATUALMENTE visível (chamada de várias funções de sincronização)
+function _renderAbaAtual(){
+  const ativa = document.querySelector('.section.active');
+  if(!ativa) return;
+  const id = ativa.id || '';
+  // Mapa de ID → função
+  if(id === 'sec-consumo' && typeof renderConsumo === 'function') renderConsumo();
+  else if(id === 'sec-inventario' && typeof renderInv === 'function') renderInv();
+  else if(id === 'sec-projetado' && typeof renderProjetado === 'function') renderProjetado();
+  else if(id === 'sec-divergencia' && typeof renderDivergencia === 'function') renderDivergencia();
+  else if(id === 'sec-entradas' && typeof renderEntradas === 'function') renderEntradas();
+  else if(id === 'sec-perdas' && typeof renderPerdas === 'function') renderPerdas();
+  else if(id === 'sec-compras' && typeof gerarCompras === 'function') gerarCompras();
+  else if(id === 'sec-importar' && typeof renderImportar === 'function') renderImportar();
+  else if(id === 'sec-historico' && typeof renderHistorico === 'function') renderHistorico();
+  else if(id === 'sec-financeiro' && typeof renderFinanceiro === 'function') renderFinanceiro();
 }
 
 function atualizarLojaDD(ctx){
