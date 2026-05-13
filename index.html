@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.83</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.84</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -4646,10 +4646,9 @@ function renderListaSabores(){
 
 // Detecta produtos vendidos nos relatórios que NÃO têm receita cadastrada
 function _itensSemCadastro(){
-  if(!Array.isArray(db.relatorios) || db.relatorios.length === 0) return [];
   const receitas = getReceitas();
   // Função similar à buscarReceita pra normalizar
-  const normalizar = (s) => s.toUpperCase()
+  const normalizar = (s) => (s || '').toUpperCase()
     .replace(/\s*(180|300|500|700)\s*ML.*$/i, '')
     .replace(/PASSATEMPO/i, '')
     .trim()
@@ -4657,9 +4656,7 @@ function _itensSemCadastro(){
 
   // Verifica se tem receita pra esse nome+tamanho
   const temReceita = (nomeNorm, tamanho) => {
-    // Busca exata
     if(receitas[nomeNorm] && receitas[nomeNorm][tamanho] && receitas[nomeNorm][tamanho].length > 0) return true;
-    // Busca parcial
     for(const sabor of Object.keys(receitas)){
       const sNorm = sabor.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       if((nomeNorm.includes(sNorm) || sNorm.includes(nomeNorm)) && receitas[sabor][tamanho] && receitas[sabor][tamanho].length > 0){
@@ -4669,25 +4666,29 @@ function _itensSemCadastro(){
     return false;
   };
 
-  // Agrupa por nome+categoria com contador
+  // Acumula vendas de cada nome+categoria, varrendo db.financeiro[].pdvs[].sabores
   const semCadastro = {};
-  db.relatorios.forEach(rel => {
-    if(!Array.isArray(rel.saboresList)) return;
-    rel.saboresList.forEach(s => {
-      const nome = (s.nomeProd || '').trim();
-      if(!nome) return;
-      // Tamanho pode ser 180/300/500/700 (sabor) ou 'adicional'/'bebida'/'mimo'
-      const tam = String(s.tamanho || '');
-      if(!tam) return;
-      const nomeNorm = normalizar(nome);
-      if(temReceita(nomeNorm, tam)) return;
-      const chave = `${nomeNorm}|${tam}`;
-      if(!semCadastro[chave]){
-        semCadastro[chave] = { nome: nomeNorm, categoria: tam, qtdVendas: 0 };
-      }
-      semCadastro[chave].qtdVendas += (s.qtd || 1);
+  (db.financeiro||[]).forEach(fin => {
+    const pdvs = Array.isArray(fin.pdvs) ? fin.pdvs : [];
+    pdvs.forEach(pdv => {
+      const lista = Array.isArray(pdv.sabores) ? pdv.sabores : [];
+      lista.forEach(s => {
+        const nome = (s.nomeProd || '').trim();
+        if(!nome) return;
+        const tam = String(s.tamanho || '');
+        if(!tam) return;
+        const nomeNorm = normalizar(nome);
+        if(!nomeNorm) return;
+        if(temReceita(nomeNorm, tam)) return;
+        const chave = `${nomeNorm}|${tam}`;
+        if(!semCadastro[chave]){
+          semCadastro[chave] = { nome: nomeNorm, categoria: tam, qtdVendas: 0 };
+        }
+        semCadastro[chave].qtdVendas += (Number(s.qtd) || 1);
+      });
     });
   });
+
   // Ordena: adicionais/bebidas/mimos primeiro, depois sabores; mais vendido em cima
   const ordemCat = {adicional:0, bebida:1, mimo:2};
   return Object.values(semCadastro).sort((a,b) => {
