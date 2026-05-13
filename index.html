@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.86</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.87</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -519,6 +519,7 @@
           <div class="loja-dd-item" data-n="3" onclick="pickLoja('d',3)"><span class="loja-dd-check"></span><span class="loja-dd-icon">🏗️</span><span id="ddln-d-3">Carapicuíba</span></div>
         </div>
       </div>
+      <button class="btn" onclick="abrirCompararCopos()" style="background:var(--purple);color:white;margin-bottom:10px;width:100%">⚖️ Comparar Copos: Consumo vs Vendas</button>
       <div id="div-semanas"></div>
       <div id="div-lista"></div>
     </div>
@@ -943,6 +944,58 @@
         </div>
       </div>
       <div id="lista-custos-modal" style="flex:1;overflow-y:auto;padding:14px"></div>
+    </div>
+
+    <!-- MODAL COMPARAR COPOS: Consumo+Perdas vs Vendas do PDV -->
+    <div id="modal-comparar-copos" style="display:none;position:fixed;inset:0;background:white;z-index:750;flex-direction:column;overflow:hidden">
+      <div style="background:linear-gradient(135deg,#581c87,#7c3aed);color:white;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <div>
+          <div style="font-family:'Baloo 2',cursive;font-size:1.15rem;font-weight:800">⚖️ Comparar Copos</div>
+          <div style="font-size:.75rem;opacity:.85">Consumo + Perdas × Vendas do PDV (relatório Degust)</div>
+        </div>
+        <button onclick="fecharCompararCopos()" style="background:rgba(255,255,255,.2);border:none;border-radius:50px;padding:7px 14px;color:white;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">✕ Fechar</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:14px">
+        <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;padding:10px 12px;margin-bottom:12px;color:#581c87;font-size:.78rem;line-height:1.4">
+          <strong>Como funciona:</strong> compara quantos copos foram consumidos (Consumo + Perdas) com quantos sabores foram vendidos no relatório do PDV. Use isso pra detectar diferenças (quebra, sobras, copos extras, etc).
+        </div>
+
+        <label class="field-label">Loja</label>
+        <select id="comp-copos-loja" class="field-input" style="margin-bottom:12px">
+          <option value="1">🏪 Cajamar</option>
+          <option value="2">🏬 Iguatemi</option>
+          <option value="3">🏗️ Carapicuíba</option>
+        </select>
+
+        <label class="field-label">Período</label>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <label style="display:flex;align-items:center;gap:5px;font-size:.82rem;cursor:pointer">
+            <input type="radio" name="comp-copos-tipo" value="dia" checked onchange="_atualizarCompCoposCampos()"> Um dia
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:.82rem;cursor:pointer">
+            <input type="radio" name="comp-copos-tipo" value="faixa" onchange="_atualizarCompCoposCampos()"> Faixa de datas
+          </label>
+        </div>
+        <div id="comp-copos-dia-area">
+          <input type="date" id="comp-copos-dia" class="field-input" style="margin-bottom:12px">
+        </div>
+        <div id="comp-copos-faixa-area" style="display:none">
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <div style="flex:1">
+              <div style="font-size:.7rem;color:var(--gray);margin-bottom:2px">De</div>
+              <input type="date" id="comp-copos-de" class="field-input" style="margin-bottom:0">
+            </div>
+            <div style="flex:1">
+              <div style="font-size:.7rem;color:var(--gray);margin-bottom:2px">Até</div>
+              <input type="date" id="comp-copos-ate" class="field-input" style="margin-bottom:0">
+            </div>
+          </div>
+        </div>
+
+        <button onclick="calcularCompararCopos()" style="width:100%;background:#7c3aed;color:white;border:none;border-radius:12px;padding:13px;font-family:'Baloo 2',cursive;font-size:1rem;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(124,58,237,.3);margin-bottom:14px">🔍 Calcular comparação</button>
+
+        <div id="comp-copos-resultado"></div>
+      </div>
     </div>
 
     <!-- MODAL GERENCIAR VENDAS EXTERNAS -->
@@ -7337,6 +7390,204 @@ function _lojaAtualFin(){
   const v = document.getElementById('fin-filtro-loja')?.value;
   return v ? Number(v) : null;
 }
+
+// ─────────────────────────────────────────────────────────────────
+// COMPARAR COPOS: Consumo + Perdas × Vendas do PDV
+// ─────────────────────────────────────────────────────────────────
+function abrirCompararCopos(){
+  // Pré-seleciona a loja se houver alguma escolhida em div ou outras abas
+  const sel = document.getElementById('comp-copos-loja');
+  const lojas = [...(divLojasFiltro||new Set())];
+  if(lojas.length === 1) sel.value = lojas[0];
+  // Pré-seleciona data: hoje
+  document.getElementById('comp-copos-dia').value = hoje();
+  document.getElementById('comp-copos-de').value = hoje();
+  document.getElementById('comp-copos-ate').value = hoje();
+  document.getElementById('comp-copos-resultado').innerHTML = '';
+  document.getElementById('modal-comparar-copos').style.display = 'flex';
+}
+
+function fecharCompararCopos(){
+  document.getElementById('modal-comparar-copos').style.display = 'none';
+}
+
+function _atualizarCompCoposCampos(){
+  const tipo = document.querySelector('input[name="comp-copos-tipo"]:checked')?.value;
+  document.getElementById('comp-copos-dia-area').style.display = tipo === 'dia' ? 'block' : 'none';
+  document.getElementById('comp-copos-faixa-area').style.display = tipo === 'faixa' ? 'block' : 'none';
+}
+
+// Detecta itens-copo no estoque: nomes que casam "COPO 180", "COPO 300", etc.
+// Retorna objeto { 180: itemId, 300: itemId, 500: itemId, 700: itemId } - ou null pros que faltam.
+function _detectarCopos(){
+  const result = { 180:null, 300:null, 500:null, 700:null };
+  if(!Array.isArray(db.items)) return result;
+  const tamanhos = [180,300,500,700];
+  const nomesCadidatos = [];
+  tamanhos.forEach(t => {
+    // Procura item cujo nome bate "COPO" + tamanho (e NÃO contém "DELIVERY"/"DEL")
+    const matches = db.items.filter(i => {
+      const n = (i.nome||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      if(/DELIVERY|\bDEL\b/.test(n)) return false; // pula delivery
+      const re = new RegExp(`\\bCOPO\\b.*\\b${t}\\b`);
+      return re.test(n);
+    });
+    if(matches.length > 0){
+      result[t] = matches[0].id;
+      nomesCadidatos.push({ tam: t, item: matches[0] });
+    }
+  });
+  return result;
+}
+
+function calcularCompararCopos(){
+  const loja = Number(document.getElementById('comp-copos-loja').value);
+  const tipo = document.querySelector('input[name="comp-copos-tipo"]:checked')?.value || 'dia';
+  let dataDe, dataAte;
+  if(tipo === 'dia'){
+    dataDe = dataAte = document.getElementById('comp-copos-dia').value;
+  } else {
+    dataDe = document.getElementById('comp-copos-de').value;
+    dataAte = document.getElementById('comp-copos-ate').value;
+  }
+  if(!dataDe || !dataAte){
+    showToast('⚠️ Informe a data');
+    return;
+  }
+  if(dataDe > dataAte){
+    showToast('⚠️ Data inicial maior que a final');
+    return;
+  }
+
+  // 1. Detecta copos no estoque
+  const copos = _detectarCopos();
+  const semDetectar = [180,300,500,700].filter(t => !copos[t]);
+  let alertaCopos = '';
+  if(semDetectar.length > 0){
+    alertaCopos = `<div style="background:#fef3c7;border:1.5px solid #fcd34d;color:#92400e;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:.82rem">
+      ⚠️ <strong>Copos não detectados automaticamente:</strong> ${semDetectar.map(t=>t+'ml').join(', ')}.
+      Verifique se existem itens cadastrados como "COPO ${semDetectar[0]}" (sem "DELIVERY"/"DEL" no nome). Linhas com "—" abaixo não puderam ser calculadas.
+    </div>`;
+  }
+
+  // 2. Soma Consumo + Perdas dos copos no período
+  // db.consumos[i] = { data, loja, itemId, qty }
+  // db.perdas[i]   = { data, loja, itemId, qty }
+  const consumoPorTam = { 180:0, 300:0, 500:0, 700:0 };
+  [180,300,500,700].forEach(t => {
+    const itemId = copos[t];
+    if(!itemId) return;
+    (db.consumos||[]).forEach(c => {
+      if(Number(c.loja) !== loja) return;
+      if(c.itemId !== itemId) return;
+      if(c.data < dataDe || c.data > dataAte) return;
+      consumoPorTam[t] += Number(c.qty) || 0;
+    });
+    (db.perdas||[]).forEach(p => {
+      if(Number(p.loja) !== loja) return;
+      if(p.itemId !== itemId) return;
+      if(p.data < dataDe || p.data > dataAte) return;
+      consumoPorTam[t] += Number(p.qty) || 0;
+    });
+  });
+
+  // 3. Soma Vendas do PDV (totaisPorTamanho dos relatórios importados)
+  // db.financeiro[i] = { data, loja, pdvs: [{ porTamanho:{180:..} }] }
+  const vendidoPorTam = { 180:0, 300:0, 500:0, 700:0 };
+  (db.financeiro||[]).forEach(f => {
+    if(Number(f.loja) !== loja) return;
+    if(f.data < dataDe || f.data > dataAte) return;
+    (f.pdvs||[]).forEach(pdv => {
+      const pt = pdv.porTamanho || {};
+      [180,300,500,700].forEach(t => {
+        vendidoPorTam[t] += Number(pt[t]) || 0;
+      });
+    });
+  });
+
+  // 4. Monta tabela
+  const linhas = [180,300,500,700].map(t => {
+    const consumo = copos[t] !== null ? consumoPorTam[t] : null;
+    const vendido = vendidoPorTam[t];
+    const dif = consumo !== null ? (consumo - vendido) : null;
+    let badge = '';
+    let corValor = '#1f2937';
+    if(dif === null){
+      badge = '<span style="color:#9ca3af">—</span>';
+    } else if(dif === 0){
+      badge = `<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:6px;font-weight:800">🟢 0</span>`;
+    } else if(dif > 0){
+      const sev = Math.abs(dif) > Math.max(3, vendido * 0.1);
+      if(sev){
+        badge = `<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:6px;font-weight:800">🔴 +${dif}</span>`;
+      } else {
+        badge = `<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:6px;font-weight:800">🟡 +${dif}</span>`;
+      }
+    } else {
+      // Negativo: consumiu MENOS que vendeu (estranho — pode ser inconsistência)
+      badge = `<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:6px;font-weight:800">🔵 ${dif}</span>`;
+    }
+    return `<tr style="border-bottom:1px solid #e5e7eb">
+      <td style="padding:10px 8px;font-weight:700">${t}ml</td>
+      <td style="padding:10px 8px;text-align:center">${consumo === null ? '<span style="color:#9ca3af">—</span>' : consumo}</td>
+      <td style="padding:10px 8px;text-align:center">${vendido}</td>
+      <td style="padding:10px 8px;text-align:center">${badge}</td>
+    </tr>`;
+  }).join('');
+
+  const totalConsumo = [180,300,500,700].reduce((s,t)=>s+(copos[t]?consumoPorTam[t]:0),0);
+  const totalVendido = [180,300,500,700].reduce((s,t)=>s+vendidoPorTam[t],0);
+  const totalDif = totalConsumo - totalVendido;
+  const corTotal = totalDif === 0 ? '#166534' : (totalDif > 0 ? '#991b1b' : '#1e40af');
+
+  const periodoTxt = dataDe === dataAte
+    ? `${_fmtDataBr(dataDe)}`
+    : `${_fmtDataBr(dataDe)} a ${_fmtDataBr(dataAte)}`;
+
+  const detalheCopos = [180,300,500,700].map(t => {
+    if(!copos[t]) return `<div>• ${t}ml: <em style="color:#9ca3af">não detectado</em></div>`;
+    const item = db.items.find(i => i.id === copos[t]);
+    return `<div>• ${t}ml: <strong>${item?.nome||copos[t]}</strong></div>`;
+  }).join('');
+
+  document.getElementById('comp-copos-resultado').innerHTML = `
+    ${alertaCopos}
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:.75rem;color:#374151">
+      <div style="font-weight:800;margin-bottom:4px">📋 Detalhes</div>
+      <div>🏪 Loja: <strong>${nomeLoja(loja)}</strong></div>
+      <div>📅 Período: <strong>${periodoTxt}</strong></div>
+      <div style="margin-top:6px;font-weight:700">Copos detectados:</div>
+      ${detalheCopos}
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:.85rem;background:white;border:1.5px solid #c084fc;border-radius:10px;overflow:hidden">
+      <thead style="background:#7c3aed;color:white">
+        <tr>
+          <th style="padding:10px 8px;text-align:left">Copo</th>
+          <th style="padding:10px 8px;text-align:center">Consumo+Perda</th>
+          <th style="padding:10px 8px;text-align:center">Vendido</th>
+          <th style="padding:10px 8px;text-align:center">Diferença</th>
+        </tr>
+      </thead>
+      <tbody>${linhas}</tbody>
+      <tfoot style="background:#faf5ff">
+        <tr style="font-weight:800">
+          <td style="padding:10px 8px">TOTAL</td>
+          <td style="padding:10px 8px;text-align:center">${totalConsumo}</td>
+          <td style="padding:10px 8px;text-align:center">${totalVendido}</td>
+          <td style="padding:10px 8px;text-align:center;color:${corTotal}">${totalDif > 0 ? '+' : ''}${totalDif}</td>
+        </tr>
+      </tfoot>
+    </table>
+    <div style="background:#f3f4f6;border-radius:8px;padding:8px 10px;margin-top:10px;font-size:.7rem;color:#6b7280;line-height:1.5">
+      <div><strong>Como ler:</strong></div>
+      <div>🟢 <strong>0</strong>: tudo bate</div>
+      <div>🟡 <strong>+pequena</strong>: pouco mais consumido (quebra esperada, copos de teste)</div>
+      <div>🔴 <strong>+grande</strong>: muito mais consumido (investigar — perdas, copos sem registro?)</div>
+      <div>🔵 <strong>negativo</strong>: vendeu mais do que consumiu (não-lançamentos no Consumo ou inventário desatualizado)</div>
+    </div>
+  `;
+}
+
 
 // ── Renderiza o painel de Vendas Externas (canais + planilha mensal) ──
 function renderListaVendas(){
