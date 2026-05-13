@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.84</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.85</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -953,6 +953,7 @@
           <div style="font-size:.75rem;opacity:.85" id="vendas-subtitulo">—</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
+          <button onclick="abrirImportarRelatorioDelivery()" style="background:white;color:#15803d;border:none;border-radius:50px;padding:7px 14px;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">📥 Importar</button>
           <button onclick="abrirNovoCanalVE()" style="background:white;color:#15803d;border:none;border-radius:50px;padding:7px 14px;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">➕ Novo</button>
           <button onclick="fecharGerenciarVendas()" style="background:rgba(255,255,255,.2);border:none;border-radius:50px;padding:7px 14px;color:white;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">✕ Fechar</button>
         </div>
@@ -963,6 +964,28 @@
         </div>
       </div>
       <div id="lista-vendas-modal" style="flex:1;overflow-y:auto;padding:14px"></div>
+    </div>
+
+    <!-- MODAL IMPORTAR RELATÓRIO DELIVERY (iFood + 99Food) -->
+    <div id="modal-importar-delivery" style="display:none;position:fixed;inset:0;background:white;z-index:750;flex-direction:column;overflow:hidden">
+      <div style="background:linear-gradient(135deg,#7c2d12,#c2410c);color:white;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <div>
+          <div style="font-family:'Baloo 2',cursive;font-size:1.15rem;font-weight:800">📥 Importar Relatório de Delivery</div>
+          <div style="font-size:.75rem;opacity:.85">Cole o texto do relatório semanal (iFood + 99Food)</div>
+        </div>
+        <button onclick="fecharImportarDelivery()" style="background:rgba(255,255,255,.2);border:none;border-radius:50px;padding:7px 14px;color:white;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">✕ Fechar</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:14px">
+        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 12px;margin-bottom:10px;color:#7c2d12;font-size:.78rem;line-height:1.4">
+          <strong>Como usar:</strong> Cole o conteúdo do e-mail/TXT que sua franquia envia. O sistema detecta automaticamente a loja (Cajamar/Iguatemi/Carapicuíba) e os valores líquidos diários do iFood e 99Food. Você confere o preview e confirma.
+        </div>
+        <textarea id="importar-delivery-input" placeholder="Cole aqui o relatório completo da franquia (com cabeçalho, tabelas iFood e 99Food)..." style="width:100%;min-height:200px;padding:10px;font-family:monospace;font-size:.78rem;border:1.5px solid #fdba74;border-radius:10px;resize:vertical;box-sizing:border-box"></textarea>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button onclick="analisarRelatorioDelivery()" style="flex:1;background:#c2410c;color:white;border:none;border-radius:10px;padding:11px;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(194,65,12,.3)">🔍 Analisar</button>
+          <button onclick="document.getElementById('importar-delivery-input').value=''" style="background:#f3f4f6;color:#374151;border:none;border-radius:10px;padding:11px 18px;font-family:'Baloo 2',cursive;font-size:.85rem;font-weight:700;cursor:pointer">🗑️ Limpar</button>
+        </div>
+        <div id="importar-delivery-preview" style="margin-top:14px"></div>
+      </div>
     </div>
 
     <!-- MODAL ADICIONAR/EDITAR CUSTO -->
@@ -7355,6 +7378,312 @@ function renderListaVendas(){
     </div>`;
   }).join('');
 }
+
+// ─────────────────────────────────────────────────────────────────
+// IMPORTAÇÃO DE RELATÓRIO DELIVERY (iFood + 99Food da franquia)
+// ─────────────────────────────────────────────────────────────────
+let _importDeliveryParsed = null; // estado do que foi analisado
+
+function abrirImportarRelatorioDelivery(){
+  document.getElementById('importar-delivery-input').value = '';
+  document.getElementById('importar-delivery-preview').innerHTML = '';
+  _importDeliveryParsed = null;
+  document.getElementById('modal-importar-delivery').style.display = 'flex';
+  setTimeout(()=>document.getElementById('importar-delivery-input').focus(), 100);
+}
+
+function fecharImportarDelivery(){
+  document.getElementById('modal-importar-delivery').style.display = 'none';
+  _importDeliveryParsed = null;
+}
+
+// Detecta a loja a partir do texto. Retorna número (1/2/3) ou null.
+function _detectarLojaRelatorio(texto){
+  const t = (texto||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  // Procura nas primeiras 600 caracteres (cabeçalho)
+  const top = t.slice(0, 600);
+  if(/ANHANGUERA|CAJAMAR/.test(top)) return 1;
+  if(/IGUATEMI|ALPHAVILLE/.test(top)) return 2;
+  if(/CARAPICUIBA/.test(top)) return 3;
+  return null;
+}
+
+// Converte "R$ 1.234,56" → 1234.56
+function _parseValorBR(s){
+  if(!s) return 0;
+  return parseFloat(String(s).replace(/R\$/g,'').replace(/\./g,'').replace(',','.').trim()) || 0;
+}
+
+// Converte "DD/MM/AAAA" → "AAAA-MM-DD"
+function _parseDataBR(s){
+  const m = String(s||'').match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  if(!m) return null;
+  return `${m[3]}-${m[2]}-${m[1]}`;
+}
+
+// Faz o parse do relatório completo. Retorna { loja, lojaNome, canais:[{nome:'iFood', lancamentos:[{data,valor,pedidos}]}] } ou erro.
+function _parseRelatorioDelivery(texto){
+  if(!texto || !texto.trim()){
+    return { erro: 'Cole o texto do relatório primeiro.' };
+  }
+  const loja = _detectarLojaRelatorio(texto);
+  // Quebra em seções por canal — divide o texto em blocos baseado nas palavras "IFOOD" e "99FOOD"
+  // Estratégia: identifica posições de "IFOOD" e "99FOOD" como cabeçalhos de seção
+  const linhas = texto.split(/\r?\n/);
+  const blocos = { iFood: [], food99: [] };
+  let canalAtual = null;
+  for(const linha of linhas){
+    const t = linha.trim();
+    if(/^\s*IFOOD\s*$/i.test(t) || /\bIFOOD\b/i.test(t) && !/TOTAL|CANCELAMENTO/i.test(t) && t.length < 25){
+      canalAtual = 'iFood';
+      continue;
+    }
+    if(/^\s*99\s*FOOD\s*$/i.test(t) || /\b99\s*FOOD\b/i.test(t) && !/TOTAL/i.test(t) && t.length < 25){
+      canalAtual = 'food99';
+      continue;
+    }
+    // Para de ler o canal atual ao chegar em TOTAL ou CANCELAMENTO
+    if(/^TOTAL\s+(IFOOD|99\s*FOOD)/i.test(t) || /^CANCELAMENTOS/i.test(t)){
+      canalAtual = null;
+      continue;
+    }
+    if(canalAtual && t){
+      blocos[canalAtual].push(t);
+    }
+  }
+
+  // Pra cada bloco, extrai linhas no formato: DD/MM/AAAA <pedidos> R$ ... R$ <valor_liquido>
+  // A última coluna é Valor Líquido
+  function extrairLancamentos(linhasBloco){
+    const result = [];
+    for(const linha of linhasBloco){
+      // Linha que começa com data DD/MM/AAAA
+      const m = linha.match(/^(\d{2}\/\d{2}\/\d{4})\s+(\d+)\s+R\$\s*[\d.,]+\s+R\$\s*([\d.,]+)/i);
+      if(m){
+        const dataIso = _parseDataBR(m[1]);
+        const pedidos = parseInt(m[2], 10) || 0;
+        const valor = _parseValorBR(m[3]);
+        if(dataIso && valor >= 0){
+          result.push({ data: dataIso, dataBr: m[1], valor, pedidos });
+        }
+      }
+    }
+    return result;
+  }
+
+  const lancsIfood = extrairLancamentos(blocos.iFood);
+  const lancs99 = extrairLancamentos(blocos.food99);
+
+  if(lancsIfood.length === 0 && lancs99.length === 0){
+    return { erro: 'Não encontrei nenhuma linha de venda válida. Verifique se colou o relatório completo com as tabelas Data | Pedidos | Valor Itens | Valor Líquido.' };
+  }
+
+  return {
+    loja,
+    lojaNome: loja ? nomeLoja(loja) : null,
+    canais: [
+      { nome: 'iFood', chave: 'IFOOD', lancamentos: lancsIfood },
+      { nome: '99Food', chave: '99FOOD', lancamentos: lancs99 },
+    ].filter(c => c.lancamentos.length > 0),
+  };
+}
+
+// Procura o canal cadastrado de uma loja por palavra-chave no nome (case-insensitive, ignora acentos)
+function _acharCanalVE(loja, palavra){
+  const palavraN = String(palavra||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  return (db.vendasExternas||[]).find(v => {
+    if(Number(v.loja) !== Number(loja)) return false;
+    const descN = String(v.descricao||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    if(palavraN === 'IFOOD') return /IFOOD|I\s*FOOD/.test(descN);
+    if(palavraN === '99FOOD') return /99\s*FOOD|99FOOD/.test(descN);
+    return false;
+  });
+}
+
+function analisarRelatorioDelivery(){
+  const texto = document.getElementById('importar-delivery-input').value;
+  const parsed = _parseRelatorioDelivery(texto);
+  const prev = document.getElementById('importar-delivery-preview');
+
+  if(parsed.erro){
+    prev.innerHTML = `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:12px;color:#991b1b;font-size:.85rem">⚠️ ${parsed.erro}</div>`;
+    _importDeliveryParsed = null;
+    return;
+  }
+
+  _importDeliveryParsed = parsed;
+
+  // Monta seletor de loja (com pré-seleção se foi detectada)
+  const opts = [1,2,3].map(l => `<option value="${l}" ${parsed.loja===l?'selected':''}>${lojaIcon(l)} ${nomeLoja(l)}</option>`).join('');
+  const lojaInfo = parsed.loja
+    ? `<div style="background:#dcfce7;border:1.5px solid #86efac;color:#166534;border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:.85rem">✓ <strong>Loja detectada automaticamente:</strong> ${lojaIcon(parsed.loja)} ${parsed.lojaNome}</div>`
+    : `<div style="background:#fef3c7;border:1.5px solid #fcd34d;color:#92400e;border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:.85rem">⚠️ <strong>Não consegui detectar a loja no cabeçalho.</strong> Selecione manualmente abaixo:</div>`;
+
+  // Verifica conflitos (datas que já tem lançamento)
+  function detectarConflitos(loja){
+    const conflitos = [];
+    parsed.canais.forEach(canal => {
+      const canalCad = _acharCanalVE(loja, canal.chave);
+      if(!canalCad) return; // sem canal cadastrado, sem conflito
+      canal.lancamentos.forEach(l => {
+        const existente = Number((canalCad.lancamentos||{})[l.data]) || 0;
+        if(existente > 0 && Math.abs(existente - l.valor) > 0.01){
+          conflitos.push({
+            canal: canal.nome,
+            data: l.dataBr,
+            antigo: existente,
+            novo: l.valor,
+          });
+        }
+      });
+    });
+    return conflitos;
+  }
+
+  function montarPreview(loja){
+    const canaisHtml = parsed.canais.map(canal => {
+      const canalCad = _acharCanalVE(loja, canal.chave);
+      const cadHtml = canalCad
+        ? `<span style="background:#dcfce7;color:#166534;border-radius:6px;padding:2px 8px;font-size:.7rem;font-weight:700">✓ Canal cadastrado: ${canalCad.descricao}</span>`
+        : `<span style="background:#fee2e2;color:#991b1b;border-radius:6px;padding:2px 8px;font-size:.7rem;font-weight:700">⚠️ Sem canal cadastrado de ${canal.nome} — vou criar automático</span>`;
+      const total = canal.lancamentos.reduce((s,l)=>s+l.valor,0);
+      const linhasHtml = canal.lancamentos.map(l => {
+        const existente = canalCad ? Number((canalCad.lancamentos||{})[l.data])||0 : 0;
+        const conflito = existente > 0 && Math.abs(existente - l.valor) > 0.01;
+        const iguala = existente > 0 && Math.abs(existente - l.valor) <= 0.01;
+        let badge = '';
+        if(conflito) badge = `<span style="background:#fef3c7;color:#92400e;border-radius:5px;padding:1px 6px;font-size:.65rem;font-weight:700">⚠️ ${_fmtBRL(existente)} → ${_fmtBRL(l.valor)}</span>`;
+        else if(iguala) badge = `<span style="background:#f3f4f6;color:#6b7280;border-radius:5px;padding:1px 6px;font-size:.65rem;font-weight:700">= sem mudança</span>`;
+        return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed #e5e7eb;font-size:.78rem">
+          <span>${l.dataBr} · ${l.pedidos} pedido${l.pedidos===1?'':'s'}</span>
+          <span style="display:flex;gap:6px;align-items:center"><strong>R$ ${_fmtBRL(l.valor)}</strong>${badge}</span>
+        </div>`;
+      }).join('');
+      const cor = canal.nome === 'iFood' ? '#dc2626' : '#1e40af';
+      return `<div style="background:white;border:1.5px solid ${cor};border-radius:10px;padding:10px 12px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-family:'Baloo 2',cursive;font-weight:800;color:${cor};font-size:.95rem">${canal.nome} · ${canal.lancamentos.length} dia${canal.lancamentos.length===1?'':'s'}</div>
+          <div style="font-size:.85rem;font-weight:800;color:#1f2937">Total: R$ ${_fmtBRL(total)}</div>
+        </div>
+        <div style="margin-bottom:6px">${cadHtml}</div>
+        ${linhasHtml}
+      </div>`;
+    }).join('');
+
+    const conflitos = detectarConflitos(loja);
+    const avisoConflitos = conflitos.length > 0
+      ? `<div style="background:#fef3c7;border:1.5px solid #fcd34d;color:#92400e;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:.82rem"><strong>⚠️ ${conflitos.length} valor(es) divergente(s):</strong> alguns dias já têm lançamento manual com valor diferente. Você precisa confirmar a sobrescrita.</div>`
+      : '';
+
+    return `${lojaInfo}
+      <label class="field-label">Loja para importar:</label>
+      <select id="import-delivery-loja-sel" onchange="_atualizarPreviewDelivery()" style="width:100%;padding:9px;font-size:.92rem;border:1.5px solid #fdba74;border-radius:10px;margin-bottom:14px">${opts}</select>
+      ${avisoConflitos}
+      ${canaisHtml}
+      <button onclick="confirmarImportacaoDelivery()" style="width:100%;background:#16a34a;color:white;border:none;border-radius:12px;padding:13px;font-family:'Baloo 2',cursive;font-size:1rem;font-weight:800;cursor:pointer;margin-top:6px;box-shadow:0 4px 14px rgba(22,163,74,.4)">✅ Confirmar importação</button>`;
+  }
+
+  prev.innerHTML = montarPreview(parsed.loja);
+}
+
+// Re-renderiza preview quando muda a loja no seletor
+function _atualizarPreviewDelivery(){
+  if(!_importDeliveryParsed) return;
+  const sel = document.getElementById('import-delivery-loja-sel');
+  if(!sel) return;
+  const novaLoja = Number(sel.value);
+  _importDeliveryParsed.loja = novaLoja;
+  _importDeliveryParsed.lojaNome = nomeLoja(novaLoja);
+  // Re-renderiza
+  analisarRelatorioDelivery._inhibitReparse = true;
+  const inputTexto = document.getElementById('importar-delivery-input').value;
+  // Mantém o parsed atual; só re-renderiza preview
+  const prev = document.getElementById('importar-delivery-preview');
+  // Chama analisar de novo, mas o parse já foi feito; vamos só re-montar
+  // Pra simplificar, chama analisarRelatorioDelivery que re-parsa (rápido)
+  analisarRelatorioDelivery();
+  // Após chamar, o select volta com a loja detectada original — força a nova:
+  setTimeout(()=>{
+    const sel2 = document.getElementById('import-delivery-loja-sel');
+    if(sel2 && sel2.value != novaLoja){
+      sel2.value = novaLoja;
+      _importDeliveryParsed.loja = novaLoja;
+      analisarRelatorioDelivery();
+    }
+  }, 0);
+}
+
+async function confirmarImportacaoDelivery(){
+  if(!_importDeliveryParsed){
+    showToast('⚠️ Analise o relatório primeiro');
+    return;
+  }
+  const sel = document.getElementById('import-delivery-loja-sel');
+  const loja = sel ? Number(sel.value) : _importDeliveryParsed.loja;
+  if(!loja){ showToast('⚠️ Selecione a loja'); return; }
+
+  // Detecta conflitos pra pedir confirmação
+  const conflitos = [];
+  _importDeliveryParsed.canais.forEach(canal => {
+    const canalCad = _acharCanalVE(loja, canal.chave);
+    if(!canalCad) return;
+    canal.lancamentos.forEach(l => {
+      const existente = Number((canalCad.lancamentos||{})[l.data]) || 0;
+      if(existente > 0 && Math.abs(existente - l.valor) > 0.01){
+        conflitos.push({ canal: canal.nome, data: l.dataBr, antigo: existente, novo: l.valor });
+      }
+    });
+  });
+
+  if(conflitos.length > 0){
+    const lista = conflitos.slice(0,5).map(c =>
+      `• ${c.canal} ${c.data}: R$ ${_fmtBRL(c.antigo)} → R$ ${_fmtBRL(c.novo)}`
+    ).join('\n');
+    const extra = conflitos.length > 5 ? `\n... e mais ${conflitos.length-5}` : '';
+    if(!confirm(`⚠️ ${conflitos.length} valor(es) divergente(s):\n\n${lista}${extra}\n\nDeseja SOBRESCREVER esses valores?`)){
+      showToast('Importação cancelada');
+      return;
+    }
+  }
+
+  // Cria canais que faltam
+  if(!Array.isArray(db.vendasExternas)) db.vendasExternas = [];
+  let criados = 0, atualizados = 0;
+  _importDeliveryParsed.canais.forEach(canal => {
+    let canalCad = _acharCanalVE(loja, canal.chave);
+    if(!canalCad){
+      // Cria canal novo (CMV em 0, usuário ajusta depois)
+      canalCad = {
+        id: `vex_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+        loja: loja,
+        descricao: canal.nome,
+        percCusto: 0,
+        lancamentos: {},
+        criadoEm: new Date().toISOString(),
+      };
+      db.vendasExternas.push(canalCad);
+      criados++;
+    }
+    if(!canalCad.lancamentos) canalCad.lancamentos = {};
+    canal.lancamentos.forEach(l => {
+      canalCad.lancamentos[l.data] = l.valor;
+      atualizados++;
+    });
+  });
+
+  const ok = await saveCloud();
+  if(ok){
+    let msg = `✅ Importado: ${atualizados} lançamento(s).`;
+    if(criados > 0) msg += ` ${criados} canal(is) criado(s).`;
+    showToast(msg);
+    fecharImportarDelivery();
+    renderListaVendas();
+    renderFinanceiro();
+  } else {
+    showToast('❌ Erro ao salvar');
+  }
+}
+
 
 function renderListaCustos(){
   const lojaFiltro = _lojaAtualFin();
