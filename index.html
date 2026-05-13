@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.81</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.83</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -4578,32 +4578,143 @@ function renderListaSabores(){
   document.getElementById('sabores-contador').textContent =
     `${Object.keys(receitas).length} sabores cadastrados`;
 
-  if(!sabores.length){
-    document.getElementById('lista-sabores-modal').innerHTML =
-      `<div class="empty"><span class="ej">🍦</span><p>Nenhum sabor encontrado.</p></div>`;
-    return;
+  // ── Card de pendências: itens vendidos no PDV sem receita configurada ──
+  const pendentes = _itensSemCadastro();
+  let cardPendentes = '';
+  if(pendentes.length > 0){
+    const linhas = pendentes.map(p => {
+      const cor = p.categoria === 'adicional' ? '#9a3412'
+                : p.categoria === 'bebida'    ? '#1e40af'
+                : p.categoria === 'mimo'      ? '#9d174d'
+                : '#374151';
+      const icone = p.categoria === 'adicional' ? '🍯'
+                  : p.categoria === 'bebida'    ? '🥤'
+                  : p.categoria === 'mimo'      ? '🎁'
+                  : '🍦';
+      const labelCat = p.categoria === 'adicional' ? 'adicional'
+                    : p.categoria === 'bebida'    ? 'bebida'
+                    : p.categoria === 'mimo'      ? 'mimo'
+                    : `sabor ${p.categoria}ml`;
+      const nomeEsc = p.nome.replace(/'/g,"\\'");
+      return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:white;border:1px solid #fecaca;border-radius:10px;margin-bottom:5px">
+        <div style="font-size:1.1rem">${icone}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Baloo 2',cursive;font-size:.86rem;font-weight:800;color:#1f2937">${p.nome}</div>
+          <div style="font-size:.65rem;color:var(--gray);margin-top:1px">[${labelCat}] vendido ${p.qtdVendas}x sem cadastro</div>
+        </div>
+        <button onclick="cadastrarItemSemRegistro('${nomeEsc}', '${p.categoria}')"
+          style="background:#dc2626;color:white;border:none;border-radius:8px;padding:6px 12px;font-family:'Baloo 2',cursive;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap">➕ Cadastrar</button>
+      </div>`;
+    }).join('');
+    cardPendentes = `<div class="card" style="margin-bottom:14px;background:linear-gradient(135deg,#fef2f2,#fee2e2);border:2px solid #fca5a5">
+      <div class="card-title" style="color:#991b1b;display:flex;align-items:center;gap:6px"><span>⚠️</span>Itens sem cadastro <span style="font-size:.7rem;background:#dc2626;color:white;border-radius:8px;padding:2px 8px;font-weight:800">${pendentes.length}</span></div>
+      <div style="font-size:.72rem;color:#7f1d1d;margin-bottom:8px;padding:0 4px">Estes produtos apareceram nos relatórios do PDV mas não têm receita/custo configurado. Clique em <strong>➕ Cadastrar</strong> para registrar agora.</div>
+      ${linhas}
+    </div>`;
   }
 
-  document.getElementById('lista-sabores-modal').innerHTML = sabores.map(nome => {
-    const r = receitas[nome];
-    const tamanhos = Object.keys(r).filter(t => r[t] && r[t].length > 0);
-    const ingCount = tamanhos.reduce((acc, t) => acc + (r[t]?.length || 0), 0);
-    return `<div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:10px;padding:12px 14px">
-      <div style="font-size:1.4rem">🍦</div>
-      <div style="flex:1">
-        <div style="font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;color:var(--pink-dark)">${nome}</div>
-        <div style="font-size:.72rem;color:var(--gray);margin-top:2px">
-          Tamanhos: ${tamanhos.map(t=>t+'ml').join(', ')} &nbsp;|&nbsp; ${ingCount} ingrediente(s)
+  let cardsSabores = '';
+  if(!sabores.length){
+    cardsSabores = `<div class="empty"><span class="ej">🍦</span><p>Nenhum sabor encontrado.</p></div>`;
+  } else {
+    cardsSabores = sabores.map(nome => {
+      const r = receitas[nome];
+      const tamanhos = Object.keys(r).filter(t => r[t] && r[t].length > 0);
+      const ingCount = tamanhos.reduce((acc, t) => acc + (r[t]?.length || 0), 0);
+      // Formata tamanhos: numéricos viram "180ml", outros viram só "adicional"/"bebida"/"mimo"
+      const tamanhosFmt = tamanhos.map(t => isNaN(Number(t)) ? t : t+'ml').join(', ');
+      return `<div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:10px;padding:12px 14px">
+        <div style="font-size:1.4rem">🍦</div>
+        <div style="flex:1">
+          <div style="font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;color:var(--pink-dark)">${nome}</div>
+          <div style="font-size:.72rem;color:var(--gray);margin-top:2px">
+            ${tamanhosFmt} &nbsp;|&nbsp; ${ingCount} ingrediente(s)
+          </div>
         </div>
-      </div>
-      <div style="display:flex;gap:6px">
-        <button onclick="abrirEditarSabor('${nome.replace(/'/g,"\'")}')"
-          style="background:var(--purple);color:white;border:none;border-radius:8px;padding:6px 12px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer">✏️</button>
-        <button onclick="excluirSabor('${nome.replace(/'/g,"\'")}' )"
-          style="background:var(--red);color:white;border:none;border-radius:8px;padding:6px 12px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer">🗑️</button>
-      </div>
-    </div>`;
-  }).join('');
+        <div style="display:flex;gap:6px">
+          <button onclick="abrirEditarSabor('${nome.replace(/'/g,"\\'")}')"
+            style="background:var(--purple);color:white;border:none;border-radius:8px;padding:6px 12px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer">✏️</button>
+          <button onclick="excluirSabor('${nome.replace(/'/g,"\\'")}' )"
+            style="background:var(--red);color:white;border:none;border-radius:8px;padding:6px 12px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer">🗑️</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('lista-sabores-modal').innerHTML = cardPendentes + cardsSabores;
+}
+
+// Detecta produtos vendidos nos relatórios que NÃO têm receita cadastrada
+function _itensSemCadastro(){
+  if(!Array.isArray(db.relatorios) || db.relatorios.length === 0) return [];
+  const receitas = getReceitas();
+  // Função similar à buscarReceita pra normalizar
+  const normalizar = (s) => s.toUpperCase()
+    .replace(/\s*(180|300|500|700)\s*ML.*$/i, '')
+    .replace(/PASSATEMPO/i, '')
+    .trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  // Verifica se tem receita pra esse nome+tamanho
+  const temReceita = (nomeNorm, tamanho) => {
+    // Busca exata
+    if(receitas[nomeNorm] && receitas[nomeNorm][tamanho] && receitas[nomeNorm][tamanho].length > 0) return true;
+    // Busca parcial
+    for(const sabor of Object.keys(receitas)){
+      const sNorm = sabor.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if((nomeNorm.includes(sNorm) || sNorm.includes(nomeNorm)) && receitas[sabor][tamanho] && receitas[sabor][tamanho].length > 0){
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Agrupa por nome+categoria com contador
+  const semCadastro = {};
+  db.relatorios.forEach(rel => {
+    if(!Array.isArray(rel.saboresList)) return;
+    rel.saboresList.forEach(s => {
+      const nome = (s.nomeProd || '').trim();
+      if(!nome) return;
+      // Tamanho pode ser 180/300/500/700 (sabor) ou 'adicional'/'bebida'/'mimo'
+      const tam = String(s.tamanho || '');
+      if(!tam) return;
+      const nomeNorm = normalizar(nome);
+      if(temReceita(nomeNorm, tam)) return;
+      const chave = `${nomeNorm}|${tam}`;
+      if(!semCadastro[chave]){
+        semCadastro[chave] = { nome: nomeNorm, categoria: tam, qtdVendas: 0 };
+      }
+      semCadastro[chave].qtdVendas += (s.qtd || 1);
+    });
+  });
+  // Ordena: adicionais/bebidas/mimos primeiro, depois sabores; mais vendido em cima
+  const ordemCat = {adicional:0, bebida:1, mimo:2};
+  return Object.values(semCadastro).sort((a,b) => {
+    const oa = ordemCat[a.categoria] !== undefined ? ordemCat[a.categoria] : 10;
+    const ob = ordemCat[b.categoria] !== undefined ? ordemCat[b.categoria] : 10;
+    if(oa !== ob) return oa - ob;
+    return b.qtdVendas - a.qtdVendas;
+  });
+}
+
+// Abre o modal Novo Sabor com nome já preenchido e foca na categoria correta
+function cadastrarItemSemRegistro(nome, categoria){
+  abrirNovoSabor();
+  // Preenche o nome
+  document.getElementById('edit-sabor-nome').value = nome;
+  // Adiciona um ingrediente em branco na categoria pra facilitar
+  if(!_saborEditandoIngredientes[categoria]) _saborEditandoIngredientes[categoria] = [];
+  _saborEditandoIngredientes[categoria].push({itemId:'', nome:'', qty:0, unidade:''});
+  renderSecaoTamanho(categoria);
+  // Scroll pra seção da categoria correta
+  setTimeout(()=>{
+    const sec = document.getElementById('sabor-section-'+categoria);
+    if(sec){
+      sec.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+  }, 200);
+  showToast(`📝 Cadastrando "${nome}" como ${categoria}. Selecione o ingrediente.`);
 }
 
 // Estado temporário do sabor em edição
@@ -4758,8 +4869,15 @@ function removerIng(tam, idx){
 
 async function salvarSaborEditado(){
   try {
-    const nomeRaw = document.getElementById('edit-sabor-nome').value.trim().toUpperCase();
-    if(!nomeRaw){ showToast('⚠️ Digite o nome do sabor!'); return; }
+    const inpNome = document.getElementById('edit-sabor-nome');
+    console.log('salvarSaborEditado: input encontrado?', !!inpNome, 'value:', inpNome?.value);
+    const nomeRaw = (inpNome?.value || '').trim().toUpperCase();
+    if(!nomeRaw){
+      showToast('⚠️ Digite o nome do sabor!');
+      // Foca no input pra ajudar
+      if(inpNome) inpNome.focus();
+      return;
+    }
 
     // Garante que _saborEditandoIngredientes está inicializado (proteção contra estado quebrado)
     if(!_saborEditandoIngredientes || typeof _saborEditandoIngredientes !== 'object'){
