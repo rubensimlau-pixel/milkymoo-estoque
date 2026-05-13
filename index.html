@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.85</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.86</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -3434,7 +3434,7 @@ function processarRelatorio(){
   // Vendas por sabor: { 'PANDORA|300': {nomeProd, tamanho, qtd, subtotal, custoInsumos} }
   const vendasPorSabor = {};
 
-  const SECOES_MILK   = ['MILKSHAKES 180 ML','MILKSHAKES 300 ML','MILKSHAKES 500 ML','MILKSHAKES 700 ML','SAZONAL'];
+  const SECOES_MILK   = ['MILKSHAKES 180 ML','MILKSHAKES 300 ML','MILKSHAKES 500 ML','MILKSHAKES 700 ML','SAZONAL','APP MOO 180 ML','APP MOO 300 ML','APP MOO 500 ML','APP MOO 700 ML','APP MOO 180ML','APP MOO 300ML','APP MOO 500ML','APP MOO 700ML'];
   const TAMANHO_REGEX = /(180|300|500|700)\s*ML/i;
   // Seções a IGNORAR (não geram vendas, são listas informativas)
   const SECOES_IGNORADAS = ['TOP 5'];
@@ -3513,7 +3513,8 @@ function processarRelatorio(){
     const m = linha.match(/^\s{2,}\d+\s+(.+?)\s{2,}(\d+)\s+([\d.]+,\d{2})\s+[\d.,]+/);
     if(!m) return;
 
-    const nomeProd  = m[1].trim();
+    // Remove sufixo " APP" do nome (produtos vendidos via app Moo/Hanzo aparecem como "FILO 300ML APP")
+    const nomeProd  = m[1].trim().replace(/\s+APP\s*$/i, '').trim();
     const qtdProd   = parseInt(m[2]);
     const subtotal  = parseFloat(m[3].replace(/\./g,'').replace(',','.'));
     if(!qtdProd || qtdProd <= 0) return;
