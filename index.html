@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.97</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.98</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -878,6 +878,7 @@
           <div style="padding:8px 12px;font-size:.7rem;color:var(--gray);font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #f3f4f6;background:#fafafa;">Configurações</div>
           <button onclick="fecharFinConfigMenu();abrirGerenciarCustos();" style="width:100%;text-align:left;background:white;border:none;border-bottom:1px solid #f3f4f6;padding:11px 14px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:700;color:#92400e;display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='#fff7ed';" onmouseout="this.style.background='white';">💰 Custos Fixos</button>
           <button onclick="fecharFinConfigMenu();abrirGerenciarVendas();" style="width:100%;text-align:left;background:white;border:none;border-bottom:1px solid #f3f4f6;padding:11px 14px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:700;color:#15803d;display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='#f0fdf4';" onmouseout="this.style.background='white';">💵 Vendas Externas</button>
+          <button onclick="fecharFinConfigMenu();abrirSimularCusto();" style="width:100%;text-align:left;background:white;border:none;border-bottom:1px solid #f3f4f6;padding:11px 14px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:700;color:#7c3aed;display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='#faf5ff';" onmouseout="this.style.background='white';">🧮 Simular Custo Milkshake</button>
           <div style="padding:6px 12px;font-size:.65rem;color:var(--gray);font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #f3f4f6;background:#fafafa;">Relatórios</div>
           <button onclick="fecharFinConfigMenu();gerarRelatorioMensal();" style="width:100%;text-align:left;background:white;border:none;padding:11px 14px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:700;color:#1e40af;display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='#eff6ff';" onmouseout="this.style.background='white';">📄 Relatório Mensal (PDF)</button>
         </div>
@@ -1066,6 +1067,84 @@
           <button onclick="document.getElementById('importar-99food-input').value=''" style="background:#f3f4f6;color:#374151;border:none;border-radius:10px;padding:11px 18px;font-family:'Baloo 2',cursive;font-size:.85rem;font-weight:700;cursor:pointer">🗑️ Limpar</button>
         </div>
         <div id="importar-99food-preview" style="margin-top:14px"></div>
+      </div>
+    </div>
+
+    <!-- MODAL SIMULAR CUSTO MILKSHAKE -->
+    <div id="modal-simular-custo" style="display:none;position:fixed;inset:0;background:white;z-index:760;flex-direction:column;overflow:hidden">
+      <div style="background:linear-gradient(135deg,#581c87,#7c3aed);color:white;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <div>
+          <div style="font-family:'Baloo 2',cursive;font-size:1.15rem;font-weight:800">🧮 Simular Custo de Milkshake</div>
+          <div style="font-size:.75rem;opacity:.85">Calcule custo, encargos e margem antes de definir preço</div>
+        </div>
+        <button onclick="fecharSimularCusto()" style="background:rgba(255,255,255,.2);border:none;border-radius:50px;padding:7px 14px;color:white;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">✕ Fechar</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:14px">
+
+        <!-- Card: Sabor base -->
+        <div style="background:white;border:1.5px solid #c084fc;border-radius:12px;padding:12px;margin-bottom:12px">
+          <div style="font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;color:#581c87;margin-bottom:10px">🍦 Sabor base</div>
+          <label class="field-label">Loja (pra calcular encargos)</label>
+          <select id="sim-custo-loja" class="field-input" style="margin-bottom:10px" onchange="atualizarSimulacaoCusto()">
+            <option value="1">🏪 Cajamar</option>
+            <option value="2">🏬 Iguatemi</option>
+            <option value="3">🏗️ Carapicuíba</option>
+          </select>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <div style="flex:2">
+              <label class="field-label">Sabor</label>
+              <select id="sim-custo-sabor" class="field-input" onchange="atualizarSimulacaoCusto()">
+                <option value="">— Escolha um sabor —</option>
+              </select>
+            </div>
+            <div style="flex:1">
+              <label class="field-label">Tamanho</label>
+              <select id="sim-custo-tamanho" class="field-input" onchange="atualizarSimulacaoCusto()">
+                <option value="180">180ml</option>
+                <option value="300" selected>300ml</option>
+                <option value="500">500ml</option>
+                <option value="700">700ml</option>
+              </select>
+            </div>
+          </div>
+          <label class="field-label">Preço de venda</label>
+          <input id="sim-custo-preco" type="text" inputmode="decimal" placeholder="0,00" class="field-input" oninput="formatarInputMoeda(this);atualizarSimulacaoCusto()">
+        </div>
+
+        <!-- Card: Adicionais opcionais -->
+        <div style="background:white;border:1.5px solid #f59e0b;border-radius:12px;padding:12px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;color:#92400e">🍯 Adicionais / Itens extras</div>
+            <button onclick="adicionarItemSimulacao()" style="background:#f59e0b;color:white;border:none;border-radius:8px;padding:5px 10px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer">➕ Adicionar</button>
+          </div>
+          <div style="font-size:.7rem;color:var(--gray);margin-bottom:8px">Ex: Ferrero, Brownie, Embalagem Delivery, Porta Copo, Saco delivery, etc.</div>
+          <div id="sim-custo-adicionais"></div>
+        </div>
+
+        <!-- Card: Encargos -->
+        <div style="background:white;border:1.5px solid #ef4444;border-radius:12px;padding:12px;margin-bottom:12px">
+          <div style="font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;color:#991b1b;margin-bottom:6px">📊 Encargos (% sobre preço de venda)</div>
+          <div id="sim-custo-encargos-info" style="font-size:.7rem;color:var(--gray);margin-bottom:10px">Buscando configuração da loja...</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <div style="flex:1;min-width:90px">
+              <label class="field-label" style="font-size:.7rem">Imposto %</label>
+              <input id="sim-custo-imposto" type="number" min="0" step="0.01" class="field-input" oninput="atualizarSimulacaoCusto()">
+            </div>
+            <div style="flex:1;min-width:90px">
+              <label class="field-label" style="font-size:.7rem">Franqueadora %</label>
+              <input id="sim-custo-franq" type="number" min="0" step="0.01" class="field-input" oninput="atualizarSimulacaoCusto()">
+            </div>
+            <div style="flex:1;min-width:90px">
+              <label class="field-label" style="font-size:.7rem">Royalties %</label>
+              <input id="sim-custo-royal" type="number" min="0" step="0.01" class="field-input" oninput="atualizarSimulacaoCusto()">
+            </div>
+          </div>
+          <div style="font-size:.65rem;color:var(--gray);margin-top:6px;font-style:italic">💡 Simulação considera pagamento em dinheiro (sem taxa de cartão)</div>
+        </div>
+
+        <!-- Resultado -->
+        <div id="sim-custo-resultado"></div>
+
       </div>
     </div>
 
@@ -7450,6 +7529,279 @@ document.addEventListener('click', function(e){
   if(!m || m.style.display !== 'block') return;
   if(!m.contains(e.target)) fecharFinConfigMenu();
 });
+
+// ─────────────────────────────────────────────────────────────────
+// SIMULAR CUSTO DE MILKSHAKE
+// ─────────────────────────────────────────────────────────────────
+let _simCustoAdicionais = []; // [{itemId, qty}]
+
+function abrirSimularCusto(){
+  _simCustoAdicionais = [];
+  // Loja default: do filtro do financeiro
+  const lojaAtual = _lojaAtualFin();
+  if(lojaAtual){
+    document.getElementById('sim-custo-loja').value = lojaAtual;
+  }
+  // Popula sabores disponíveis
+  const receitas = getReceitas();
+  const sabores = Object.keys(receitas).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const sel = document.getElementById('sim-custo-sabor');
+  sel.innerHTML = '<option value="">— Escolha um sabor —</option>' +
+    sabores.map(s => `<option value="${s.replace(/"/g,'&quot;')}">${s}</option>`).join('');
+  // Limpa campos
+  document.getElementById('sim-custo-preco').value = '';
+  document.getElementById('sim-custo-resultado').innerHTML = '';
+  // Carrega encargos da loja
+  _carregarEncargosDaLoja();
+  document.getElementById('sim-custo-adicionais').innerHTML = '<div style="font-size:.78rem;color:var(--gray);padding:6px 0;text-align:center">Nenhum adicional. Clique em ➕ Adicionar.</div>';
+  document.getElementById('modal-simular-custo').style.display = 'flex';
+}
+
+function fecharSimularCusto(){
+  document.getElementById('modal-simular-custo').style.display = 'none';
+  _simCustoAdicionais = [];
+}
+
+// Lê encargos da loja selecionada e preenche os campos
+function _carregarEncargosDaLoja(){
+  const loja = Number(document.getElementById('sim-custo-loja').value) || 1;
+  const cfg = db.config || {};
+  const imp = Number(cfg[`impostoLoja${loja}`]) || 0;
+  const fra = Number(cfg[`franqueadoraLoja${loja}`]) || 0;
+  const roy = Number(cfg[`royaltiesLoja${loja}`]) || 0;
+  document.getElementById('sim-custo-imposto').value = imp;
+  document.getElementById('sim-custo-franq').value = fra;
+  document.getElementById('sim-custo-royal').value = roy;
+  document.getElementById('sim-custo-encargos-info').innerHTML = `Carregados da loja ${nomeLoja(loja)} (você pode editar pra simular cenários).`;
+}
+
+function adicionarItemSimulacao(){
+  _simCustoAdicionais.push({ itemId: '', qty: 1 });
+  _renderAdicionaisSimulacao();
+  atualizarSimulacaoCusto();
+}
+
+function removerItemSimulacao(idx){
+  _simCustoAdicionais.splice(idx, 1);
+  _renderAdicionaisSimulacao();
+  atualizarSimulacaoCusto();
+}
+
+function _renderAdicionaisSimulacao(){
+  const cont = document.getElementById('sim-custo-adicionais');
+  if(!cont) return;
+  if(_simCustoAdicionais.length === 0){
+    cont.innerHTML = '<div style="font-size:.78rem;color:var(--gray);padding:6px 0;text-align:center">Nenhum adicional. Clique em ➕ Adicionar.</div>';
+    return;
+  }
+  // Opções: todos os itens do estoque
+  const items = (db.items||[]).slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt-BR'));
+  const opts = items.map(i => `<option value="${i.id}">${i.nome}</option>`).join('');
+  let html = '';
+  _simCustoAdicionais.forEach((ad, idx) => {
+    const itemSel = ad.itemId ? items.find(i => i.id === ad.itemId) : null;
+    let optsUnidade = '';
+    if(itemSel){
+      const uPrim = itemSel.unidade || '';
+      const uSec = itemSel.unidadeSecundaria || '';
+      if(uPrim) optsUnidade += `<option value="${uPrim}" ${ad.unidade===uPrim?'selected':''}>${uPrim}</option>`;
+      if(uSec && uSec !== uPrim) optsUnidade += `<option value="${uSec}" ${ad.unidade===uSec?'selected':''}>${uSec}</option>`;
+    } else {
+      optsUnidade = `<option value="">—</option>`;
+    }
+    html += `<div style="display:flex;gap:6px;align-items:center;margin-bottom:7px;padding:8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px">
+      <select onchange="_atualizarItemSimul(${idx},'itemId',this.value)"
+        style="flex:1;min-width:0;border:2px solid #fed7aa;border-radius:8px;padding:5px 6px;font-family:'Nunito',sans-serif;font-size:.78rem">
+        <option value="">— Item —</option>${opts}
+      </select>
+      <input type="number" min="0" step="0.01" value="${ad.qty||''}"
+        onchange="_atualizarItemSimul(${idx},'qty',parseFloat(this.value)||0)"
+        placeholder="Qtd" style="width:60px;border:2px solid #fed7aa;border-radius:8px;padding:5px;font-family:'Nunito',sans-serif;font-size:.8rem;text-align:center">
+      <select onchange="_atualizarItemSimul(${idx},'unidade',this.value)"
+        ${itemSel?'':'disabled'}
+        style="min-width:80px;border:2px solid #fed7aa;border-radius:8px;padding:5px 4px;font-family:'Nunito',sans-serif;font-size:.72rem;background:white">
+        ${optsUnidade}
+      </select>
+      <button onclick="removerItemSimulacao(${idx})" style="background:#dc2626;color:white;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;font-size:.8rem">✕</button>
+    </div>`;
+  });
+  cont.innerHTML = html;
+  // Seta selects com valor correto
+  _simCustoAdicionais.forEach((ad, idx) => {
+    if(ad.itemId){
+      const sel = cont.querySelectorAll('select')[idx*2]; // 1º select de cada linha = item
+      if(sel) sel.value = ad.itemId;
+    }
+  });
+}
+
+function _atualizarItemSimul(idx, campo, valor){
+  if(!_simCustoAdicionais[idx]) return;
+  _simCustoAdicionais[idx][campo] = valor;
+  if(campo === 'itemId'){
+    // Quando muda item, default unidade pra secundária
+    const item = (db.items||[]).find(i => i.id === valor);
+    if(item){
+      _simCustoAdicionais[idx].unidade = item.unidadeSecundaria || item.unidade || '';
+    }
+    _renderAdicionaisSimulacao();
+  }
+  atualizarSimulacaoCusto();
+}
+
+// Calcula custo de um ingrediente (já recebe na unidade que foi configurada)
+function _custoIngredienteSimul(itemId, qty, unidade){
+  const item = (db.items||[]).find(i => i.id === itemId);
+  if(!item) return 0;
+  const dados = _dadosCustoItem(item);
+  // Se a unidade do ingrediente bate com a SECUNDÁRIA (fracionada) e o item tem fração:
+  if(dados.temFracao && unidade === item.unidadeSecundaria){
+    return qty * dados.custoPorUnit; // custoPorUnit já é por unidade fracionada
+  }
+  // Senão, considera unidade primária (valor cheio da embalagem)
+  return qty * (dados.valorEmbalagem || dados.custoPorUnit);
+}
+
+function atualizarSimulacaoCusto(){
+  const sabor = document.getElementById('sim-custo-sabor').value;
+  const tamanho = document.getElementById('sim-custo-tamanho').value;
+  const preco = _parseInputMoeda(document.getElementById('sim-custo-preco').value);
+  const imp = parseFloat(document.getElementById('sim-custo-imposto').value) || 0;
+  const fra = parseFloat(document.getElementById('sim-custo-franq').value) || 0;
+  const roy = parseFloat(document.getElementById('sim-custo-royal').value) || 0;
+
+  if(!sabor || !tamanho){
+    document.getElementById('sim-custo-resultado').innerHTML = '<div style="text-align:center;color:var(--gray);font-size:.85rem;padding:20px">Escolha um sabor e tamanho para começar a simulação.</div>';
+    return;
+  }
+
+  // Custo do sabor base
+  const receitas = getReceitas();
+  const r = receitas[sabor];
+  let custoBase = 0;
+  let ingredientesBase = [];
+  if(r && Array.isArray(r[tamanho]) && r[tamanho].length > 0){
+    r[tamanho].forEach(ing => {
+      if(!ing.itemId) return;
+      const c = _custoIngredienteSimul(ing.itemId, Number(ing.qty)||0, ing.unidade);
+      custoBase += c;
+      const item = (db.items||[]).find(i => i.id === ing.itemId);
+      ingredientesBase.push({ nome: item?.nome || ing.nome || ing.itemId, qty: ing.qty, unidade: ing.unidade, custo: c });
+    });
+  }
+
+  // Custo dos adicionais
+  let custoAdicionais = 0;
+  let adicionaisDetalhe = [];
+  _simCustoAdicionais.forEach(ad => {
+    if(!ad.itemId || !ad.qty) return;
+    const c = _custoIngredienteSimul(ad.itemId, Number(ad.qty)||0, ad.unidade);
+    custoAdicionais += c;
+    const item = (db.items||[]).find(i => i.id === ad.itemId);
+    adicionaisDetalhe.push({ nome: item?.nome || ad.itemId, qty: ad.qty, unidade: ad.unidade, custo: c });
+  });
+
+  // Encargos (% sobre preço de venda)
+  const encargosTotal = preco * (imp + fra + roy) / 100;
+  const valorImp = preco * imp / 100;
+  const valorFra = preco * fra / 100;
+  const valorRoy = preco * roy / 100;
+
+  // Totais
+  const custoTotal = custoBase + custoAdicionais + encargosTotal;
+  const lucro = preco - custoTotal;
+  const margem = preco > 0 ? (lucro / preco) * 100 : 0;
+  const markup = custoTotal > 0 ? ((preco - custoTotal) / custoTotal) * 100 : 0;
+
+  const corMargem = margem >= 40 ? '#166534' : margem >= 20 ? '#92400e' : '#991b1b';
+  const iconeMargem = margem >= 40 ? '🟢' : margem >= 20 ? '🟡' : '🔴';
+
+  // Tabela de ingredientes do sabor
+  let baseHtml = '';
+  if(ingredientesBase.length > 0){
+    baseHtml = `<div style="margin-top:8px"><div style="font-size:.72rem;color:#581c87;font-weight:700;margin-bottom:4px">Ingredientes do ${sabor} ${tamanho}ml:</div>`;
+    ingredientesBase.forEach(i => {
+      baseHtml += `<div style="display:flex;justify-content:space-between;font-size:.72rem;padding:2px 0;color:#374151">
+        <span>${i.nome} (${i.qty} ${i.unidade})</span>
+        <span>R$ ${_fmtBRL(i.custo)}</span>
+      </div>`;
+    });
+    baseHtml += '</div>';
+  } else {
+    baseHtml = `<div style="color:#991b1b;font-size:.72rem;margin-top:4px;font-style:italic">⚠️ Receita do ${sabor} ${tamanho}ml não cadastrada ou sem ingredientes.</div>`;
+  }
+
+  // Tabela de adicionais
+  let adicHtml = '';
+  if(adicionaisDetalhe.length > 0){
+    adicHtml = `<div style="margin-top:6px"><div style="font-size:.72rem;color:#92400e;font-weight:700;margin-bottom:4px">Adicionais:</div>`;
+    adicionaisDetalhe.forEach(i => {
+      adicHtml += `<div style="display:flex;justify-content:space-between;font-size:.72rem;padding:2px 0;color:#374151">
+        <span>${i.nome} (${i.qty} ${i.unidade})</span>
+        <span>R$ ${_fmtBRL(i.custo)}</span>
+      </div>`;
+    });
+    adicHtml += '</div>';
+  }
+
+  document.getElementById('sim-custo-resultado').innerHTML = `
+    <div style="background:linear-gradient(135deg,#faf5ff,#f3e8ff);border:2px solid #c084fc;border-radius:14px;padding:14px">
+      <div style="font-family:'Baloo 2',cursive;font-weight:800;color:#581c87;font-size:1rem;margin-bottom:10px">📊 Resultado da Simulação</div>
+
+      ${baseHtml}
+      ${adicHtml}
+
+      <div style="border-top:1.5px dashed #c084fc;margin:10px 0 8px 0"></div>
+
+      <div style="display:flex;justify-content:space-between;font-size:.82rem;color:#581c87;padding:3px 0">
+        <span>📦 Custo insumos sabor</span><strong>R$ ${_fmtBRL(custoBase)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.82rem;color:#92400e;padding:3px 0">
+        <span>🍯 Custo adicionais</span><strong>R$ ${_fmtBRL(custoAdicionais)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.78rem;color:#7f1d1d;padding:2px 0;padding-left:12px">
+        <span>↳ Imposto (${imp}%)</span><span>R$ ${_fmtBRL(valorImp)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.78rem;color:#7f1d1d;padding:2px 0;padding-left:12px">
+        <span>↳ Franqueadora (${fra}%)</span><span>R$ ${_fmtBRL(valorFra)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.78rem;color:#7f1d1d;padding:2px 0;padding-left:12px">
+        <span>↳ Royalties (${roy}%)</span><span>R$ ${_fmtBRL(valorRoy)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.82rem;color:#991b1b;padding:3px 0;font-weight:700">
+        <span>📊 Encargos total</span><strong>R$ ${_fmtBRL(encargosTotal)}</strong>
+      </div>
+
+      <div style="border-top:2px solid #c084fc;margin:8px 0 6px 0"></div>
+
+      <div style="display:flex;justify-content:space-between;font-size:.92rem;color:#1f2937;padding:4px 0;font-weight:800">
+        <span>📊 Custo total</span><strong style="color:#991b1b">R$ ${_fmtBRL(custoTotal)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.92rem;color:#1f2937;padding:4px 0;font-weight:800">
+        <span>💰 Preço de venda</span><strong>R$ ${_fmtBRL(preco)}</strong>
+      </div>
+
+      <div style="border-top:2px solid #c084fc;margin:8px 0"></div>
+
+      <div style="display:flex;justify-content:space-between;font-size:1.05rem;font-family:'Baloo 2',cursive;font-weight:800;padding:6px 0;color:${corMargem}">
+        <span>${iconeMargem} Lucro líquido</span><span>R$ ${_fmtBRL(lucro)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.88rem;font-weight:700;color:${corMargem};padding:2px 0">
+        <span>Margem sobre venda</span><span>${margem.toFixed(2)}%</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--gray);padding:2px 0">
+        <span>Markup sobre custo</span><span>${markup.toFixed(2)}%</span>
+      </div>
+
+      <div style="background:white;border-radius:8px;padding:8px;margin-top:10px;font-size:.7rem;color:#6b7280;line-height:1.4">
+        🟢 <strong>Margem ≥ 40%</strong>: boa<br>
+        🟡 <strong>20% ≤ Margem &lt; 40%</strong>: aceitável<br>
+        🔴 <strong>Margem &lt; 20%</strong>: revisar preço
+      </div>
+    </div>
+  `;
+}
+
 
 function abrirGerenciarVendas(){
   renderListaVendas();
