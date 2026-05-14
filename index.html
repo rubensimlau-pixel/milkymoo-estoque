@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.90</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.91</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -9170,7 +9170,16 @@ function _renderFinDetalhe(r){
   }
 
   // Tabela de insumos
-  const insumos = (r.insumos||[]).slice().sort((a,b)=> (a.nome||'').localeCompare(b.nome||'','pt-BR'));
+  // Resolve nome com fallback (db.items) ANTES de ordenar, pra ficar tudo alfabético direitinho
+  function _nomeIng(ing){
+    let n = ing.nome && String(ing.nome).trim();
+    if(!n && ing.itemId){
+      const itm = (db.items||[]).find(i => i.id === ing.itemId);
+      if(itm && itm.nome) n = itm.nome;
+    }
+    return n || ing.itemId || '';
+  }
+  const insumos = (r.insumos||[]).slice().sort((a,b)=> _nomeIng(a).localeCompare(_nomeIng(b),'pt-BR'));
   if(insumos.length){
     html += `
       <div style="margin-bottom:14px">
@@ -9183,6 +9192,13 @@ function _renderFinDetalhe(r){
     insumos.forEach((ing,idx)=>{
       const total = (ing.qty||0) * (ing.custoPorUnit||0);
       const bg = idx%2===0 ? 'white' : '#fafafa';
+      // Fallback robusto: se nome salvo está vazio, busca em db.items pelo itemId
+      let nomeIng = ing.nome && String(ing.nome).trim();
+      if(!nomeIng && ing.itemId){
+        const itm = (db.items||[]).find(i => i.id === ing.itemId);
+        if(itm && itm.nome) nomeIng = itm.nome;
+      }
+      if(!nomeIng) nomeIng = ing.itemId || '(sem nome)';
       const explicacao = ing.temFracao
         ? `<span style="font-size:.6rem;color:#9ca3af;display:block">${ing.unidadePrim} R$&nbsp;${_fmtBRL(ing.valorEmbalagem)} ÷ ${fmtQ(ing.qtdPorUnidade)}${ing.unidade}</span>`
         : '';
@@ -9193,7 +9209,7 @@ function _renderFinDetalhe(r){
         ? `<strong style="color:#c9345a">R$&nbsp;${_fmtBRL(total)}</strong>`
         : '<span style="color:#d1d5db">—</span>';
       html += `<div style="display:grid;grid-template-columns:1fr 80px 110px 100px;padding:6px 10px;font-size:.74rem;background:${bg};border-bottom:1px solid #f3f4f6;align-items:center;">
-        <span style="font-weight:600">${ing.nome}${explicacao}</span>
+        <span style="font-weight:600">${nomeIng}${explicacao}</span>
         <span style="text-align:center;font-weight:700;color:#0369a1">${fmtQ(ing.qty)} ${ing.unidade}</span>
         <span style="text-align:center;font-size:.7rem;color:#6b7280">${custoCell}</span>
         <span style="text-align:right">${totalCell}</span>
