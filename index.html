@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.91</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.93</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1041,6 +1041,28 @@
       </div>
     </div>
 
+    <!-- MODAL IMPORTAR 99FOOD CSV (consumo de insumos) -->
+    <div id="modal-importar-99food" style="display:none;position:fixed;inset:0;background:white;z-index:760;flex-direction:column;overflow:hidden">
+      <div style="background:linear-gradient(135deg,#ea580c,#dc2626);color:white;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <div>
+          <div style="font-family:'Baloo 2',cursive;font-size:1.15rem;font-weight:800">📥 Importar Detalhes 99Food</div>
+          <div style="font-size:.75rem;opacity:.85">Cole o CSV de "Dados do item" do 99Food</div>
+        </div>
+        <button onclick="fecharImportar99Food()" style="background:rgba(255,255,255,.2);border:none;border-radius:50px;padding:7px 14px;color:white;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">✕ Fechar</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:14px">
+        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 12px;margin-bottom:10px;color:#7c2d12;font-size:.78rem;line-height:1.5">
+          <strong>Como usar:</strong> Abra o CSV "Dados do item" exportado do 99Food (não o CSV de pedidos). Cole o conteúdo abaixo. O sistema vai identificar sabores, tamanhos, adicionais e calcular o consumo de insumos, descontando do estoque do dia.
+        </div>
+        <textarea id="importar-99food-input" placeholder="Cole o CSV completo (com cabeçalho Data;Nome do estabelecimento;...)" style="width:100%;min-height:200px;padding:10px;font-family:monospace;font-size:.75rem;border:1.5px solid #fdba74;border-radius:10px;resize:vertical;box-sizing:border-box"></textarea>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button onclick="analisar99FoodCSV()" style="flex:1;background:#dc2626;color:white;border:none;border-radius:10px;padding:11px;font-family:'Baloo 2',cursive;font-size:.95rem;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(220,38,38,.3)">🔍 Analisar</button>
+          <button onclick="document.getElementById('importar-99food-input').value=''" style="background:#f3f4f6;color:#374151;border:none;border-radius:10px;padding:11px 18px;font-family:'Baloo 2',cursive;font-size:.85rem;font-weight:700;cursor:pointer">🗑️ Limpar</button>
+        </div>
+        <div id="importar-99food-preview" style="margin-top:14px"></div>
+      </div>
+    </div>
+
     <!-- MODAL ADICIONAR/EDITAR CUSTO -->
     <div id="modal-editar-custo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:700;align-items:center;justify-content:center;padding:20px">
       <div style="background:white;border-radius:20px;padding:24px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;">
@@ -1105,7 +1127,10 @@
           <div style="font-family:'Baloo 2',cursive;font-size:1.1rem;font-weight:800" id="planilha-ve-titulo">📋 Lançamentos</div>
           <div style="font-size:.72rem;opacity:.85" id="planilha-ve-info">—</div>
         </div>
-        <button onclick="fecharPlanilhaVE()" style="background:rgba(255,255,255,.2);border:none;border-radius:50px;padding:7px 14px;color:white;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer;flex-shrink:0">✕ Fechar</button>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button id="btn-importar-99food" onclick="abrirImportar99Food()" style="display:none;background:white;color:#15803d;border:none;border-radius:50px;padding:7px 12px;font-family:'Baloo 2',cursive;font-size:.78rem;font-weight:700;cursor:pointer">📥 Importar 99Food</button>
+          <button onclick="fecharPlanilhaVE()" style="background:rgba(255,255,255,.2);border:none;border-radius:50px;padding:7px 14px;color:white;font-family:'Baloo 2',cursive;font-size:.82rem;font-weight:700;cursor:pointer">✕ Fechar</button>
+        </div>
       </div>
 
       <!-- Navegação de mês -->
@@ -8396,6 +8421,10 @@ function abrirPlanilhaVendaExt(canalId){
   _planilhaVeMesRef = `${hj.getFullYear()}-${String(hj.getMonth()+1).padStart(2,'0')}`;
   document.getElementById('planilha-ve-titulo').textContent = `📋 ${v.descricao}`;
   document.getElementById('planilha-ve-info').textContent = `${lojaIcon(v.loja)} ${nomeLoja(v.loja)} · CMV ${v.percCusto||0}%`;
+  // Mostra botão 99Food só se canal for do tipo 99Food
+  const isNoveFood = /99\s*food|99food/i.test(v.descricao||'');
+  const btn99 = document.getElementById('btn-importar-99food');
+  if(btn99) btn99.style.display = isNoveFood ? '' : 'none';
   renderPlanilhaVE();
   document.getElementById('modal-planilha-ve').style.display = 'flex';
 }
@@ -8415,6 +8444,524 @@ function navegarMesVE(delta){
   _planilhaVeMesRef = `${novaData.getFullYear()}-${String(novaData.getMonth()+1).padStart(2,'0')}`;
   renderPlanilhaVE();
 }
+
+// ─────────────────────────────────────────────────────────────────
+// IMPORTAÇÃO DE CSV 99FOOD (consumo de insumos)
+// ─────────────────────────────────────────────────────────────────
+let _import99FoodParsed = null;
+// Cache do mapa "itemId do copo normal" → "itemId do copo delivery" (mesmo tamanho)
+// Usado pra trocar automaticamente o copo da receita pelo copo delivery em importações de delivery
+let _99FoodCopoMapCache = null;
+
+// Constrói mapa: itemId do copo normal → itemId do copo delivery (mesmo tamanho)
+// Reutiliza a função _detectarCopos (já distingue normal vs delivery por nome)
+function _construir99FoodCopoMap(){
+  const result = {};
+  if(typeof _detectarCopos !== 'function') return result;
+  try {
+    const copos = _detectarCopos();
+    // Pra cada tamanho que tem ambos (normal + delivery), cria entrada
+    [180,300,500,700].forEach(t => {
+      const normal   = copos.normal && copos.normal[t];
+      const delivery = copos.delivery && copos.delivery[t];
+      if(normal && delivery){
+        result[normal] = delivery;
+      }
+    });
+  } catch(e){
+    console.warn('Erro montando map de copos:', e);
+  }
+  return result;
+}
+
+// Invalidador: chama isso quando o estoque de itens for editado, pra recalcular o map
+function _invalidar99FoodCopoMap(){
+  _99FoodCopoMapCache = null;
+}
+
+function abrirImportar99Food(){
+  document.getElementById('importar-99food-input').value = '';
+  document.getElementById('importar-99food-preview').innerHTML = '';
+  _import99FoodParsed = null;
+  _99FoodCopoMapCache = null; // recalcula na próxima importação
+  document.getElementById('modal-importar-99food').style.display = 'flex';
+  setTimeout(()=>document.getElementById('importar-99food-input').focus(), 100);
+}
+
+function fecharImportar99Food(){
+  document.getElementById('modal-importar-99food').style.display = 'none';
+  _import99FoodParsed = null;
+}
+
+// Detecta a loja pela linha de cabeçalho do CSV (usa nome do estabelecimento)
+function _detectarLoja99Food(linhas){
+  for(const linha of linhas){
+    const t = (linha||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    if(/ANHANGUERA|PARQUE\s*SHOPPING|CAJAMAR/.test(t)) return 1;
+    if(/IGUATEMI|ALPHAVILLE/.test(t)) return 2;
+    if(/CARAPICUIBA/.test(t)) return 3;
+  }
+  return null;
+}
+
+// Parse de uma linha CSV (delimitador ';') respeitando aspas
+function _parseCsvLinha(linha){
+  const result = [];
+  let atual = '';
+  let dentroAspas = false;
+  for(let i = 0; i < linha.length; i++){
+    const c = linha[i];
+    if(c === '"'){
+      dentroAspas = !dentroAspas;
+    } else if(c === ';' && !dentroAspas){
+      result.push(atual);
+      atual = '';
+    } else {
+      atual += c;
+    }
+  }
+  result.push(atual);
+  return result.map(s => s.trim());
+}
+
+// Parse do CSV 99Food. Retorna { loja, lojaNome, porData: {YYYY-MM-DD: { sabores:[{nome,tamanho,qtd}], adicionais:[{nome,qtd}] }}, erros:[] }
+function _parse99FoodCSV(texto){
+  if(!texto || !texto.trim()) return { erro: 'Cole o conteúdo do CSV primeiro.' };
+  // Remove BOM
+  let t = texto.replace(/^\uFEFF/, '');
+  const linhas = t.split(/\r?\n/).filter(l => l.trim());
+  if(linhas.length < 2) return { erro: 'CSV vazio ou sem dados.' };
+
+  // Detecta loja varrendo as primeiras 5 linhas
+  const loja = _detectarLoja99Food(linhas.slice(0, 5));
+
+  // Procura header (linha que contém 'Data' e 'Nome do item')
+  let headerIdx = -1;
+  for(let i = 0; i < Math.min(linhas.length, 5); i++){
+    const cols = _parseCsvLinha(linhas[i]);
+    if(cols.some(c => /^Data$/i.test(c.trim())) && cols.some(c => /Nome do item/i.test(c))){
+      headerIdx = i;
+      break;
+    }
+  }
+  if(headerIdx < 0) return { erro: 'Não encontrei cabeçalho (Data;...;Nome do item;...) no CSV.' };
+
+  const header = _parseCsvLinha(linhas[headerIdx]);
+  const idxData = header.findIndex(h => /^Data$/i.test(h.trim()));
+  const idxNome = header.findIndex(h => /Nome do item/i.test(h));
+  const idxQty = header.findIndex(h => /Volume de vendas/i.test(h));
+  const idxReceita = header.findIndex(h => /Receita do item/i.test(h));
+
+  if(idxData < 0 || idxNome < 0 || idxQty < 0){
+    return { erro: 'CSV não tem as colunas esperadas (Data, Nome do item, Volume de vendas).' };
+  }
+
+  const porData = {};
+  const tamanhoRegex = /^(\d{2,3})\s*ml\s*-\s*(.+)$/i;
+  let totalLinhasIgnoradas = 0;
+  let totalLinhasProcessadas = 0;
+
+  for(let i = headerIdx + 1; i < linhas.length; i++){
+    const cols = _parseCsvLinha(linhas[i]);
+    if(cols.length < Math.max(idxData, idxNome, idxQty) + 1) continue;
+    const dataStr = cols[idxData];
+    const nome = cols[idxNome];
+    const qty = parseInt(cols[idxQty], 10) || 0;
+    const receita = idxReceita >= 0 ? parseFloat(String(cols[idxReceita]).replace(/\./g,'').replace(',','.')) || 0 : 0;
+    if(!dataStr || !nome || qty <= 0) continue;
+    // Data esperada: YYYY-MM-DD
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dataStr)) continue;
+
+    if(!porData[dataStr]) porData[dataStr] = { sabores: [], adicionais: [], combos: [] };
+
+    // Identifica tipo da linha
+    const matchTamanho = nome.match(tamanhoRegex);
+    if(matchTamanho){
+      // Linha "300ml - Pandora" → sabor com tamanho (usar pra consumo)
+      const tamanho = matchTamanho[1];
+      const saborNome = matchTamanho[2].trim();
+      porData[dataStr].sabores.push({ nome: saborNome, tamanho, qtd: qty });
+      totalLinhasProcessadas++;
+    } else if(/^Trio\s+de\s+milkshakes/i.test(nome)){
+      // Combo: ignorar (sabores estão nas linhas de tamanho)
+      porData[dataStr].combos.push({ nome, qtd: qty, receita });
+      totalLinhasIgnoradas++;
+    } else {
+      // Linha "Pandora" (sem ml) → é a venda principal OU adicional
+      // Heurística: se receita > 0 E nome aparece como sabor em outra linha de tamanho na mesma data → é "principal" → IGNORA
+      // Se não tem versão com tamanho na mesma data → é adicional
+      // Como ainda não temos todas as linhas processadas, vamos só guardar como "ambíguo"
+      porData[dataStr].adicionais.push({ nome, qtd: qty, receita, _ambiguo: true });
+      totalLinhasProcessadas++;
+    }
+  }
+
+  // Pós-processamento: pra cada data, remove dos "adicionais" os nomes que aparecem como sabor
+  // (esses são linhas principais redundantes)
+  Object.keys(porData).forEach(dataKey => {
+    const d = porData[dataKey];
+    const nomesSabores = new Set(d.sabores.map(s => s.nome.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')));
+    d.adicionais = d.adicionais.filter(a => {
+      const n = a.nome.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      // Se o nome do "adicional" bate com um sabor da mesma data, é a linha principal → remove
+      return !nomesSabores.has(n);
+    });
+  });
+
+  return {
+    loja,
+    lojaNome: loja ? nomeLoja(loja) : null,
+    porData,
+    stats: {
+      datas: Object.keys(porData).length,
+      processadas: totalLinhasProcessadas,
+      ignoradas: totalLinhasIgnoradas,
+    },
+  };
+}
+
+// Tenta achar receita do sabor — usa a mesma lógica do parser do Degust
+function _acharReceita99Food(nomeSabor, tamanho){
+  const receitas = getReceitas();
+  const norm = s => (s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+  const nomeNorm = norm(nomeSabor);
+  // Match exato
+  for(const sabor of Object.keys(receitas)){
+    if(norm(sabor) === nomeNorm){
+      const r = receitas[sabor];
+      if(r && Array.isArray(r[tamanho]) && r[tamanho].length > 0){
+        return { sabor, ingredientes: r[tamanho], encontrouTamanho: true };
+      }
+      // Achou sabor mas sem tamanho específico
+      return { sabor, ingredientes: [], encontrouTamanho: false };
+    }
+  }
+  // Match parcial
+  for(const sabor of Object.keys(receitas)){
+    const sNorm = norm(sabor);
+    if(sNorm.length >= 4 && (nomeNorm.includes(sNorm) || sNorm.includes(nomeNorm))){
+      const r = receitas[sabor];
+      if(r && Array.isArray(r[tamanho]) && r[tamanho].length > 0){
+        return { sabor, ingredientes: r[tamanho], encontrouTamanho: true };
+      }
+    }
+  }
+  return null;
+}
+
+// Tenta achar receita de adicional (categoria 'adicional')
+function _acharReceitaAdicional(nomeAdicional){
+  const receitas = getReceitas();
+  const norm = s => (s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+  const nomeNorm = norm(nomeAdicional);
+  for(const sabor of Object.keys(receitas)){
+    if(norm(sabor) === nomeNorm){
+      const r = receitas[sabor];
+      if(r && Array.isArray(r.adicional) && r.adicional.length > 0){
+        return { sabor, ingredientes: r.adicional };
+      }
+    }
+  }
+  // Tenta categoria 'mimo' e 'bebida' como fallback (alguns podem estar lá)
+  for(const cat of ['adicional','mimo','bebida','outros']){
+    for(const sabor of Object.keys(receitas)){
+      if(norm(sabor) === nomeNorm){
+        const r = receitas[sabor];
+        if(r && Array.isArray(r[cat]) && r[cat].length > 0){
+          return { sabor, ingredientes: r[cat] };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function analisar99FoodCSV(){
+  const texto = document.getElementById('importar-99food-input').value;
+  const parsed = _parse99FoodCSV(texto);
+  const prev = document.getElementById('importar-99food-preview');
+
+  if(parsed.erro){
+    prev.innerHTML = `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:12px;color:#991b1b;font-size:.85rem">⚠️ ${parsed.erro}</div>`;
+    _import99FoodParsed = null;
+    return;
+  }
+
+  // Loja: usa do canal aberto (se houver) ou a detectada
+  const canal = (db.vendasExternas||[]).find(x => x.id === _planilhaVeCanalId);
+  const lojaCanal = canal ? Number(canal.loja) : null;
+  const lojaDetectada = parsed.loja;
+  // Se loja do CSV não bate com a do canal, alerta
+  let avisoLoja = '';
+  if(lojaDetectada && lojaCanal && lojaDetectada !== lojaCanal){
+    avisoLoja = `<div style="background:#fef3c7;border:1.5px solid #fcd34d;color:#92400e;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:.82rem">
+      ⚠️ <strong>Aviso:</strong> O CSV é da loja <strong>${nomeLoja(lojaDetectada)}</strong>, mas o canal aberto é da loja <strong>${nomeLoja(lojaCanal)}</strong>. Os dados serão importados pra <strong>${nomeLoja(lojaCanal)}</strong> (do canal aberto).
+    </div>`;
+  } else if(!lojaDetectada && lojaCanal){
+    avisoLoja = `<div style="background:#e0f2fe;border:1.5px solid #7dd3fc;color:#075985;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:.82rem">
+      ℹ️ Não identifiquei a loja no CSV — vou usar a loja do canal aberto: <strong>${nomeLoja(lojaCanal)}</strong>.
+    </div>`;
+  } else if(lojaDetectada){
+    avisoLoja = `<div style="background:#dcfce7;border:1.5px solid #86efac;color:#166534;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:.82rem">
+      ✓ Loja detectada: <strong>${nomeLoja(lojaDetectada)}</strong>
+    </div>`;
+  }
+
+  _import99FoodParsed = { ...parsed, lojaFinal: lojaCanal || lojaDetectada };
+
+  // Monta preview por data
+  const datas = Object.keys(parsed.porData).sort();
+  let totalSabores = 0, totalCopos = { 300:0, 500:0, 700:0 }, totalAdicionais = 0;
+  const semReceitaSabor = new Map();   // nome|tamanho → qtd
+  const semReceitaAdic = new Map();    // nome → qtd
+  const datasHtml = datas.map(dataKey => {
+    const d = parsed.porData[dataKey];
+    const saboresHtml = d.sabores.map(s => {
+      totalSabores += s.qtd;
+      const t = Number(s.tamanho);
+      if(totalCopos[t] !== undefined) totalCopos[t] += s.qtd;
+      const r = _acharReceita99Food(s.nome, s.tamanho);
+      let badge;
+      if(!r){
+        badge = '<span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:5px;font-size:.65rem;font-weight:700">sem cadastro</span>';
+        const k = `${s.nome}|${s.tamanho}`;
+        semReceitaSabor.set(k, (semReceitaSabor.get(k)||0) + s.qtd);
+      } else if(!r.encontrouTamanho){
+        badge = '<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:5px;font-size:.65rem;font-weight:700">sem tamanho '+s.tamanho+'</span>';
+      } else {
+        badge = `<span style="background:#dcfce7;color:#166534;padding:1px 6px;border-radius:5px;font-size:.65rem;font-weight:700">✓ ${r.ingredientes.length} insumo${r.ingredientes.length===1?'':'s'}</span>`;
+      }
+      return `<div style="font-size:.74rem;padding:2px 0;display:flex;justify-content:space-between;gap:6px"><span>${s.qtd}× ${s.nome} (${s.tamanho}ml)</span>${badge}</div>`;
+    }).join('');
+    const adicionaisHtml = d.adicionais.map(a => {
+      totalAdicionais += a.qtd;
+      const r = _acharReceitaAdicional(a.nome);
+      let badge;
+      if(!r){
+        badge = '<span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:5px;font-size:.65rem;font-weight:700">sem cadastro</span>';
+        semReceitaAdic.set(a.nome, (semReceitaAdic.get(a.nome)||0) + a.qtd);
+      } else {
+        badge = `<span style="background:#dcfce7;color:#166534;padding:1px 6px;border-radius:5px;font-size:.65rem;font-weight:700">✓ ${r.ingredientes.length} insumo${r.ingredientes.length===1?'':'s'}</span>`;
+      }
+      return `<div style="font-size:.74rem;padding:2px 0;display:flex;justify-content:space-between;gap:6px"><span>${a.qtd}× ${a.nome} <em style="color:var(--gray)">(adicional)</em></span>${badge}</div>`;
+    }).join('');
+    const combosHtml = d.combos.length > 0
+      ? `<div style="font-size:.7rem;color:#92400e;padding:4px 0;font-style:italic">ℹ️ ${d.combos.length} combo(s) — sabores extraídos das linhas com tamanho.</div>`
+      : '';
+    return `<div style="background:white;border:1.5px solid #fed7aa;border-radius:10px;padding:8px 10px;margin-bottom:8px">
+      <div style="font-family:'Baloo 2',cursive;font-weight:800;color:#7c2d12;font-size:.85rem;margin-bottom:4px">📅 ${_fmtDataBr(dataKey)}</div>
+      ${saboresHtml}
+      ${adicionaisHtml}
+      ${combosHtml}
+    </div>`;
+  }).join('');
+
+  // Avisos
+  let avisosCadastro = '';
+  if(semReceitaSabor.size > 0 || semReceitaAdic.size > 0){
+    const itens = [];
+    semReceitaSabor.forEach((qtd, k) => itens.push(`• ${qtd}× <strong>${k.split('|')[0]} ${k.split('|')[1]}ml</strong> (sabor)`));
+    semReceitaAdic.forEach((qtd, n) => itens.push(`• ${qtd}× <strong>${n}</strong> (adicional)`));
+    avisosCadastro = `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:.78rem;color:#991b1b">
+      <strong>⚠️ ${itens.length} item(ns) sem receita cadastrada</strong> — esses não terão insumos descontados:<br>
+      ${itens.slice(0,10).join('<br>')}${itens.length > 10 ? '<br>... e mais ' + (itens.length-10) : ''}
+    </div>`;
+  }
+
+  // Cache de substituição (recalcula sempre que analisa)
+  _99FoodCopoMapCache = _construir99FoodCopoMap();
+  const tamanhosComDelivery = [180,300,500,700].filter(t => {
+    const copos = _detectarCopos();
+    return copos.normal[t] && copos.delivery && copos.delivery[t];
+  });
+  const tamanhosSemDelivery = [180,300,500,700].filter(t => {
+    const copos = _detectarCopos();
+    return copos.normal[t] && (!copos.delivery || !copos.delivery[t]);
+  });
+
+  let avisoCopoSubst = '';
+  if(tamanhosComDelivery.length > 0){
+    avisoCopoSubst = `<div style="background:#dbeafe;border:1.5px solid #93c5fd;color:#1e3a8a;border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:.78rem">
+      🔄 <strong>Substituição automática de copos:</strong> nos insumos das receitas, os copos normais <strong>${tamanhosComDelivery.map(t=>t+'ml').join(', ')}</strong> serão substituídos pelos copos delivery correspondentes.
+    </div>`;
+  }
+  if(tamanhosSemDelivery.length > 0){
+    avisoCopoSubst += `<div style="background:#fef3c7;border:1.5px solid #fcd34d;color:#92400e;border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:.78rem">
+      ⚠️ <strong>Sem copo delivery cadastrado para:</strong> ${tamanhosSemDelivery.map(t=>t+'ml').join(', ')}. Para esses tamanhos, será descontado o copo normal mesmo. Cadastre "COPO DEL XXX" no estoque pra ativar a substituição.
+    </div>`;
+  }
+
+  prev.innerHTML = `
+    ${avisoLoja}
+    ${avisoCopoSubst}
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:.78rem;color:#374151">
+      <strong>📊 Resumo:</strong> ${parsed.stats.datas} dia(s) · ${totalSabores} milkshake(s) · ${totalAdicionais} adicional(is)<br>
+      <strong>🥤 Copos:</strong> 300ml=${totalCopos[300]} · 500ml=${totalCopos[500]} · 700ml=${totalCopos[700]}
+    </div>
+    ${avisosCadastro}
+    ${datasHtml}
+    <button onclick="confirmarImportacao99Food()" style="width:100%;background:#16a34a;color:white;border:none;border-radius:12px;padding:13px;font-family:'Baloo 2',cursive;font-size:1rem;font-weight:800;cursor:pointer;margin-top:10px;box-shadow:0 4px 14px rgba(22,163,74,.4)">✅ Confirmar importação</button>
+  `;
+}
+
+async function confirmarImportacao99Food(){
+  if(!_import99FoodParsed){
+    showToast('⚠️ Analise o CSV primeiro');
+    return;
+  }
+  const loja = _import99FoodParsed.lojaFinal;
+  if(!loja){ showToast('⚠️ Loja não identificada'); return; }
+  const porData = _import99FoodParsed.porData;
+  const datas = Object.keys(porData).sort();
+
+  // Verifica conflitos: dias que já tenham insumos com origem '99food'
+  const dataComExistente = [];
+  datas.forEach(dataKey => {
+    const fin = (db.financeiro||[]).find(f => f.data === dataKey && Number(f.loja) === Number(loja));
+    if(fin){
+      const tem = (fin.insumos||[]).some(i => i.origem === '99food');
+      if(tem) dataComExistente.push(dataKey);
+    }
+  });
+  if(dataComExistente.length > 0){
+    const lista = dataComExistente.map(d => `• ${_fmtDataBr(d)}`).join('\n');
+    if(!confirm(`⚠️ ${dataComExistente.length} dia(s) já tem importação anterior do 99Food:\n\n${lista}\n\nDeseja SOBRESCREVER (remover os anteriores e adicionar os novos)?`)){
+      showToast('Importação cancelada');
+      return;
+    }
+  }
+
+  // Acha canal aberto (pra atualizar copos)
+  const canal = (db.vendasExternas||[]).find(x => x.id === _planilhaVeCanalId);
+
+  // Processa cada data
+  let totalInsumosAdicionados = 0;
+  let totalDiasProcessados = 0;
+  const coposPorData = {}; // dataKey → {c300, c500, c700}
+
+  datas.forEach(dataKey => {
+    const d = porData[dataKey];
+    // Acha ou cria registro financeiro do dia/loja
+    if(!Array.isArray(db.financeiro)) db.financeiro = [];
+    let fin = db.financeiro.find(f => f.data === dataKey && Number(f.loja) === Number(loja));
+    if(!fin){
+      fin = {
+        data: dataKey,
+        loja: Number(loja),
+        pdvs: [],
+        insumos: [],
+        ts: Date.now(),
+      };
+      db.financeiro.push(fin);
+    }
+    if(!Array.isArray(fin.insumos)) fin.insumos = [];
+
+    // Remove insumos antigos com origem '99food' (sobrescrita)
+    fin.insumos = fin.insumos.filter(i => i.origem !== '99food');
+
+    // Calcula insumos consumidos
+    const insumosAcc = {}; // itemId → {qty, dadosItem}
+    // Helper: dado um itemId de copo NORMAL, retorna o itemId do COPO DELIVERY do mesmo tamanho (ou null se não existir)
+    // Cache pra não buscar várias vezes
+    if(typeof _99FoodCopoMapCache === 'undefined' || !_99FoodCopoMapCache){
+      _99FoodCopoMapCache = _construir99FoodCopoMap();
+    }
+    function _99FoodSubstituirCopo(itemId){
+      return _99FoodCopoMapCache[itemId] || itemId;
+    }
+    function _addIngredientes(ingredientes, multQty){
+      ingredientes.forEach(ing => {
+        if(!ing.itemId) return;
+        // Se ingrediente é um copo NORMAL, substitui pelo delivery (se existir)
+        const itemIdFinal = _99FoodSubstituirCopo(ing.itemId);
+        const key = itemIdFinal;
+        if(!insumosAcc[key]){
+          // Se houve substituição, usa o nome/unidade do item delivery (busca em db.items)
+          let nome = ing.nome || '';
+          let unidade = ing.unidade || '';
+          if(itemIdFinal !== ing.itemId){
+            const itmDel = (db.items||[]).find(i => i.id === itemIdFinal);
+            if(itmDel){
+              nome = itmDel.nome || nome;
+              unidade = itmDel.unidadeSecundaria || itmDel.unidade || unidade;
+            }
+          }
+          insumosAcc[key] = { itemId: itemIdFinal, qty: 0, qtdRefIngrediente: ing.qty, unidade, nome };
+        }
+        insumosAcc[key].qty += (Number(ing.qty) || 0) * multQty;
+      });
+    }
+
+    // Sabores
+    d.sabores.forEach(s => {
+      const r = _acharReceita99Food(s.nome, s.tamanho);
+      if(r && r.encontrouTamanho) _addIngredientes(r.ingredientes, s.qtd);
+    });
+    // Adicionais
+    d.adicionais.forEach(a => {
+      const r = _acharReceitaAdicional(a.nome);
+      if(r) _addIngredientes(r.ingredientes, a.qtd);
+    });
+
+    // Coposas 300/500/700 (1 copo por sabor)
+    const cops = { 300:0, 500:0, 700:0 };
+    d.sabores.forEach(s => {
+      const t = Number(s.tamanho);
+      if(cops[t] !== undefined) cops[t] += s.qtd;
+    });
+    coposPorData[dataKey] = { c300: cops[300], c500: cops[500], c700: cops[700] };
+
+    // Salva insumos com flag de origem + calcula custo
+    Object.values(insumosAcc).forEach(ins => {
+      const itm = (db.items||[]).find(i => i.id === ins.itemId);
+      const custoUnit = itm ? _custoPorUnitItem(itm) : 0;
+      fin.insumos.push({
+        itemId: ins.itemId,
+        nome: ins.nome || (itm && itm.nome) || ins.itemId,
+        qty: ins.qty,
+        unidade: ins.unidade || (itm && (itm.unidadeSecundaria||itm.unidade)) || '',
+        custoPorUnit: custoUnit,
+        origem: '99food',
+      });
+      totalInsumosAdicionados++;
+    });
+    totalDiasProcessados++;
+  });
+
+  // Atualiza copos no canal aberto
+  if(canal){
+    if(!canal.copos) canal.copos = {};
+    Object.keys(coposPorData).forEach(dataKey => {
+      const c = coposPorData[dataKey];
+      if(c.c300 === 0 && c.c500 === 0 && c.c700 === 0){
+        delete canal.copos[dataKey];
+      } else {
+        canal.copos[dataKey] = c;
+      }
+    });
+  }
+
+  const ok = await saveCloud();
+  if(ok){
+    showToast(`✅ ${totalDiasProcessados} dia(s) · ${totalInsumosAdicionados} insumo(s) importado(s)`);
+    fecharImportar99Food();
+    renderPlanilhaVE();
+    renderFinanceiro();
+  } else {
+    showToast('❌ Erro ao salvar');
+  }
+}
+
+// Helper: custo por unidade de um item (já existe lógica similar em outros lugares, vou reproduzir)
+function _custoPorUnitItem(item){
+  if(!item) return 0;
+  // Lógica simplificada: se tem fração, divide; senão usa preço unitário
+  if(item.qtdPorUnidade && item.qtdPorUnidade > 0){
+    return (Number(item.valorEmbalagem) || 0) / Number(item.qtdPorUnidade);
+  }
+  return Number(item.valor) || Number(item.valorEmbalagem) || 0;
+}
+
 
 function _coletarValoresPlanilhaVE(){
   // Lê inputs da planilha e atualiza db.vendasExternas em memória (sem saveCloud)
