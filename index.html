@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.93</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.96</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1053,6 +1053,12 @@
       <div style="flex:1;overflow-y:auto;padding:14px">
         <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 12px;margin-bottom:10px;color:#7c2d12;font-size:.78rem;line-height:1.5">
           <strong>Como usar:</strong> Abra o CSV "Dados do item" exportado do 99Food (não o CSV de pedidos). Cole o conteúdo abaixo. O sistema vai identificar sabores, tamanhos, adicionais e calcular o consumo de insumos, descontando do estoque do dia.
+        </div>
+        <div id="importar-99food-dropzone" style="border:2px dashed #fdba74;border-radius:12px;padding:20px;text-align:center;background:#fff7ed;cursor:pointer;margin-bottom:10px;transition:all .15s" onclick="document.getElementById('importar-99food-file').click()">
+          <div style="font-size:2rem;line-height:1;margin-bottom:6px">📁</div>
+          <div style="font-family:'Baloo 2',cursive;font-weight:800;color:#c2410c;font-size:.92rem">Arraste o CSV aqui</div>
+          <div style="font-size:.72rem;color:#92400e;margin-top:2px">ou clique pra escolher · ou cole o conteúdo abaixo</div>
+          <input type="file" id="importar-99food-file" accept=".csv,.txt,text/csv,text/plain" style="display:none" onchange="_lerArquivo99Food(this.files[0])">
         </div>
         <textarea id="importar-99food-input" placeholder="Cole o CSV completo (com cabeçalho Data;Nome do estabelecimento;...)" style="width:100%;min-height:200px;padding:10px;font-family:monospace;font-size:.75rem;border:1.5px solid #fdba74;border-radius:10px;resize:vertical;box-sizing:border-box"></textarea>
         <div style="display:flex;gap:8px;margin-top:10px">
@@ -4911,6 +4917,33 @@ function renderSecaoTamanho(tam){
   }
 
   ings.forEach((ing, idx) => {
+    // Monta opções de unidade do item selecionado
+    let optsUnidade = '';
+    const itemSel = ing.itemId ? db.items.find(i => i.id === ing.itemId) : null;
+    if(itemSel){
+      const uPrim = itemSel.unidade || '';
+      const uSec = itemSel.unidadeSecundaria || '';
+      // Primária sempre disponível
+      if(uPrim){
+        optsUnidade += `<option value="${uPrim}" ${ing.unidade===uPrim?'selected':''}>${uPrim} (primária)</option>`;
+      }
+      // Secundária só se cadastrada
+      if(uSec && uSec !== uPrim){
+        optsUnidade += `<option value="${uSec}" ${ing.unidade===uSec?'selected':''}>${uSec} (secundária)</option>`;
+      }
+      // Se o valor atual da unidade não bate com nenhuma das duas (legacy), mantém como custom
+      if(ing.unidade && ing.unidade !== uPrim && ing.unidade !== uSec){
+        optsUnidade += `<option value="${ing.unidade}" selected>${ing.unidade} (custom)</option>`;
+      }
+    } else {
+      // Sem item selecionado, deixa só a unidade que já está cadastrada (se houver)
+      if(ing.unidade){
+        optsUnidade = `<option value="${ing.unidade}" selected>${ing.unidade}</option>`;
+      } else {
+        optsUnidade = `<option value="">—</option>`;
+      }
+    }
+
     html += `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:7px;padding:8px;background:var(--gray-light);border-radius:10px">
         <select onchange="atualizarIng('${tam}',${idx},'itemId',this.value)"
@@ -4920,9 +4953,12 @@ function renderSecaoTamanho(tam){
         <input type="number" min="0" step="0.01" value="${ing.qty||''}"
           onchange="atualizarIng('${tam}',${idx},'qty',parseFloat(this.value)||0)"
           placeholder="Qtd" style="width:60px;border:2px solid var(--border);border-radius:8px;padding:5px;font-family:'Nunito',sans-serif;font-size:.8rem;text-align:center">
-        <input type="text" value="${ing.unidade||''}"
-          onchange="atualizarIng('${tam}',${idx},'unidade',this.value)"
-          placeholder="unid" style="width:52px;border:2px solid var(--border);border-radius:8px;padding:5px;font-family:'Nunito',sans-serif;font-size:.75rem">
+        <select onchange="atualizarIng('${tam}',${idx},'unidade',this.value)"
+          ${itemSel ? '' : 'disabled'}
+          title="Escolha a unidade (primária ou secundária)"
+          style="min-width:88px;border:2px solid var(--border);border-radius:8px;padding:5px 4px;font-family:'Nunito',sans-serif;font-size:.72rem;background:white">
+          ${optsUnidade}
+        </select>
         <button onclick="removerIng('${tam}',${idx})"
           style="background:var(--red);color:white;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;font-size:.8rem;flex-shrink:0">✕</button>
       </div>`;
@@ -4952,10 +4988,11 @@ function atualizarIng(tam, idx, campo, valor){
     const item = db.items.find(i=>i.id===valor);
     if(item){
       _saborEditandoIngredientes[tam][idx].nome = item.nome;
-      if(!_saborEditandoIngredientes[tam][idx].unidade){
-        _saborEditandoIngredientes[tam][idx].unidade = item.unidade;
-        renderSecaoTamanho(tam);
-      }
+      // Default da unidade: SECUNDÁRIA se existir (geralmente é a fracionada — ex: gramas em vez de pote),
+      // caso contrário usa a primária. Usuário pode trocar manualmente no select.
+      const uDefault = item.unidadeSecundaria || item.unidade || '';
+      _saborEditandoIngredientes[tam][idx].unidade = uDefault;
+      renderSecaoTamanho(tam);
     }
   }
 }
@@ -8483,9 +8520,73 @@ function abrirImportar99Food(){
   document.getElementById('importar-99food-input').value = '';
   document.getElementById('importar-99food-preview').innerHTML = '';
   _import99FoodParsed = null;
-  _99FoodCopoMapCache = null; // recalcula na próxima importação
+  _99FoodCopoMapCache = null;
+  _inicializarApelidos99Food();
   document.getElementById('modal-importar-99food').style.display = 'flex';
+  _configurarDragDrop99Food();
   setTimeout(()=>document.getElementById('importar-99food-input').focus(), 100);
+}
+
+// Lê arquivo selecionado/arrastado e coloca o texto na textarea
+function _lerArquivo99Food(file){
+  if(!file) return;
+  const nomeArq = file.name || '';
+  if(file.size > 5 * 1024 * 1024){
+    showToast('⚠️ Arquivo muito grande (máx 5MB)');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e){
+    let conteudo = e.target.result || '';
+    document.getElementById('importar-99food-input').value = conteudo;
+    showToast(`📁 ${nomeArq} carregado`);
+    // Analisa automaticamente
+    setTimeout(()=>analisar99FoodCSV(), 100);
+  };
+  reader.onerror = function(){
+    showToast('❌ Erro ao ler o arquivo');
+  };
+  // CSV tem BOM e geralmente é UTF-8
+  reader.readAsText(file, 'UTF-8');
+}
+
+// Configura drag & drop na zona e na textarea
+function _configurarDragDrop99Food(){
+  const zona = document.getElementById('importar-99food-dropzone');
+  const textarea = document.getElementById('importar-99food-input');
+  if(!zona || !textarea) return;
+  // Evita configurar 2x
+  if(zona._dragConfigurado) return;
+  zona._dragConfigurado = true;
+
+  function impedir(e){ e.preventDefault(); e.stopPropagation(); }
+  function destacar(){
+    zona.style.background = '#ffedd5';
+    zona.style.borderColor = '#c2410c';
+  }
+  function desnacar(){
+    zona.style.background = '#fff7ed';
+    zona.style.borderColor = '#fdba74';
+  }
+
+  ['dragenter','dragover','dragleave','drop'].forEach(ev => {
+    zona.addEventListener(ev, impedir);
+    textarea.addEventListener(ev, impedir);
+  });
+  ['dragenter','dragover'].forEach(ev => {
+    zona.addEventListener(ev, destacar);
+    textarea.addEventListener(ev, destacar);
+  });
+  ['dragleave','drop'].forEach(ev => {
+    zona.addEventListener(ev, desnacar);
+    textarea.addEventListener(ev, desnacar);
+  });
+  function handleDrop(e){
+    const files = e.dataTransfer && e.dataTransfer.files;
+    if(files && files.length > 0) _lerArquivo99Food(files[0]);
+  }
+  zona.addEventListener('drop', handleDrop);
+  textarea.addEventListener('drop', handleDrop);
 }
 
 function fecharImportar99Food(){
@@ -8620,60 +8721,156 @@ function _parse99FoodCSV(texto){
   };
 }
 
-// Tenta achar receita do sabor — usa a mesma lógica do parser do Degust
+// Tenta achar receita do sabor. Usa apelidos cadastrados e match exato (sem parcial).
 function _acharReceita99Food(nomeSabor, tamanho){
   const receitas = getReceitas();
   const norm = s => (s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+  const apelidos = (db.apelidos99Food || {});
   const nomeNorm = norm(nomeSabor);
-  // Match exato
+  // Aplica apelido (caso o nome do CSV difira do cadastrado)
+  const nomeAlvo = apelidos[nomeNorm] || nomeSabor;
+  const nomeAlvoNorm = norm(nomeAlvo);
+
+  // Match exato apenas
   for(const sabor of Object.keys(receitas)){
-    if(norm(sabor) === nomeNorm){
+    if(norm(sabor) === nomeAlvoNorm){
       const r = receitas[sabor];
       if(r && Array.isArray(r[tamanho]) && r[tamanho].length > 0){
         return { sabor, ingredientes: r[tamanho], encontrouTamanho: true };
       }
-      // Achou sabor mas sem tamanho específico
       return { sabor, ingredientes: [], encontrouTamanho: false };
-    }
-  }
-  // Match parcial
-  for(const sabor of Object.keys(receitas)){
-    const sNorm = norm(sabor);
-    if(sNorm.length >= 4 && (nomeNorm.includes(sNorm) || sNorm.includes(nomeNorm))){
-      const r = receitas[sabor];
-      if(r && Array.isArray(r[tamanho]) && r[tamanho].length > 0){
-        return { sabor, ingredientes: r[tamanho], encontrouTamanho: true };
-      }
     }
   }
   return null;
 }
 
-// Tenta achar receita de adicional (categoria 'adicional')
+// Tenta achar receita de adicional (categoria 'adicional').
+// Estratégia:
+// 1. Verifica se tem APELIDO cadastrado pra esse nome (db.apelidos99Food)
+// 2. Match exato em receitas[].adicional / .mimo / .bebida / .outros
+// 3. Se nada bater, tenta achar como INSUMO direto (db.items) e retorna como "ingrediente único"
 function _acharReceitaAdicional(nomeAdicional){
-  const receitas = getReceitas();
   const norm = s => (s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
   const nomeNorm = norm(nomeAdicional);
-  for(const sabor of Object.keys(receitas)){
-    if(norm(sabor) === nomeNorm){
-      const r = receitas[sabor];
-      if(r && Array.isArray(r.adicional) && r.adicional.length > 0){
-        return { sabor, ingredientes: r.adicional };
-      }
-    }
-  }
-  // Tenta categoria 'mimo' e 'bebida' como fallback (alguns podem estar lá)
+
+  // Resolve apelido: se o nome vier do CSV e tiver apelido, usa o nome cadastrado real
+  const apelidos = (db.apelidos99Food || {});
+  const nomeAlvo = apelidos[nomeNorm] || nomeAdicional;
+  const nomeAlvoNorm = norm(nomeAlvo);
+
+  // 1) Tenta em receitas (qualquer categoria) - match exato
+  const receitas = getReceitas();
   for(const cat of ['adicional','mimo','bebida','outros']){
     for(const sabor of Object.keys(receitas)){
-      if(norm(sabor) === nomeNorm){
+      if(norm(sabor) === nomeAlvoNorm){
         const r = receitas[sabor];
         if(r && Array.isArray(r[cat]) && r[cat].length > 0){
-          return { sabor, ingredientes: r[cat] };
+          return { sabor, ingredientes: r[cat], origem: 'receita' };
         }
       }
     }
   }
+
+  // 2) Tenta direto como item do estoque (Insumo)
+  const item = (db.items||[]).find(i => norm(i.nome) === nomeAlvoNorm);
+  if(item){
+    // Retorna um "ingrediente único" representando o próprio item — quantidade 1 por unidade vendida
+    return {
+      sabor: item.nome,
+      origem: 'insumo',
+      ingredientes: [{
+        itemId: item.id,
+        nome: item.nome,
+        qty: 1,
+        unidade: item.unidadeSecundaria || item.unidade || 'unidade',
+      }],
+    };
+  }
+
   return null;
+}
+
+// Salva apelido pra próximas importações
+async function _salvarApelido99Food(nomeCSV, nomeApp){
+  const norm = s => (s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+  if(!db.apelidos99Food) db.apelidos99Food = {};
+  db.apelidos99Food[norm(nomeCSV)] = nomeApp;
+  const ok = await saveCloud();
+  return ok;
+}
+
+// Lista todos os candidatos pra vincular (receitas adicional/mimo/bebida/outros + itens)
+function _listarCandidatosVinculo(){
+  const candidatos = [];
+  const receitas = getReceitas();
+  for(const cat of ['adicional','mimo','bebida','outros']){
+    for(const sabor of Object.keys(receitas)){
+      const r = receitas[sabor];
+      if(r && Array.isArray(r[cat]) && r[cat].length > 0){
+        candidatos.push({ tipo: 'receita_'+cat, nome: sabor, label: `📋 ${sabor} (receita ${cat})` });
+      }
+    }
+  }
+  (db.items||[]).forEach(i => {
+    if(!i.nome) return;
+    candidatos.push({ tipo: 'item', nome: i.nome, label: `📦 ${i.nome} (insumo)` });
+  });
+  // Remove duplicatas pelo nome
+  const visto = new Set();
+  return candidatos.filter(c => {
+    if(visto.has(c.nome.toLowerCase())) return false;
+    visto.add(c.nome.toLowerCase());
+    return true;
+  }).sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+}
+
+// Abre prompt pra vincular um nome de CSV a um cadastro
+async function _abrirVincularAdicional(nomeCSV){
+  const candidatos = _listarCandidatosVinculo();
+  if(candidatos.length === 0){
+    alert('Nenhum item ou receita cadastrada. Cadastre primeiro o item/receita correspondente.');
+    return;
+  }
+  const lista = candidatos.map((c,i) => `${i+1}. ${c.label}`).join('\n');
+  const resp = prompt(`Vincular "${nomeCSV}" a qual cadastro?\n\nDigite o número:\n\n${lista}`);
+  if(!resp) return;
+  const idx = parseInt(resp, 10) - 1;
+  if(isNaN(idx) || idx < 0 || idx >= candidatos.length){
+    alert('Número inválido');
+    return;
+  }
+  const escolhido = candidatos[idx];
+  const ok = await _salvarApelido99Food(nomeCSV, escolhido.nome);
+  if(ok){
+    showToast(`✓ "${nomeCSV}" vinculado a "${escolhido.nome}"`);
+    // Re-analisa pra atualizar preview
+    analisar99FoodCSV();
+  } else {
+    showToast('❌ Erro ao salvar vínculo');
+  }
+}
+
+// Pré-popula apelidos comuns na primeira vez
+function _inicializarApelidos99Food(){
+  if(db.apelidos99Food && Object.keys(db.apelidos99Food).length > 0) return;
+  if(!db.apelidos99Food) db.apelidos99Food = {};
+  // Apelidos iniciais informados pelo usuário (nomes do CSV → nomes que provavelmente existem no cadastro)
+  // Chave: nome normalizado (UPPER, sem acento)
+  const APELIDOS_INICIAIS = {
+    'BRIGADEIRO': 'Brigadeiro Choc.',
+    'BRIGADEIRO DE LEITE': 'Brigadeiro Ninho',
+    'BRIGADEIRO DE LEITE EM PO': 'Brigadeiro Ninho',
+    'BRIGADEIRO DE NINHO': 'Brigadeiro Ninho',
+    'BRIGADEIRO NINHO': 'Brigadeiro Ninho',
+    'LEITE EM PO': 'Leite Ninho',
+    'PACOCA': 'Paçoquinha',
+    'CREME DE AVELA': 'Nutella',
+    'CALDA DE MARACUJA': 'Calda Maracujá',
+    'BOMBOM FERRERO ROCHER': 'Ferrero Rocher',
+  };
+  Object.keys(APELIDOS_INICIAIS).forEach(k => {
+    db.apelidos99Food[k] = APELIDOS_INICIAIS[k];
+  });
 }
 
 function analisar99FoodCSV(){
@@ -8738,12 +8935,15 @@ function analisar99FoodCSV(){
       const r = _acharReceitaAdicional(a.nome);
       let badge;
       if(!r){
-        badge = '<span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:5px;font-size:.65rem;font-weight:700">sem cadastro</span>';
+        const nomeEscaped = a.nome.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+        badge = `<span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:5px;font-size:.65rem;font-weight:700">sem cadastro</span>
+          <button onclick="_abrirVincularAdicional('${nomeEscaped}')" style="background:#7c3aed;color:white;border:none;border-radius:5px;padding:2px 8px;font-size:.65rem;font-weight:700;cursor:pointer;margin-left:4px">🔗 Vincular</button>`;
         semReceitaAdic.set(a.nome, (semReceitaAdic.get(a.nome)||0) + a.qtd);
       } else {
-        badge = `<span style="background:#dcfce7;color:#166534;padding:1px 6px;border-radius:5px;font-size:.65rem;font-weight:700">✓ ${r.ingredientes.length} insumo${r.ingredientes.length===1?'':'s'}</span>`;
+        const origLabel = r.origem === 'insumo' ? '(insumo direto)' : '';
+        badge = `<span style="background:#dcfce7;color:#166534;padding:1px 6px;border-radius:5px;font-size:.65rem;font-weight:700">✓ ${r.ingredientes.length} insumo${r.ingredientes.length===1?'':'s'} ${origLabel}</span>`;
       }
-      return `<div style="font-size:.74rem;padding:2px 0;display:flex;justify-content:space-between;gap:6px"><span>${a.qtd}× ${a.nome} <em style="color:var(--gray)">(adicional)</em></span>${badge}</div>`;
+      return `<div style="font-size:.74rem;padding:2px 0;display:flex;justify-content:space-between;gap:6px;align-items:center"><span>${a.qtd}× ${a.nome} <em style="color:var(--gray)">(adicional)</em></span><span style="display:flex;align-items:center">${badge}</span></div>`;
     }).join('');
     const combosHtml = d.combos.length > 0
       ? `<div style="font-size:.7rem;color:#92400e;padding:4px 0;font-style:italic">ℹ️ ${d.combos.length} combo(s) — sabores extraídos das linhas com tamanho.</div>`
@@ -8911,16 +9111,20 @@ async function confirmarImportacao99Food(){
     });
     coposPorData[dataKey] = { c300: cops[300], c500: cops[500], c700: cops[700] };
 
-    // Salva insumos com flag de origem + calcula custo
+    // Salva insumos com flag de origem + calcula custo (mesmos campos do parser do Degust)
     Object.values(insumosAcc).forEach(ins => {
       const itm = (db.items||[]).find(i => i.id === ins.itemId);
-      const custoUnit = itm ? _custoPorUnitItem(itm) : 0;
+      const dados = _dadosCustoItem(itm);
       fin.insumos.push({
         itemId: ins.itemId,
-        nome: ins.nome || (itm && itm.nome) || ins.itemId,
+        nome: (itm && itm.nome && String(itm.nome).trim()) ? itm.nome : (ins.nome || ins.itemId),
         qty: ins.qty,
-        unidade: ins.unidade || (itm && (itm.unidadeSecundaria||itm.unidade)) || '',
-        custoPorUnit: custoUnit,
+        unidade: ins.unidade || (itm && (itm.unidadeSecundaria || itm.unidade)) || '',
+        unidadePrim: dados.unidadePrim,
+        valorEmbalagem: dados.valorEmbalagem,
+        qtdPorUnidade: dados.qtdPorUnidade,
+        temFracao: dados.temFracao,
+        custoPorUnit: dados.custoPorUnit,
         origem: '99food',
       });
       totalInsumosAdicionados++;
@@ -8952,14 +9156,24 @@ async function confirmarImportacao99Food(){
   }
 }
 
-// Helper: custo por unidade de um item (já existe lógica similar em outros lugares, vou reproduzir)
+// Helper: dado um item, retorna dados de custo (igual à lógica do parser do Degust)
+function _dadosCustoItem(item){
+  if(!item) return { custoPorUnit:0, valorEmbalagem:0, qtdPorUnidade:0, temFracao:false, unidadePrim:'' };
+  const valorEmbalagem = Number(item.valor) || 0;
+  const qtdPorUnidade  = Number(item.qtdPorUnidade) || 0;
+  const temFracao = valorEmbalagem > 0 && qtdPorUnidade > 0 && !!item.unidadeSecundaria;
+  return {
+    custoPorUnit:  temFracao ? valorEmbalagem / qtdPorUnidade : valorEmbalagem,
+    valorEmbalagem,
+    qtdPorUnidade,
+    temFracao,
+    unidadePrim: item.unidade || '',
+  };
+}
+
+// (Mantida pra compatibilidade — alguns lugares só precisam do custo)
 function _custoPorUnitItem(item){
-  if(!item) return 0;
-  // Lógica simplificada: se tem fração, divide; senão usa preço unitário
-  if(item.qtdPorUnidade && item.qtdPorUnidade > 0){
-    return (Number(item.valorEmbalagem) || 0) / Number(item.qtdPorUnidade);
-  }
-  return Number(item.valor) || Number(item.valorEmbalagem) || 0;
+  return _dadosCustoItem(item).custoPorUnit;
 }
 
 
