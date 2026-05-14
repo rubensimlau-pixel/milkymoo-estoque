@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.98</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.101</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1137,6 +1137,14 @@
             <div style="flex:1;min-width:90px">
               <label class="field-label" style="font-size:.7rem">Royalties %</label>
               <input id="sim-custo-royal" type="number" min="0" step="0.01" class="field-input" oninput="atualizarSimulacaoCusto()">
+            </div>
+            <div style="flex:1;min-width:120px">
+              <label class="field-label" style="font-size:.7rem;display:flex;gap:4px;align-items:center">
+                <input id="sim-custo-outros-label" type="text" value="Outros" maxlength="20" oninput="atualizarSimulacaoCusto()"
+                  style="flex:1;border:none;background:transparent;font-family:'Nunito',sans-serif;font-size:.7rem;font-weight:700;color:#6b7280;padding:0;outline:none">
+                <span>%</span>
+              </label>
+              <input id="sim-custo-outros" type="number" min="0" step="0.01" class="field-input" oninput="atualizarSimulacaoCusto()">
             </div>
           </div>
           <div style="font-size:.65rem;color:var(--gray);margin-top:6px;font-style:italic">💡 Simulação considera pagamento em dinheiro (sem taxa de cartão)</div>
@@ -7572,6 +7580,11 @@ function _carregarEncargosDaLoja(){
   document.getElementById('sim-custo-imposto').value = imp;
   document.getElementById('sim-custo-franq').value = fra;
   document.getElementById('sim-custo-royal').value = roy;
+  // Outros começa zerado (campo livre, não está no config)
+  const outroInp = document.getElementById('sim-custo-outros');
+  if(outroInp) outroInp.value = '';
+  const outroLbl = document.getElementById('sim-custo-outros-label');
+  if(outroLbl) outroLbl.value = 'Outros';
   document.getElementById('sim-custo-encargos-info').innerHTML = `Carregados da loja ${nomeLoja(loja)} (você pode editar pra simular cenários).`;
 }
 
@@ -7595,7 +7608,12 @@ function _renderAdicionaisSimulacao(){
     return;
   }
   // Opções: todos os itens do estoque
-  const items = (db.items||[]).slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt-BR'));
+  // Filtra itens das categorias "limpeza" e "mimos" — não devem aparecer como adicionais de receita
+  const CATEGORIAS_EXCLUIR_ADICIONAIS = new Set(['limpeza', 'mimos']);
+  const items = (db.items||[])
+    .filter(i => !CATEGORIAS_EXCLUIR_ADICIONAIS.has((i.cat || '').toLowerCase()))
+    .slice()
+    .sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt-BR'));
   const opts = items.map(i => `<option value="${i.id}">${i.nome}</option>`).join('');
   let html = '';
   _simCustoAdicionais.forEach((ad, idx) => {
@@ -7669,6 +7687,8 @@ function atualizarSimulacaoCusto(){
   const imp = parseFloat(document.getElementById('sim-custo-imposto').value) || 0;
   const fra = parseFloat(document.getElementById('sim-custo-franq').value) || 0;
   const roy = parseFloat(document.getElementById('sim-custo-royal').value) || 0;
+  const out = parseFloat(document.getElementById('sim-custo-outros').value) || 0;
+  const outLabel = (document.getElementById('sim-custo-outros-label').value || 'Outros').trim() || 'Outros';
 
   if(!sabor || !tamanho){
     document.getElementById('sim-custo-resultado').innerHTML = '<div style="text-align:center;color:var(--gray);font-size:.85rem;padding:20px">Escolha um sabor e tamanho para começar a simulação.</div>';
@@ -7702,10 +7722,11 @@ function atualizarSimulacaoCusto(){
   });
 
   // Encargos (% sobre preço de venda)
-  const encargosTotal = preco * (imp + fra + roy) / 100;
+  const encargosTotal = preco * (imp + fra + roy + out) / 100;
   const valorImp = preco * imp / 100;
   const valorFra = preco * fra / 100;
   const valorRoy = preco * roy / 100;
+  const valorOut = preco * out / 100;
 
   // Totais
   const custoTotal = custoBase + custoAdicionais + encargosTotal;
@@ -7767,6 +7788,9 @@ function atualizarSimulacaoCusto(){
       </div>
       <div style="display:flex;justify-content:space-between;font-size:.78rem;color:#7f1d1d;padding:2px 0;padding-left:12px">
         <span>↳ Royalties (${roy}%)</span><span>R$ ${_fmtBRL(valorRoy)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.78rem;color:#7f1d1d;padding:2px 0;padding-left:12px">
+        <span>↳ ${outLabel} (${out}%)</span><span>R$ ${_fmtBRL(valorOut)}</span>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:.82rem;color:#991b1b;padding:3px 0;font-weight:700">
         <span>📊 Encargos total</span><strong>R$ ${_fmtBRL(encargosTotal)}</strong>
