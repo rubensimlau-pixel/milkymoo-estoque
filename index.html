@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.103</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.105</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -2358,16 +2358,82 @@ async function salvarConsumo(){
   if(currentUser.role!=='admin' && dt<hoje()){
     showToast('⚠️ Não é permitido lançar em datas anteriores!');return;
   }
-  const tsAgora=new Date().toISOString();
+
+  // ── PROTEÇÃO: detecta se vai sobrescrever lançamentos de outras pessoas ──
+  const planoMudanca = []; // [{item, qtyAntiga, qtyNova, usuarioAntigo}]
   db.items.filter(permiteConsumo).forEach(item=>{
     const el=document.getElementById('con-'+item.id);if(!el)return;
-    const val=parseFloat(el.value);
-    db.consumos=db.consumos.filter(c=>!(c.data===dt&&c.loja==lojaC&&c.itemId===item.id));
-    if(!isNaN(val)&&val>0)db.consumos.push({data:dt,loja:lojaC,itemId:item.id,qty:val,usuario:resp,ts:tsAgora});
+    const raw = el.value.trim();
+    if(raw === '') return; // vazio = não mexe
+    const val=parseFloat(raw);
+    if(isNaN(val)) return;
+    const existente = db.consumos.find(c=>c.data===dt&&c.loja==lojaC&&c.itemId===item.id);
+    if(existente && existente.usuario && existente.usuario.toLowerCase() !== resp.toLowerCase()){
+      // Outro usuário já lançou — vamos sobrescrever
+      planoMudanca.push({
+        item, qtyAntiga: existente.qty, qtyNova: val, usuarioAntigo: existente.usuario,
+        acao: (val === 0 ? 'remover' : 'atualizar'),
+      });
+    }
+  });
+
+  if(planoMudanca.length > 0){
+    const linhas = planoMudanca.slice(0, 10).map(p => {
+      const acaoLabel = p.acao === 'remover' ? `🗑️ REMOVER` : `${p.qtyAntiga} → ${p.qtyNova}`;
+      return `• ${p.item.nome}: ${acaoLabel} (lançado por ${p.usuarioAntigo})`;
+    }).join('\n');
+    const extra = planoMudanca.length > 10 ? `\n... e mais ${planoMudanca.length-10} itens` : '';
+    if(!confirm(`⚠️ ATENÇÃO!\n\nVocê está alterando ${planoMudanca.length} lançamento(s) feito(s) por OUTRA PESSOA na data ${dt}:\n\n${linhas}${extra}\n\nDeseja realmente sobrescrever?`)){
+      showToast('Salvamento cancelado');
+      return;
+    }
+  }
+
+  // ── BACKUP LOCAL antes de salvar ──
+  _salvarBackupLocal('consumo', dt, lojaC);
+
+  const tsAgora=new Date().toISOString();
+  // MODO NÃO-DESTRUTIVO:
+  //   - input VAZIO  → não mexe (preserva valor já salvo)
+  //   - input == 0   → remove o lançamento (usuário quer zerar)
+  //   - input > 0    → atualiza/cria
+  let atualizados = 0;
+  let criados = 0;
+  let removidos = 0;
+  db.items.filter(permiteConsumo).forEach(item=>{
+    const el=document.getElementById('con-'+item.id);if(!el)return;
+    const raw = el.value.trim();
+    if(raw === '') return;
+    const val=parseFloat(raw);
+    if(isNaN(val)) return;
+    const existente = db.consumos.find(c=>c.data===dt&&c.loja==lojaC&&c.itemId===item.id);
+    if(val === 0){
+      if(existente){
+        db.consumos = db.consumos.filter(c=>c !== existente);
+        removidos++;
+      }
+    } else if(val > 0){
+      if(existente){
+        existente.qty = val;
+        existente.usuario = resp;
+        existente.ts = tsAgora;
+        atualizados++;
+      } else {
+        db.consumos.push({data:dt,loja:lojaC,itemId:item.id,qty:val,usuario:resp,ts:tsAgora});
+        criados++;
+      }
+    }
   });
   const ok = await saveCloud('consumo');
   if(ok){
-    showToast('✅ Consumo salvo! Estoque atualizado.');
+    let msg = '✅ Consumo salvo!';
+    const partes = [];
+    if(criados>0) partes.push(`${criados} novo${criados===1?'':'s'}`);
+    if(atualizados>0) partes.push(`${atualizados} atualizado${atualizados===1?'':'s'}`);
+    if(removidos>0) partes.push(`${removidos} removido${removidos===1?'':'s'}`);
+    if(partes.length>0) msg = `✅ ${partes.join(' · ')}. Estoque atualizado.`;
+    showToast(msg);
+    _mostrarBtnDesfazer('consumo', dt, lojaC);
     renderProjetado();
   }
 }
@@ -2425,17 +2491,62 @@ async function salvarInventario(){
   if(currentUser.role!=='admin' && dt<hoje()){
     showToast('⚠️ Não é permitido lançar em datas anteriores!');return;
   }
-  db.inventarios=db.inventarios.filter(r=>!(r.data===dt&&r.loja==lojaI));
-  const tsAgoraInv=new Date().toISOString();
+
+  // ── PROTEÇÃO: aviso de sobrescrita ──
+  const planoMudanca = [];
   db.items.forEach(item=>{
     const el=document.getElementById('inv-'+item.id);if(!el)return;
-    const val=parseFloat(el.value);
-    if(!isNaN(val)&&val>=0)db.inventarios.push({data:dt,loja:lojaI,itemId:item.id,qty:val,usuario:resp,ts:tsAgoraInv});
+    const raw = el.value.trim();
+    if(raw === '') return;
+    const val=parseFloat(raw);
+    if(isNaN(val)) return;
+    const existente = db.inventarios.find(r=>r.data===dt&&r.loja==lojaI&&r.itemId===item.id);
+    if(existente && existente.usuario && existente.usuario.toLowerCase() !== resp.toLowerCase()){
+      planoMudanca.push({ item, qtyAntiga: existente.qty, qtyNova: val, usuarioAntigo: existente.usuario });
+    }
+  });
+  if(planoMudanca.length > 0){
+    const linhas = planoMudanca.slice(0, 10).map(p =>
+      `• ${p.item.nome}: ${p.qtyAntiga} → ${p.qtyNova} (lançado por ${p.usuarioAntigo})`
+    ).join('\n');
+    const extra = planoMudanca.length > 10 ? `\n... e mais ${planoMudanca.length-10} itens` : '';
+    if(!confirm(`⚠️ ATENÇÃO!\n\nVocê está alterando ${planoMudanca.length} lançamento(s) feito(s) por OUTRA PESSOA na data ${dt}:\n\n${linhas}${extra}\n\nDeseja realmente sobrescrever?`)){
+      showToast('Salvamento cancelado');
+      return;
+    }
+  }
+
+  // ── BACKUP LOCAL ──
+  _salvarBackupLocal('inv', dt, lojaI);
+
+  const tsAgoraInv=new Date().toISOString();
+  let atualizados = 0, criados = 0;
+  db.items.forEach(item=>{
+    const el=document.getElementById('inv-'+item.id);if(!el)return;
+    const raw = el.value.trim();
+    if(raw === '') return;
+    const val=parseFloat(raw);
+    if(isNaN(val)) return;
+    const existente = db.inventarios.find(r=>r.data===dt&&r.loja==lojaI&&r.itemId===item.id);
+    if(val >= 0){
+      if(existente){
+        existente.qty = val; existente.usuario = resp; existente.ts = tsAgoraInv;
+        atualizados++;
+      } else {
+        db.inventarios.push({data:dt,loja:lojaI,itemId:item.id,qty:val,usuario:resp,ts:tsAgoraInv});
+        criados++;
+      }
+    }
   });
   const ok = await saveCloud('inv');
   if(ok){
-    showToast('📋 Inventário salvo! Estoque atualizado.');
-    // Re-renderiza o estoque projetado (essencial pra ver o resultado da contagem)
+    let msg = '📋 Inventário salvo!';
+    const partes = [];
+    if(criados>0) partes.push(`${criados} novo${criados===1?'':'s'}`);
+    if(atualizados>0) partes.push(`${atualizados} atualizado${atualizados===1?'':'s'}`);
+    if(partes.length>0) msg = `📋 ${partes.join(' · ')}. Estoque atualizado.`;
+    showToast(msg);
+    _mostrarBtnDesfazer('inv', dt, lojaI);
     renderProjetado();
   }
 }
@@ -2601,6 +2712,10 @@ async function salvarPerdas(){
   if(currentUser.role!=='admin' && dt<hoje()){
     showToast('⚠️ Não é permitido lançar em datas anteriores!');return;
   }
+
+  // ── BACKUP LOCAL antes de adicionar ──
+  _salvarBackupLocal('perdas', dt, lojaPr);
+
   const btn = document.getElementById('btn-sv-perdas');btn.disabled=true;
   const timestamp = new Date().toISOString();
   const itensPerda = [];
@@ -2632,6 +2747,7 @@ async function salvarPerdas(){
     renderPerdas();
     renderProjetado(); // atualiza Estoque (perdas descontam do projetado)
     showToast(`💔 ${totalItens} perda(s) registrada(s) e descontada(s) do estoque!`);
+    _mostrarBtnDesfazer('perdas', dt, lojaPr);
   } else {
     showToast('⚠️ Erro ao salvar!');
   }
@@ -4720,6 +4836,196 @@ function fmtQ(n){const v=parseFloat(n);if(n===undefined||n===null||n===''||isNaN
 function fmtDate(d){if(!d)return''; const[y,m,dd]=d.split('-'); return`${dd}/${m}`;}
 function setLoad(v){document.getElementById('loading').classList.toggle('show',v);}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+// ─────────────────────────────────────────────────────────────────
+// BACKUP LOCAL + DESFAZER
+// ─────────────────────────────────────────────────────────────────
+// Estado de "desfazer" pra cada tipo de operação. Quando o usuário salva,
+// guardamos o estado anterior aqui por 60s. Se clicar em "Desfazer", restauramos.
+let _ultimoBackupParaDesfazer = null;
+let _timerDesfazer = null;
+
+// Salva um snapshot dos dados afetados antes da operação destrutiva.
+// tipo: 'consumo' | 'inv' | 'perdas'
+// data: YYYY-MM-DD
+// loja: 1, 2 ou 3
+function _salvarBackupLocal(tipo, data, loja){
+  try {
+    const snapshot = {
+      tipo, data, loja,
+      ts: Date.now(),
+      tsBr: new Date().toLocaleString('pt-BR'),
+    };
+    if(tipo === 'consumo'){
+      snapshot.dados = (db.consumos||[])
+        .filter(c => c.data===data && Number(c.loja)===Number(loja))
+        .map(c => ({...c}));
+    } else if(tipo === 'inv'){
+      snapshot.dados = (db.inventarios||[])
+        .filter(r => r.data===data && Number(r.loja)===Number(loja))
+        .map(r => ({...r}));
+    } else if(tipo === 'perdas'){
+      snapshot.dados = (db.perdas||[])
+        .filter(p => p.data===data && Number(p.loja)===Number(loja))
+        .map(p => ({...p}));
+    }
+    // Guarda em memória pra desfazer imediato
+    _ultimoBackupParaDesfazer = snapshot;
+
+    // Guarda no localStorage (até 30 dias) - chave única por tipo+data+loja+timestamp
+    try {
+      const chave = `mm_backup_${tipo}_${data}_${loja}_${snapshot.ts}`;
+      localStorage.setItem(chave, JSON.stringify(snapshot));
+      // Limpa backups antigos (>30 dias) pra não encher o storage
+      _limparBackupsAntigos();
+    } catch(e){
+      console.warn('Backup localStorage falhou:', e);
+    }
+  } catch(e){
+    console.warn('Falha ao criar backup:', e);
+  }
+}
+
+// Limpa backups locais com mais de 30 dias
+function _limparBackupsAntigos(){
+  try {
+    const limite = Date.now() - 30 * 24 * 60 * 60 * 1000; // 30 dias
+    const chaves = [];
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(k && k.startsWith('mm_backup_')) chaves.push(k);
+    }
+    chaves.forEach(k => {
+      try {
+        const v = JSON.parse(localStorage.getItem(k));
+        if(v.ts && v.ts < limite){
+          localStorage.removeItem(k);
+        }
+      } catch(e){}
+    });
+  } catch(e){}
+}
+
+// Mostra botão de Desfazer flutuante por 60 segundos após salvamento
+function _mostrarBtnDesfazer(tipo, data, loja){
+  // Remove botão anterior se houver
+  const antigo = document.getElementById('btn-desfazer-flutuante');
+  if(antigo) antigo.remove();
+  if(_timerDesfazer){ clearTimeout(_timerDesfazer); _timerDesfazer = null; }
+
+  if(!_ultimoBackupParaDesfazer) return;
+
+  const labels = { consumo: 'Consumo', inv: 'Inventário', perdas: 'Perdas' };
+  const btn = document.createElement('button');
+  btn.id = 'btn-desfazer-flutuante';
+  btn.textContent = `↶ Desfazer salvamento de ${labels[tipo]||tipo}`;
+  btn.title = `Reverte o último salvamento (válido por 60s)`;
+  btn.style.cssText = `
+    position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+    background:#1f2937;color:white;border:none;border-radius:50px;
+    padding:11px 20px;font-family:'Baloo 2',cursive;font-size:.9rem;font-weight:800;
+    cursor:pointer;z-index:10000;box-shadow:0 6px 20px rgba(0,0,0,.4);
+    animation:fadein 0.3s;
+  `;
+  btn.onclick = function(){ _desfazerUltimoSalvamento(); };
+  document.body.appendChild(btn);
+
+  // Auto-remove em 60s
+  _timerDesfazer = setTimeout(() => {
+    const b = document.getElementById('btn-desfazer-flutuante');
+    if(b) b.remove();
+    _ultimoBackupParaDesfazer = null;
+  }, 60000);
+}
+
+async function _desfazerUltimoSalvamento(){
+  if(!_ultimoBackupParaDesfazer){
+    showToast('⚠️ Nada a desfazer');
+    return;
+  }
+  const bk = _ultimoBackupParaDesfazer;
+  if(!confirm(`Reverter o salvamento de ${bk.tipo} (${bk.data})?\n\nIsso vai restaurar os dados como estavam antes do último salvamento.`)){
+    return;
+  }
+  try {
+    // Restaura: remove tudo da data+loja+tipo e adiciona o que tinha no backup
+    if(bk.tipo === 'consumo'){
+      db.consumos = (db.consumos||[]).filter(c => !(c.data===bk.data && Number(c.loja)===Number(bk.loja)));
+      bk.dados.forEach(c => db.consumos.push({...c}));
+    } else if(bk.tipo === 'inv'){
+      db.inventarios = (db.inventarios||[]).filter(r => !(r.data===bk.data && Number(r.loja)===Number(bk.loja)));
+      bk.dados.forEach(r => db.inventarios.push({...r}));
+    } else if(bk.tipo === 'perdas'){
+      db.perdas = (db.perdas||[]).filter(p => !(p.data===bk.data && Number(p.loja)===Number(bk.loja)));
+      bk.dados.forEach(p => db.perdas.push({...p}));
+    }
+    const ok = await saveCloud();
+    if(ok){
+      showToast(`✓ Restaurado: ${bk.dados.length} lançamento(s)`);
+      // Remove botão
+      const b = document.getElementById('btn-desfazer-flutuante');
+      if(b) b.remove();
+      _ultimoBackupParaDesfazer = null;
+      if(_timerDesfazer){ clearTimeout(_timerDesfazer); _timerDesfazer = null; }
+      // Re-renderiza
+      const renders = { consumo:'renderConsumo', inv:'renderInv', perdas:'renderPerdas' };
+      const fn = renders[bk.tipo];
+      if(fn && typeof window[fn] === 'function') window[fn]();
+      renderProjetado();
+    } else {
+      showToast('❌ Erro ao restaurar');
+    }
+  } catch(e){
+    showToast('❌ Erro: ' + e.message);
+    console.error(e);
+  }
+}
+
+// Função utilitária pra ver backups locais (chame no console: listarBackupsLocais())
+window.listarBackupsLocais = function(){
+  const result = [];
+  for(let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if(k && k.startsWith('mm_backup_')){
+      try {
+        const v = JSON.parse(localStorage.getItem(k));
+        result.push({ chave: k, tipo: v.tipo, data: v.data, loja: v.loja, ts: v.tsBr, qtdItens: (v.dados||[]).length });
+      } catch(e){}
+    }
+  }
+  console.table(result.sort((a,b)=>b.ts.localeCompare(a.ts)));
+  return result;
+};
+
+// Função pra restaurar um backup específico (chame no console: restaurarBackupLocal('chave'))
+window.restaurarBackupLocal = async function(chave){
+  try {
+    const raw = localStorage.getItem(chave);
+    if(!raw){ console.error('Backup não encontrado:', chave); return; }
+    const bk = JSON.parse(raw);
+    if(!confirm(`Restaurar backup de ${bk.tipo} (${bk.data}) da loja ${bk.loja}?\n\nFeito em: ${bk.tsBr}\nLançamentos: ${(bk.dados||[]).length}`)){
+      return;
+    }
+    if(bk.tipo === 'consumo'){
+      db.consumos = (db.consumos||[]).filter(c => !(c.data===bk.data && Number(c.loja)===Number(bk.loja)));
+      bk.dados.forEach(c => db.consumos.push({...c}));
+    } else if(bk.tipo === 'inv'){
+      db.inventarios = (db.inventarios||[]).filter(r => !(r.data===bk.data && Number(r.loja)===Number(bk.loja)));
+      bk.dados.forEach(r => db.inventarios.push({...r}));
+    } else if(bk.tipo === 'perdas'){
+      db.perdas = (db.perdas||[]).filter(p => !(p.data===bk.data && Number(p.loja)===Number(bk.loja)));
+      bk.dados.forEach(p => db.perdas.push({...p}));
+    }
+    const ok = await saveCloud();
+    if(ok){
+      console.log('✓ Backup restaurado!');
+      showToast('✓ Backup restaurado');
+    }
+  } catch(e){
+    console.error('Erro:', e);
+  }
+};
+
 
 // ════════════════════════════════════════════════════════════
 //  GERENCIAR SABORES
