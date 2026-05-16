@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.113</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.114</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -2823,27 +2823,53 @@ function renderResumoDia(){
   const entradas = (db.entradas||[]).filter(e => e.data === data && Number(e.loja) === loja);
   const perdas = (db.perdas||[]).filter(p => p.data === data && Number(p.loja) === loja);
 
-  const totalLancamentos = consumos.length + inventario.length + entradas.length + perdas.length;
+  // Conta APENAS lançamentos com qty real (>0). Inventário sempre conta (zerado é proposital).
+  const cntConsumos = consumos.filter(c => (Number(c.qty)||0) > 0).length;
+  const cntInventario = inventario.length;
+  const cntEntradas = entradas.filter(e => {
+    const q = (typeof _entradaEfetiva === 'function') ? _entradaEfetiva(e) : (Number(e.qty)||Number(e.qtdPlanejada)||0);
+    return (Number(q)||0) > 0;
+  }).length;
+  const cntPerdas = perdas.filter(p => (Number(p.qty)||0) > 0).length;
+
+  const totalLancamentos = cntConsumos + cntInventario + cntEntradas + cntPerdas;
 
   // Monta mapa por item: { itemId: {consumo, inventario, entrada, perda} }
+  // Só adiciona se qty > 0 (registros zerados não contam como movimentação)
   const porItem = {};
   const addItem = (itemId) => {
     if(!porItem[itemId]) porItem[itemId] = {consumo:0, inventario:null, entrada:0, perda:0};
     return porItem[itemId];
   };
 
-  consumos.forEach(c => { addItem(c.itemId).consumo += Number(c.qty)||0; });
+  consumos.forEach(c => {
+    const q = Number(c.qty)||0;
+    if(q > 0) addItem(c.itemId).consumo += q;
+  });
   inventario.forEach(r => {
-    const x = addItem(r.itemId);
-    // inventário pode ter qty=0 (zerado intencional); inv null = não contou
+    // Inventário SEMPRE entra (mesmo zerado é intencional: "contei e tinha 0")
+    addItem(r.itemId);
+    const x = porItem[r.itemId];
     x.inventario = (x.inventario||0) + (Number(r.qty)||0);
   });
   entradas.forEach(e => {
     // usa qty efetiva (validada se houver, senão planejada)
     const qty = (typeof _entradaEfetiva === 'function') ? _entradaEfetiva(e) : (Number(e.qty)||Number(e.qtdPlanejada)||0);
-    addItem(e.itemId).entrada += Number(qty)||0;
+    const q = Number(qty)||0;
+    if(q > 0) addItem(e.itemId).entrada += q;
   });
-  perdas.forEach(p => { addItem(p.itemId).perda += Number(p.qty)||0; });
+  perdas.forEach(p => {
+    const q = Number(p.qty)||0;
+    if(q > 0) addItem(p.itemId).perda += q;
+  });
+
+  // Remove itens que ficaram sem nenhuma movimentação real
+  Object.keys(porItem).forEach(id => {
+    const m = porItem[id];
+    if(m.consumo === 0 && m.inventario === null && m.entrada === 0 && m.perda === 0){
+      delete porItem[id];
+    }
+  });
 
   // Ordena por nome do item
   const ordenado = Object.entries(porItem)
@@ -2870,19 +2896,19 @@ function renderResumoDia(){
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:.8rem">
         <div style="background:white;padding:8px;border-radius:7px;text-align:center;border:1px solid #f3e8ff">
           <div style="font-size:.65rem;color:var(--gray);text-transform:uppercase;font-weight:700">Consumo</div>
-          <div style="font-weight:800;color:#ea580c;font-size:1.05rem">${consumos.length}</div>
+          <div style="font-weight:800;color:#ea580c;font-size:1.05rem">${cntConsumos}</div>
         </div>
         <div style="background:white;padding:8px;border-radius:7px;text-align:center;border:1px solid #f3e8ff">
           <div style="font-size:.65rem;color:var(--gray);text-transform:uppercase;font-weight:700">Inventário</div>
-          <div style="font-weight:800;color:#0891b2;font-size:1.05rem">${inventario.length}</div>
+          <div style="font-weight:800;color:#0891b2;font-size:1.05rem">${cntInventario}</div>
         </div>
         <div style="background:white;padding:8px;border-radius:7px;text-align:center;border:1px solid #f3e8ff">
           <div style="font-size:.65rem;color:var(--gray);text-transform:uppercase;font-weight:700">Entrada</div>
-          <div style="font-weight:800;color:#15803d;font-size:1.05rem">${entradas.length}</div>
+          <div style="font-weight:800;color:#15803d;font-size:1.05rem">${cntEntradas}</div>
         </div>
         <div style="background:white;padding:8px;border-radius:7px;text-align:center;border:1px solid #f3e8ff">
           <div style="font-size:.65rem;color:var(--gray);text-transform:uppercase;font-weight:700">Perda</div>
-          <div style="font-weight:800;color:#b91c1c;font-size:1.05rem">${perdas.length}</div>
+          <div style="font-weight:800;color:#b91c1c;font-size:1.05rem">${cntPerdas}</div>
         </div>
       </div>
     </div>`;
