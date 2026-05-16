@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.109</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.111</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -496,12 +496,30 @@
 
       <div id="confronto-resultado"></div>
 
-      <!-- Confronto histórico por data -->
+      <!-- Confronto histórico: dia único ou período -->
       <div class="card" style="margin-top:14px">
-        <div class="card-title"><span>🔍</span>Confrontar data anterior</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="date" id="data-confronto" style="border:2px solid var(--border);border-radius:8px;padding:8px;font-family:Nunito,sans-serif;font-size:.88rem">
-          <button onclick="mostrarConfronto(document.getElementById('data-confronto').value)" class="btn btn-outline" style="margin:0;padding:8px 16px;width:auto">🔍 Confrontar</button>
+        <div class="card-title"><span>🔍</span>Confrontar histórico</div>
+        <!-- Tabs -->
+        <div style="display:flex;gap:6px;margin-bottom:10px;border-bottom:1px solid var(--border)">
+          <button id="tab-conf-dia" onclick="trocarTabConfronto('dia')" class="btn btn-outline" style="margin:0;padding:7px 14px;width:auto;border-radius:8px 8px 0 0;border-bottom:none;font-size:.82rem;background:#eef2ff;color:#1e3a8a;font-weight:800">📅 Um dia</button>
+          <button id="tab-conf-periodo" onclick="trocarTabConfronto('periodo')" class="btn btn-outline" style="margin:0;padding:7px 14px;width:auto;border-radius:8px 8px 0 0;border-bottom:none;font-size:.82rem">📊 Período</button>
+        </div>
+        <!-- Tab: Um dia -->
+        <div id="box-conf-dia" style="display:block">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input type="date" id="data-confronto" style="border:2px solid var(--border);border-radius:8px;padding:8px;font-family:Nunito,sans-serif;font-size:.88rem">
+            <button onclick="mostrarConfronto(document.getElementById('data-confronto').value)" class="btn btn-outline" style="margin:0;padding:8px 16px;width:auto">🔍 Confrontar dia</button>
+          </div>
+        </div>
+        <!-- Tab: Período -->
+        <div id="box-conf-periodo" style="display:none">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+            <span style="font-size:.78rem;color:var(--gray);font-weight:700">De:</span>
+            <input type="date" id="data-confronto-de" style="border:2px solid var(--border);border-radius:8px;padding:8px;font-family:Nunito,sans-serif;font-size:.88rem">
+            <span style="font-size:.78rem;color:var(--gray);font-weight:700">Até:</span>
+            <input type="date" id="data-confronto-ate" style="border:2px solid var(--border);border-radius:8px;padding:8px;font-family:Nunito,sans-serif;font-size:.88rem">
+            <button onclick="mostrarConfrontoPeriodo()" class="btn btn-outline" style="margin:0;padding:8px 16px;width:auto">🔍 Confrontar período</button>
+          </div>
         </div>
       </div>
     </div>
@@ -5000,18 +5018,15 @@ function mostrarConfronto(data){
   });
 
   // Usa insumos diretos do relatorio se existirem (nova versão pós v3.0)
-  const insumosDirectos = relCopos.filter(r=>!['cop180','cop300','cop500','cop700','copd300','copd500','copd700'].includes(r.itemId));
-  
-  // Monta mapa de insumos do relatório
+  // INCLUI copos consumidos (cop180/300/500/700 e copd300/500/700) — eles são insumos
+  // legítimos: cada milkshake vendido descontou 1 copo do estoque, igual à contagem manual.
+  const insumosDirectos = relCopos;
+
+  // Monta mapa de insumos do relatório (soma se vier mais de uma linha pro mesmo itemId)
   const relInsumosMap = {};
-  if(insumosDirectos.length > 0){
-    // Nova versão: usa insumos diretos salvos
-    insumosDirectos.forEach(r=>{ relInsumosMap[r.itemId] = r.qty; });
-  } else {
-    // Versão antiga: recalcula a partir dos copos e receitas
-    // Percorre todas as receitas de todos os sabores para estimar insumos totais
-    // Como não sabemos os sabores, não é possível recalcular precisamente — avisa o usuário
-  }
+  insumosDirectos.forEach(r => {
+    relInsumosMap[r.itemId] = (relInsumosMap[r.itemId] || 0) + (Number(r.qty) || 0);
+  });
 
   // Consumo manual das funcionárias para essa data/loja
   const consumoManual = db.consumos.filter(c=>c.data===data&&c.loja==lojaImp);
@@ -5117,6 +5132,168 @@ function mostrarConfronto(data){
 
   container.innerHTML = html;
   document.getElementById('data-confronto').value = data;
+}
+
+// Troca entre as tabs "Um dia" e "Período" do confronto
+function trocarTabConfronto(modo){
+  const tabDia = document.getElementById('tab-conf-dia');
+  const tabPer = document.getElementById('tab-conf-periodo');
+  const boxDia = document.getElementById('box-conf-dia');
+  const boxPer = document.getElementById('box-conf-periodo');
+  if(!tabDia || !tabPer || !boxDia || !boxPer) return;
+  if(modo === 'dia'){
+    boxDia.style.display = 'block';
+    boxPer.style.display = 'none';
+    tabDia.style.background = '#eef2ff';
+    tabDia.style.color = '#1e3a8a';
+    tabDia.style.fontWeight = '800';
+    tabPer.style.background = '';
+    tabPer.style.color = '';
+    tabPer.style.fontWeight = '';
+  } else {
+    boxDia.style.display = 'none';
+    boxPer.style.display = 'block';
+    tabPer.style.background = '#eef2ff';
+    tabPer.style.color = '#1e3a8a';
+    tabPer.style.fontWeight = '800';
+    tabDia.style.background = '';
+    tabDia.style.color = '';
+    tabDia.style.fontWeight = '';
+  }
+}
+
+// Confronto de período: soma manual + relatório de TODOS os dias entre dataDe e dataAte
+function mostrarConfrontoPeriodo(){
+  const dataDe  = document.getElementById('data-confronto-de').value;
+  const dataAte = document.getElementById('data-confronto-ate').value;
+  const container = document.getElementById('confronto-resultado');
+  if(!container) return;
+  if(!dataDe || !dataAte){ showToast('⚠️ Informe as datas inicial e final!'); return; }
+  if(dataDe > dataAte){ showToast('⚠️ Data inicial não pode ser maior que a final!'); return; }
+  if(!lojaImp){ showToast('⚠️ Selecione uma loja na aba Importar!'); return; }
+
+  const fmtBRL = v => v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  // Filtra relatórios da loja dentro do período
+  const relsPeriodo = (db.relatorios||[]).filter(r =>
+    r.data >= dataDe && r.data <= dataAte && Number(r.loja) === Number(lojaImp)
+  );
+  // Datas distintas com relatório no período (pra mostrar contagem)
+  const datasComRelatorio = [...new Set(relsPeriodo.map(r => r.data))].sort();
+
+  if(!relsPeriodo.length){
+    container.innerHTML = `<div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;">
+      <strong>⚠️ Nenhum relatório importado</strong> no período de ${fmtDate(dataDe)} a ${fmtDate(dataAte)} em ${nomeLoja(lojaImp)}.
+    </div>`;
+    return;
+  }
+
+  // Mapa de qty acumulada do relatório por itemId
+  // INCLUI copos consumidos (cop180/300/500/700 e copd*) — são insumos legítimos.
+  const relInsumosMap = {};
+  relsPeriodo.forEach(r => {
+    relInsumosMap[r.itemId] = (relInsumosMap[r.itemId] || 0) + (Number(r.qty) || 0);
+  });
+
+  // Mapa de consumo manual acumulado por itemId no mesmo período/loja
+  const consumosPeriodo = (db.consumos||[]).filter(c =>
+    c.data >= dataDe && c.data <= dataAte && Number(c.loja) === Number(lojaImp)
+  );
+
+  const idsConsumo = db.items.filter(permiteConsumo).map(i => i.id);
+  const idsRelExtra = Object.keys(relInsumosMap).filter(id => !idsConsumo.includes(id));
+  const todosIds = [...idsConsumo, ...idsRelExtra];
+
+  let temDivergencia = false;
+  let rowsDiff = '', rowsOk = '';
+
+  todosIds.forEach(itemId => {
+    const item = db.items.find(i => i.id === itemId);
+    const nomeItem = item ? item.nome : itemId;
+    const relQtyRaw = relInsumosMap[itemId] || 0;
+
+    // Conversão pra unidade primária (igual confronto de um dia)
+    const temConversao = item && item.unidadeSecundaria && item.unidade !== item.unidadeSecundaria && (item.qtdPorUnidade || 0) > 0;
+    const unidExibe = item ? (item.unidade || item.unidadeSecundaria || '') : '';
+    const relQty = temConversao ? (relQtyRaw / item.qtdPorUnidade) : relQtyRaw;
+    const manual = consumosPeriodo.filter(c => c.itemId === itemId).reduce((s,c) => s + (Number(c.qty) || 0), 0);
+
+    // Custo calculado do relatório
+    let custoRel = 0;
+    if(item && relQtyRaw > 0){
+      const qtdPorUnid = item.qtdPorUnidade || 0;
+      const custUnit = (qtdPorUnid > 0 && item.unidadeSecundaria && item.valor > 0)
+        ? item.valor / qtdPorUnid
+        : (item.valor || 0);
+      custoRel = custUnit * relQtyRaw;
+    }
+
+    const diff = manual - relQty;
+    const diffColor = Math.abs(diff) < 0.001 ? 'var(--teal-dark)' : diff > 0 ? '#d97706' : 'var(--red)';
+    const diffSign  = diff > 0 ? '+' : '';
+    const diffLabel = Math.abs(diff) < 0.001 ? '✅' : `${diffSign}${fmtQ(diff)}`;
+    if(Math.abs(diff) >= 0.001) temDivergencia = true;
+
+    const custoCell = custoRel > 0
+      ? `<span style="font-size:.7rem;color:#9ca3af">R$\u00a0${fmtBRL(custoRel)}</span>`
+      : '';
+
+    const row = `<div style="display:grid;grid-template-columns:1fr 70px 70px 70px;padding:7px 12px;font-size:.78rem;border-bottom:1px solid #f3f4f6;align-items:center">
+      <span style="font-weight:600">${nomeItem}<br><span style="font-size:.66rem;color:var(--gray)">${unidExibe}</span>${custoCell}</span>
+      <span style="text-align:center;font-weight:800;${manual===0?'color:#d1d5db':''}">${manual>0?fmtQ(manual):'—'}</span>
+      <span style="text-align:center;color:var(--gray)">${relQty>0?fmtQ(relQty):'—'}</span>
+      <span style="text-align:center;color:${diffColor};font-weight:800">${diffLabel}</span>
+    </div>`;
+
+    if(manual === 0 && relQty === 0) return;
+    if(Math.abs(diff) < 0.001) rowsOk += row;
+    else rowsDiff += row;
+  });
+
+  const hdrRow = `<div style="display:grid;grid-template-columns:1fr 70px 70px 70px;padding:6px 12px;font-size:.68rem;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;background:#f9fafb;border-bottom:1px solid var(--border)">
+    <span>Insumo</span><span style="text-align:center">Manual</span><span style="text-align:center">Relatório</span><span style="text-align:center">Diferença</span>
+  </div>`;
+
+  const labelPeriodo = dataDe === dataAte
+    ? fmtDate(dataDe)
+    : `${fmtDate(dataDe)} – ${fmtDate(dataAte)}`;
+
+  let html = `
+    <div class="card">
+      <div class="card-title"><span>📊</span>Confronto de Período – ${labelPeriodo} – ${nomeLoja(lojaImp)}</div>
+      <div style="font-size:.75rem;color:var(--gray);margin-bottom:12px">
+        Soma de <strong>${datasComRelatorio.length} dia(s)</strong> com relatório importado dentro do período.
+        Lançamento manual acumulado vs insumos calculados pelo Degust.
+        <strong>O estoque usa sempre o valor manual.</strong>
+      </div>`;
+
+  if(rowsDiff){
+    html += `<div style="font-size:.72rem;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">⚠️ Com divergência</div>
+      <div style="background:white;border-radius:10px;border:1px solid var(--border);overflow:hidden;margin-bottom:14px">
+        ${hdrRow}${rowsDiff}
+      </div>`;
+  }
+  if(rowsOk){
+    html += `<div style="font-size:.72rem;font-weight:800;color:var(--teal-dark);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">✅ Conferindo</div>
+      <div style="background:white;border-radius:10px;border:1px solid var(--border);overflow:hidden">
+        ${hdrRow}${rowsOk}
+      </div>`;
+  }
+
+  html += `</div>`;
+
+  if(!temDivergencia){
+    html += `<div class="card" style="text-align:center;padding:20px">
+      <div style="font-size:2rem">🎉</div>
+      <div style="font-family:'Baloo 2',cursive;font-size:1rem;color:var(--teal-dark);margin-top:6px">Tudo confere no período!</div>
+    </div>`;
+  } else {
+    html += `<div class="info-box" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;">
+      <strong>⚠️ Há divergências no período!</strong> (+) = manual maior que relatório. (−) = relatório maior que manual.
+    </div>`;
+  }
+
+  container.innerHTML = html;
 }
 function fmtQ(n){const v=parseFloat(n);if(n===undefined||n===null||n===''||isNaN(v))return'–';return Number.isInteger(v)?v:parseFloat(v.toFixed(1));}
 function fmtDate(d){if(!d)return''; const[y,m,dd]=d.split('-'); return`${dd}/${m}`;}
