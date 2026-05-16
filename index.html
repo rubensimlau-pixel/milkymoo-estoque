@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.111</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.112</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -4846,6 +4846,45 @@ function _removerPdvDoConsolidado(reg, pdv, abertura){
   if(idx === -1) return;
   const pdvRem = reg.pdvs[idx];
 
+  // ⭐ Subtrai também de db.relatorios os insumos que esse PDV aportou.
+  // Sem isso, re-importar/substituir mesmo PDV duplica a qty em db.relatorios
+  // (o financeiro fica certo, mas o confronto mostra valores inflados).
+  if(Array.isArray(db.relatorios) && Array.isArray(pdvRem.insumos)){
+    pdvRem.insumos.forEach(ing => {
+      if(!ing.itemId) return;
+      const existeRel = db.relatorios.find(x =>
+        x.data === reg.data && Number(x.loja) === Number(reg.loja) && x.itemId === ing.itemId
+      );
+      if(existeRel){
+        existeRel.qty = Math.max(0, (existeRel.qty||0) - (Number(ing.qty)||0));
+        if(existeRel.qty < 0.001){
+          // Remove registro zerado (qty insignificante)
+          db.relatorios = db.relatorios.filter(r => r !== existeRel);
+        }
+      }
+    });
+  }
+  // Também subtrai copos que entraram via `resultado` (caso não estivessem em insumos)
+  if(Array.isArray(db.relatorios) && pdvRem.porTamanho){
+    const COPO_IDS_TAM = {180:'cop180', 300:'cop300', 500:'cop500', 700:'cop700'};
+    Object.entries(pdvRem.porTamanho).forEach(([tam, qtd]) => {
+      const copoId = COPO_IDS_TAM[Number(tam)];
+      if(!copoId || !(qtd > 0)) return;
+      // Se o copo NÃO estava na lista de insumos do PDV, foi adicionado direto pelo loop `resultado`
+      const jaSubtraido = (pdvRem.insumos||[]).some(i => i.itemId === copoId);
+      if(jaSubtraido) return;
+      const existeRel = db.relatorios.find(x =>
+        x.data === reg.data && Number(x.loja) === Number(reg.loja) && x.itemId === copoId
+      );
+      if(existeRel){
+        existeRel.qty = Math.max(0, (existeRel.qty||0) - (Number(qtd)||0));
+        if(existeRel.qty < 0.001){
+          db.relatorios = db.relatorios.filter(r => r !== existeRel);
+        }
+      }
+    });
+  }
+
   // Subtrai totais agregados
   reg.totalFaturado = Math.max(0, (reg.totalFaturado||0) - (pdvRem.totalFaturado||0));
   reg.totalCustoSabores = Math.max(0, (reg.totalCustoSabores||0) - (pdvRem.totalCustoSabores||0));
@@ -5486,6 +5525,96 @@ window.restaurarBackupLocal = async function(chave){
     }
   } catch(e){
     console.error('Erro:', e);
+  }
+};
+
+// Função pra recalcular db.relatorios a partir dos PDVs salvos em db.financeiro.
+// Útil pra corrigir duplicações causadas por re-importações antes da v3.8.112.
+// Uso no console: repararRelatorios()
+//   - sem args: pergunta antes; mostra resumo das mudanças por (data, loja, itemId)
+//   - repararRelatorios({data:'2026-05-15', loja:1}): só uma combinação
+window.repararRelatorios = async function(filtro){
+  filtro = filtro || {};
+  if(!Array.isArray(db.financeiro) || db.financeiro.length === 0){
+    console.warn('Nenhum registro em db.financeiro pra reconstruir.');
+    return;
+  }
+  // Reconstrói o que db.relatorios DEVERIA ter, somando os pdvs[].insumos
+  const reconstruido = {}; // key = `${data}|${loja}|${itemId}` → { data, loja, itemId, qty, nome, unidade }
+  db.financeiro.forEach(fin => {
+    if(filtro.data && fin.data !== filtro.data) return;
+    if(filtro.loja && Number(fin.loja) !== Number(filtro.loja)) return;
+    if(!Array.isArray(fin.pdvs)) return;
+    fin.pdvs.forEach(pdv => {
+      // 1) Soma os insumos do PDV
+      (pdv.insumos||[]).forEach(ing => {
+        if(!ing.itemId) return;
+        const k = `${fin.data}|${fin.loja}|${ing.itemId}`;
+        if(!reconstruido[k]){
+          const itm = (db.items||[]).find(i => i.id === ing.itemId);
+          reconstruido[k] = {
+            data: fin.data, loja: fin.loja, itemId: ing.itemId, qty: 0,
+            nome: ing.nome || (itm ? itm.nome : ing.itemId),
+            unidade: (itm ? (itm.unidadeSecundaria || itm.unidade) : '') || '',
+          };
+        }
+        reconstruido[k].qty += Number(ing.qty)||0;
+      });
+      // 2) Soma copos via porTamanho (caso não estivessem em `insumos`)
+      const COPO_IDS_TAM = {180:'cop180', 300:'cop300', 500:'cop500', 700:'cop700'};
+      if(pdv.porTamanho){
+        Object.entries(pdv.porTamanho).forEach(([tam, qtd]) => {
+          const copoId = COPO_IDS_TAM[Number(tam)];
+          if(!copoId || !(qtd > 0)) return;
+          const jaContado = (pdv.insumos||[]).some(i => i.itemId === copoId);
+          if(jaContado) return;
+          const k = `${fin.data}|${fin.loja}|${copoId}`;
+          if(!reconstruido[k]){
+            const itm = (db.items||[]).find(i => i.id === copoId);
+            reconstruido[k] = {
+              data: fin.data, loja: fin.loja, itemId: copoId, qty: 0,
+              nome: itm ? itm.nome : copoId,
+              unidade: itm ? (itm.unidadeSecundaria || itm.unidade) : 'unidades',
+            };
+          }
+          reconstruido[k].qty += Number(qtd)||0;
+        });
+      }
+    });
+  });
+
+  // Filtra os relatórios existentes (mantém os que NÃO estão no escopo do filtro)
+  const relsAntigos = (db.relatorios||[]).filter(r => {
+    if(filtro.data && r.data === filtro.data){
+      if(!filtro.loja || Number(r.loja) === Number(filtro.loja)) return false;
+    }
+    if(!filtro.data && !filtro.loja) return false;
+    if(filtro.loja && !filtro.data && Number(r.loja) === Number(filtro.loja)) return false;
+    return true;
+  });
+
+  // Compara: mostra diferenças
+  const novosRels = Object.values(reconstruido);
+  console.log(`📊 Reparação:`);
+  console.log(`  Mantidos: ${relsAntigos.length} registro(s) fora do filtro`);
+  console.log(`  Removendo: ${(db.relatorios||[]).length - relsAntigos.length} registro(s) do escopo`);
+  console.log(`  Inserindo: ${novosRels.length} registro(s) reconstruído(s)`);
+  if(novosRels.length > 0){
+    console.table(novosRels.map(r => ({data:r.data, loja:r.loja, item:r.itemId, qty:r.qty})));
+  }
+  if(!confirm(`Reparar db.relatorios?\n\nAtuais no escopo: ${(db.relatorios||[]).length - relsAntigos.length}\nReconstruídos: ${novosRels.length}\n\nEssa ação SOMENTE altera db.relatorios (db.financeiro fica intocado).`)){
+    console.log('Cancelado.');
+    return;
+  }
+  db.relatorios = [...relsAntigos, ...novosRels.map(r => ({
+    ...r,
+    usuario: '(reparo)',
+    ts: new Date().toISOString(),
+  }))];
+  const ok = await saveCloud();
+  if(ok){
+    console.log('✅ db.relatorios reparado e salvo no Firebase!');
+    showToast('✅ Relatórios reparados');
   }
 };
 
