@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.108</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.109</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -5031,32 +5031,41 @@ function mostrarConfronto(data){
   todosIds.forEach(itemId=>{
     const item      = db.items.find(i=>i.id===itemId);
     const nomeItem  = item ? item.nome : itemId;
-    const unidItem  = item ? (item.unidadeSecundaria||item.unidade) : '';
-    const relQty    = getRelQty(itemId);
-    const manual    = consumoManual.filter(c=>c.itemId===itemId).reduce((s,c)=>s+c.qty,0);
+    const relQtyRaw = getRelQty(itemId); // sempre em unidade secundária (ou primária quando não há secundária)
 
-    // Custo calculado do relatório para esse item
+    // ── Detecta se item tem unidade primária + secundária e qtdPorUnidade > 0 ──
+    // Ex: Sorvete (primária:litro, secundária:ml, qtdPorUnidade:1000)
+    //   - relQtyRaw=10457 ml → exibir 10,457 L
+    //   - manual=20 (litros do consumo manual) → não converter, já está em litros
+    const temConversao = item && item.unidadeSecundaria && item.unidade !== item.unidadeSecundaria && (item.qtdPorUnidade || 0) > 0;
+    // Unidade de exibição: SEMPRE a primária (a que a funcionária usa no consumo)
+    const unidExibe   = item ? (item.unidade || item.unidadeSecundaria || '') : '';
+    // Relatório convertido pra unidade primária quando aplicável
+    const relQty      = temConversao ? (relQtyRaw / item.qtdPorUnidade) : relQtyRaw;
+    const manual      = consumoManual.filter(c=>c.itemId===itemId).reduce((s,c)=>s+c.qty,0);
+
+    // Custo calculado do relatório (sempre usa qtd em unidade secundária × custo por unid secundária)
     let custoRel = 0;
-    if(item && relQty > 0){
+    if(item && relQtyRaw > 0){
       const qtdPorUnid = item.qtdPorUnidade || 0;
       const custUnit = (qtdPorUnid > 0 && item.unidadeSecundaria && item.valor > 0)
         ? item.valor / qtdPorUnid
         : (item.valor || 0);
-      custoRel = custUnit * relQty;
+      custoRel = custUnit * relQtyRaw;
     }
 
     const diff = manual - relQty;
-    const diffColor = diff===0 ? 'var(--teal-dark)' : diff>0 ? '#d97706' : 'var(--red)';
+    const diffColor = Math.abs(diff) < 0.001 ? 'var(--teal-dark)' : diff>0 ? '#d97706' : 'var(--red)';
     const diffSign  = diff>0 ? '+' : '';
-    const diffLabel = diff===0 ? '✅' : `${diffSign}${fmtQ(diff)}`;
-    if(diff!==0) temDivergencia = true;
+    const diffLabel = Math.abs(diff) < 0.001 ? '✅' : `${diffSign}${fmtQ(diff)}`;
+    if(Math.abs(diff) >= 0.001) temDivergencia = true;
 
     const custoCell = custoRel > 0
       ? `<span style="font-size:.7rem;color:#9ca3af">R$\u00a0${fmtBRL(custoRel)}</span>`
       : '';
 
     const row = `<div style="display:grid;grid-template-columns:1fr 70px 70px 70px;padding:7px 12px;font-size:.78rem;border-bottom:1px solid #f3f4f6;align-items:center">
-      <span style="font-weight:600">${nomeItem}<br><span style="font-size:.66rem;color:var(--gray)">${unidItem}</span>${custoCell}</span>
+      <span style="font-weight:600">${nomeItem}<br><span style="font-size:.66rem;color:var(--gray)">${unidExibe}</span>${custoCell}</span>
       <span style="text-align:center;font-weight:800;${manual===0?'color:#d1d5db':''}">${manual>0?fmtQ(manual):'—'}</span>
       <span style="text-align:center;color:var(--gray)">${relQty>0?fmtQ(relQty):'—'}</span>
       <span style="text-align:center;color:${diffColor};font-weight:800">${diffLabel}</span>
@@ -5064,7 +5073,7 @@ function mostrarConfronto(data){
 
     // Ignora itens onde manual=0 e relatorio=0 (sem dados dos dois lados)
     if(manual === 0 && relQty === 0) return;
-    if(diff===0) rowsOk += row;
+    if(Math.abs(diff) < 0.001) rowsOk += row;
     else rowsDiff += row;
   });
 
