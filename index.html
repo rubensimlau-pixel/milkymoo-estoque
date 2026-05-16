@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.105</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.108</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -2274,6 +2274,64 @@ function _entradaEfetiva(e){
   return { qtd: qty, data: e.data };
 }
 
+// Retorna lista cronológica de movimentações de um item específico, da loja, desde o último inventário até hoje.
+// Retorna: { dataBase, qtdBase, movimentos: [{data, tipo, qty, descricao}], saldoFinal }
+// tipo: 'consumo' | 'entrada' | 'perda'
+function _movimentacoesItem(itemId, loja, ateData){
+  const base = ultimoInventario(loja, ateData);
+  if(!base) return null;
+  const qtdBase = base.inv[itemId];
+  // Se item não existe no inventário base E não tem nenhuma movimentação, retorna null
+  const movs = [];
+
+  // Consumos
+  (db.consumos||[])
+    .filter(c => c.itemId === itemId && Number(c.loja) === Number(loja) && c.data >= base.data && c.data <= ateData)
+    .forEach(c => {
+      movs.push({ data: c.data, tipo: 'consumo', qty: -Number(c.qty)||0, descricao: 'Consumo', ts: c.ts });
+    });
+
+  // Entradas (usa qtd efetiva: validada ou planejada)
+  (db.entradas||[])
+    .filter(e => e.itemId === itemId && Number(e.loja) === Number(loja))
+    .forEach(e => {
+      const ef = _entradaEfetiva(e);
+      if(ef.data >= base.data && ef.data <= ateData){
+        const desc = (e.qtdValidada !== undefined && e.qtdValidada !== null)
+          ? 'Entrada validada'
+          : 'Entrada planejada';
+        movs.push({ data: ef.data, tipo: 'entrada', qty: Number(ef.qtd)||0, descricao: desc, ts: e.validadoEm || e.ts });
+      }
+    });
+
+  // Perdas
+  (db.perdas||[])
+    .filter(p => p.itemId === itemId && Number(p.loja) === Number(loja) && p.data >= base.data && p.data <= ateData)
+    .forEach(p => {
+      const desc = p.sabor ? `Perda (${p.sabor})` : 'Perda';
+      movs.push({ data: p.data, tipo: 'perda', qty: -Number(p.qty)||0, descricao: desc, ts: p.ts });
+    });
+
+  // Ordena por data e timestamp dentro do mesmo dia
+  movs.sort((a,b) => {
+    if(a.data !== b.data) return a.data.localeCompare(b.data);
+    if(a.ts && b.ts) return a.ts.localeCompare(b.ts);
+    return 0;
+  });
+
+  if(movs.length === 0 && (qtdBase === undefined || qtdBase === null)) return null;
+
+  const saldoFinal = (qtdBase || 0) + movs.reduce((acc,m) => acc + m.qty, 0);
+
+  return {
+    dataBase: base.data,
+    qtdBase: qtdBase ?? 0,
+    movimentos: movs,
+    saldoFinal,
+    temMovimentacoes: movs.length > 0,
+  };
+}
+
 function calcProjetado(loja,ateData){
   const base=ultimoInventario(loja,ateData);if(!base)return null;
   const proj={};db.items.forEach(item=>{proj[item.id]=base.inv[item.id]??null;});
@@ -2586,17 +2644,101 @@ function renderProjetado(){
             ? `<span class="badge b-low">Baixo</span>`
             : `<span class="badge b-ok">OK</span>`;
         const color = q<=0?'var(--red)':min>0&&q<min?'var(--orange)':'var(--teal-dark)';
-        html+=`<div class="proj-row" data-nome="${item.nome.toLowerCase()}">
-          <div class="proj-name">${item.nome}</div>
+        // Verifica se há movimentações desde o último inventário pra mostrar drill-down
+        const mov = _movimentacoesItem(item.id, loja, hoje());
+        const temMov = mov && mov.temMovimentacoes;
+        const linhaId = `proj-${loja}-${item.id}`;
+        const detalheId = `det-${loja}-${item.id}`;
+        const clickAttr = temMov ? `onclick="toggleDetalheItem('${detalheId}','${linhaId}',${loja},'${item.id}')" style="cursor:pointer"` : '';
+        const seta = temMov ? `<span id="seta-${detalheId}" style="display:inline-block;transition:transform .2s;margin-right:4px;font-size:.7rem;color:#9ca3af">▶</span>` : '';
+        html+=`<div class="proj-row" id="${linhaId}" data-nome="${item.nome.toLowerCase()}" ${clickAttr}>
+          <div class="proj-name">${seta}${item.nome}</div>
           <div class="proj-col" style="color:${color};font-weight:800">${fmtQ(q)}<br><span style="font-size:.62rem;color:var(--gray);font-weight:400">${item.unidade}</span></div>
           <div class="proj-col">${badge}</div>
         </div>`;
+        if(temMov){
+          html += `<div id="${detalheId}" class="proj-detalhe" style="display:none;background:#f9fafb;border-left:3px solid #c084fc;padding:10px 14px;margin:-2px 4px 6px 4px;border-radius:0 8px 8px 0;font-size:.78rem;"></div>`;
+        }
       });
       html+=`</div>`;
     });
   });
   container.innerHTML=html;
   aplicarFiltroBusca('proj');
+}
+
+// Expande/colapsa o detalhe de movimentações de um item na aba Estoque
+function toggleDetalheItem(detalheId, linhaId, loja, itemId){
+  const det = document.getElementById(detalheId);
+  if(!det) return;
+  const seta = document.getElementById('seta-'+detalheId);
+  // Se já está aberto, fecha
+  if(det.style.display !== 'none' && det.dataset.aberto === '1'){
+    det.style.display = 'none';
+    det.dataset.aberto = '0';
+    if(seta) seta.style.transform = 'rotate(0deg)';
+    return;
+  }
+  // Abre e renderiza conteúdo
+  const item = (db.items||[]).find(i => i.id === itemId);
+  if(!item){
+    det.innerHTML = '<em style="color:var(--red)">Item não encontrado</em>';
+    det.style.display = 'block';
+    det.dataset.aberto = '1';
+    if(seta) seta.style.transform = 'rotate(90deg)';
+    return;
+  }
+  const mov = _movimentacoesItem(itemId, Number(loja), hoje());
+  if(!mov){
+    det.innerHTML = '<em style="color:var(--gray)">Sem movimentações desde o último inventário</em>';
+    det.style.display = 'block';
+    det.dataset.aberto = '1';
+    if(seta) seta.style.transform = 'rotate(90deg)';
+    return;
+  }
+  const unid = item.unidade || '';
+  // Agrupa movimentos por data pra mostrar de forma organizada
+  const porData = {};
+  mov.movimentos.forEach(m => {
+    if(!porData[m.data]) porData[m.data] = [];
+    porData[m.data].push(m);
+  });
+  const datasOrd = Object.keys(porData).sort();
+
+  let html = `<div style="font-weight:800;color:#581c87;margin-bottom:6px;font-size:.85rem">📊 Histórico desde último inventário</div>`;
+  html += `<div style="display:flex;justify-content:space-between;padding:6px 8px;background:#ede9fe;border-radius:6px;margin-bottom:8px">
+    <span>📦 Inventário base (${fmtDate(mov.dataBase)})</span>
+    <strong style="color:#581c87">${fmtQ(mov.qtdBase)} ${unid}</strong>
+  </div>`;
+
+  datasOrd.forEach(d => {
+    const itens = porData[d];
+    html += `<div style="margin-bottom:6px">
+      <div style="font-weight:700;color:#374151;font-size:.75rem;margin-bottom:2px">📅 ${fmtDate(d)}</div>`;
+    itens.forEach(m => {
+      let icone, cor, sinal;
+      if(m.tipo === 'consumo'){ icone = '↓'; cor = '#c2410c'; sinal = '-'; }
+      else if(m.tipo === 'entrada'){ icone = '↑'; cor = '#15803d'; sinal = '+'; }
+      else if(m.tipo === 'perda'){ icone = '💔'; cor = '#991b1b'; sinal = '-'; }
+      else { icone = '•'; cor = '#6b7280'; sinal = ''; }
+      const qty = Math.abs(m.qty);
+      html += `<div style="display:flex;justify-content:space-between;padding:3px 12px;font-size:.75rem;color:${cor}">
+        <span>${icone} ${m.descricao}</span>
+        <span style="font-weight:700">${sinal}${fmtQ(qty)} ${unid}</span>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+
+  html += `<div style="display:flex;justify-content:space-between;padding:6px 8px;background:#dcfce7;border-radius:6px;margin-top:8px;border-top:2px solid #86efac">
+    <span style="font-weight:700">📊 Saldo atual</span>
+    <strong style="color:#166534">${fmtQ(mov.saldoFinal)} ${unid}</strong>
+  </div>`;
+
+  det.innerHTML = html;
+  det.style.display = 'block';
+  det.dataset.aberto = '1';
+  if(seta) seta.style.transform = 'rotate(90deg)';
 }
 
 // Definição dos copos de perda
@@ -3920,19 +4062,22 @@ function processarRelatorio(){
   });
 
   // ── Parser da seção CONTAGEM DE NUMERARIOS (formas de pagamento) ───────────
-  // Lê as 19 formas e captura a COLUNA MANUAL (4 colunas: Sistema, %, Manual, %)
+  // Lê as formas e captura a COLUNA MANUAL (4 colunas: Sistema, %, Manual, %)
   // Formato: "NOME_FORMA               123,45  10,00   123,45  10,00"
   const formasPagamento = {};
+  let totalManualContagem = 0; // TOTAL da contagem (manual) — fonte de verdade do faturamento
   const FORMAS_PAGTO_TODAS = [
-    'DINHEIRO','PIX POS','DEBITO POS','CREDITO POS','VOUCHER POS',
+    'DINHEIRO',
+    'VISA CREDITO','VISA DEBITO','MASTER CREDITO','MASTER DEBITO','ELO CREDITO','ELO DEBITO',
+    'PIX POS','DEBITO POS','CREDITO POS','VOUCHER POS','VOUCHER',
     'ALELO','QRLINX','TICKET',
     'HANZO CREDITO','HANZO DEBITO','HANZO CUPOM','HANZO DINHEIRO','HANZO PIX',
     'MOO ADIDAS',
     'HUB_OUTROS_99FOOD','HUB_OUTROS_IFOOD','HUB_OUTROS',
-    'IFOOD_OUTROS','IFOOD_ONLINE'
+    'IFOOD_OUTROS','IFOOD_ONLINE','IFOOD_DESCONTO'
   ];
-  // Trecho entre "CONTAGEM DE NUMERARIOS" e "TOTAL"
-  const trechoNumMatch = txt.match(/CONTAGEM DE NUMERARIOS[\s\S]*?(?=\n\s*-{10,}|\n\s*TOTAL\s)/i);
+  // Trecho desde "CONTAGEM DE NUMERARIOS" até a linha que tem TOTAL com 2 colunas de valor (manual + 100,00)
+  const trechoNumMatch = txt.match(/CONTAGEM DE NUMERARIOS[\s\S]*?(?:DIFERENCA|TOTAL\s+[\d.,]+\s+[\d.,]+\s+[\d.,]+\s+[\d.,]+)/i);
   if(trechoNumMatch){
     const trecho = trechoNumMatch[0];
     FORMAS_PAGTO_TODAS.forEach(forma => {
@@ -3947,6 +4092,54 @@ function processarRelatorio(){
         if(!isNaN(manual)) formasPagamento[forma] = manual;
       }
     });
+    // Captura linha TOTAL: ela tem formato "TOTAL    1142,90    1142,90 100,00" (sistema, manual, %)
+    // O TOTAL da contagem é a fonte de verdade do faturamento do dia.
+    const totalMatch = trecho.match(/^\s*TOTAL\s+(\d[\d.]*,\d{2})\s+(\d[\d.]*,\d{2})\s+(\d[\d.]*,\d{2})/mi);
+    if(totalMatch){
+      // totalMatch[2] = manual (que é o valor real recebido após cancelamentos)
+      const tManual = parseFloat(totalMatch[2].replace(/\./g,'').replace(',','.'));
+      if(!isNaN(tManual)) totalManualContagem = tManual;
+    }
+  }
+
+  // ── Parser de cancelamentos (CANCELAMENTO VENDA BALCAO / DEPOIS ENVIAR PRODUCAO) ──
+  // Lista informativa pra mostrar no preview. Não desconta dos insumos (já abatidos no TOTAL).
+  const cancelamentos = [];
+  const trechoCancel = txt.match(/CANCELAMENTO\s+VENDA\s+BALCAO[\s\S]*?(?:TOTAL:\s*[\d.,]+|$)/i);
+  if(trechoCancel){
+    // Cada linha: "  27   75 PANDORA 50          1    26,00 Aut. por 001.GERENT 13:47"
+    const reLinha = /^\s*\d+\s+\d+\s+([A-ZÀ-Ÿ0-9][^]*?)\s+(\d+)\s+(\d[\d.]*,\d{2})\s/gmi;
+    let mc;
+    while((mc = reLinha.exec(trechoCancel[0])) !== null){
+      const nome = mc[1].trim();
+      const qtd = parseInt(mc[2], 10);
+      const valor = parseFloat(mc[3].replace(/\./g,'').replace(',','.'));
+      if(qtd > 0 && !isNaN(valor)) cancelamentos.push({ nome, qtd, valor });
+    }
+  }
+
+  // ── Parser da seção RESULTADO OPERACIONAL ──
+  // Captura Faturamento Bruto, Desconto e RES. OPERACIONAL (o líquido).
+  // RES. OPERACIONAL = Faturamento Bruto - Desconto = o que de fato entrou no caixa.
+  // Essa é a fonte de verdade mais robusta — bate com o TOTAL da contagem.
+  let faturamentoBruto = 0;
+  let totalDescontos = 0;
+  let resOperacional = 0;
+  const trechoResOp = txt.match(/\*+\s*RESULTADO\s+OPERACIONAL\s*\*+[\s\S]*?RES\.\s*OPERACIONAL[^\d]*([\d.]+,\d{2})/i);
+  if(trechoResOp){
+    const trecho = trechoResOp[0];
+    // Faturamento Bruto
+    const mBruto = trecho.match(/Faturamento\s+Bruto[^\d]*([\d.]+,\d{2})/i);
+    if(mBruto){
+      faturamentoBruto = parseFloat(mBruto[1].replace(/\./g,'').replace(',','.')) || 0;
+    }
+    // Desconto (linha "(-) Desconto.....:      12,00")
+    const mDesc = trecho.match(/\(-\)\s*Desconto[^\d]*([\d.]+,\d{2})/i);
+    if(mDesc){
+      totalDescontos = parseFloat(mDesc[1].replace(/\./g,'').replace(',','.')) || 0;
+    }
+    // RES. OPERACIONAL (o líquido)
+    resOperacional = parseFloat(trechoResOp[1].replace(/\./g,'').replace(',','.')) || 0;
   }
 
   // Monta resultado para tamanhos com vendas (não depende do copo existir em db.items)
@@ -4078,6 +4271,21 @@ function processarRelatorio(){
     .sort((a,b)=> _ordemCat(a.tamanho) - _ordemCat(b.tamanho) || a.nomeProd.localeCompare(b.nomeProd,'pt-BR'));
   const totalFaturado = saboresList.reduce((s,x)=>s+x.subtotal,0);
   const totalCustoSabores = saboresList.reduce((s,x)=>s+x.custoInsumos,0);
+  // Total dos cancelamentos (informativo)
+  const totalCancelamentos = (cancelamentos||[]).reduce((s,c)=>s+c.valor,0);
+  // ⭐ FATURAMENTO REAL: hierarquia de fontes (mais confiável → menos)
+  //   1) RES. OPERACIONAL (Faturamento Bruto - Desconto): vem pronto e é o que entrou no caixa
+  //   2) TOTAL da contagem de numerários (manual)
+  //   3) Cálculo manual: soma sabores - cancelamentos - descontos
+  // Sempre escolhe o > 0 mais alto na lista.
+  let totalFaturadoReal;
+  if(resOperacional > 0){
+    totalFaturadoReal = resOperacional;
+  } else if(totalManualContagem > 0){
+    totalFaturadoReal = totalManualContagem;
+  } else {
+    totalFaturadoReal = Math.max(0, totalFaturado - totalCancelamentos - totalDescontos);
+  }
 
   let saboresTableHtml = '';
   if(saboresList.length){
@@ -4253,6 +4461,53 @@ function processarRelatorio(){
     }
   }
 
+  // ── Card de faturamento real (RES. OPERACIONAL / TOTAL contagem) + cancelamentos + descontos ──
+  let cardFaturamento = '';
+  const temDadosFat = resOperacional > 0 || totalManualContagem > 0 || totalCancelamentos > 0 || totalDescontos > 0;
+  if(temDadosFat){
+    // Validação: soma sabores - cancelamentos - descontos deve bater com totalFaturadoReal
+    const calculado = totalFaturado - totalCancelamentos - totalDescontos;
+    const divergencia = calculado - totalFaturadoReal;
+    const temDivergencia = totalFaturadoReal > 0 && Math.abs(divergencia) > 0.01;
+    let avisoDivergencia = '';
+    if(temDivergencia){
+      avisoDivergencia = `<div style="font-size:.7rem;color:#92400e;margin-top:6px;padding:6px 8px;background:#fef3c7;border-radius:6px">
+        ⚠️ Divergência: soma dos sabores (R$ ${fmtBRL(totalFaturado)}) - cancelamentos (R$ ${fmtBRL(totalCancelamentos)}) - descontos (R$ ${fmtBRL(totalDescontos)}) = R$ ${fmtBRL(calculado)} <strong>≠</strong> faturamento real (R$ ${fmtBRL(totalFaturadoReal)}). Diferença de R$ ${fmtBRL(Math.abs(divergencia))}.
+      </div>`;
+    }
+    let listaCancel = '';
+    if(cancelamentos && cancelamentos.length > 0){
+      listaCancel = `<div style="margin-top:8px;font-size:.72rem;color:#7c2d12">
+        <strong>📋 Cancelamentos detectados:</strong>
+        ${cancelamentos.map(c => `<div style="margin-left:12px">• ${c.qtd}× ${c.nome} - R$ ${fmtBRL(c.valor)}</div>`).join('')}
+      </div>`;
+    }
+    // Fonte usada
+    let fonteLabel = '';
+    if(resOperacional > 0) fonteLabel = '<span style="font-size:.65rem;color:#4b5563;font-weight:400">(RES. OPERACIONAL)</span>';
+    else if(totalManualContagem > 0) fonteLabel = '<span style="font-size:.65rem;color:#4b5563;font-weight:400">(TOTAL contagem)</span>';
+    else fonteLabel = '<span style="font-size:.65rem;color:#92400e;font-weight:400">(calculado)</span>';
+
+    cardFaturamento = `<div style="background:#eff6ff;border:1.5px solid #93c5fd;border-radius:10px;padding:10px 12px;margin-bottom:12px">
+      <div style="font-size:.78rem;font-weight:800;color:#1e3a8a;margin-bottom:8px">💰 Faturamento real do dia</div>
+      ${faturamentoBruto > 0 ? `<div style="display:flex;justify-content:space-between;font-size:.78rem;color:#374151;margin-bottom:3px">
+        <span>Faturamento Bruto:</span><span>R$ ${fmtBRL(faturamentoBruto)}</span>
+      </div>` : ''}
+      ${totalDescontos > 0 ? `<div style="display:flex;justify-content:space-between;font-size:.74rem;color:#7c2d12;margin-bottom:3px">
+        <span>🏷️ Descontos concedidos:</span><span>- R$ ${fmtBRL(totalDescontos)}</span>
+      </div>` : ''}
+      ${totalCancelamentos > 0 ? `<div style="display:flex;justify-content:space-between;font-size:.74rem;color:#7c2d12;margin-bottom:3px">
+        <span>❌ Cancelamentos:</span><span>- R$ ${fmtBRL(totalCancelamentos)}</span>
+      </div>` : ''}
+      <div style="display:flex;justify-content:space-between;font-size:.86rem;color:#1e3a8a;font-weight:800;border-top:2px solid #93c5fd;padding-top:6px;margin-top:6px">
+        <span>TOTAL recebido ${fonteLabel}:</span>
+        <strong>R$ ${fmtBRL(totalFaturadoReal)}</strong>
+      </div>
+      ${listaCancel}
+      ${avisoDivergencia}
+    </div>`;
+  }
+
   let previewHtml = `
     <div class="card">
       <div class="card-title"><span>🔍</span>Preview da Importação</div>
@@ -4264,6 +4519,7 @@ function processarRelatorio(){
         ${lojaInfo ? `<br><span style="font-size:.72rem;color:var(--gray)">📋 ${lojaInfo}</span>` : ''}
         ${cnpjTxt ? `<br><span style="font-size:.72rem;color:var(--gray)">🆔 CNPJ: ${cnpjTxt}</span>` : ''}
       </div>
+      ${cardFaturamento}
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">${resumoVendas}</div>
       ${saboresTableHtml}
       ${formasTableHtml}
@@ -4276,6 +4532,8 @@ function processarRelatorio(){
   importacaoPendente = {
     resultado, dataRelatorio, insumosList,
     saboresList, totalFaturado, totalCustoSabores,
+    totalFaturadoReal, totalManualContagem, totalCancelamentos, cancelamentos,
+    totalDescontos, faturamentoBruto, resOperacional,
     totaisPorTamanho, totalGastoGeral,
     formasPagamento,
     lojaImp,
@@ -4288,6 +4546,8 @@ async function confirmarImportacao(){
   const {
     resultado, dataRelatorio, insumosList,
     saboresList, totalFaturado, totalCustoSabores,
+    totalFaturadoReal, totalManualContagem, totalCancelamentos, cancelamentos,
+    totalDescontos, faturamentoBruto, resOperacional,
     totaisPorTamanho, totalGastoGeral,
     formasPagamento,
     pdvNum, aberturaNum,
@@ -4395,7 +4655,12 @@ async function confirmarImportacao(){
     abertura: aberId,
     ts: tsImp,
     usuario: respImp,
-    totalFaturado: totalFaturado||0,
+    totalFaturado: totalFaturadoReal||0,         // ⭐ valor REAL recebido (RES. OPERACIONAL ou TOTAL da contagem)
+    totalFaturadoSabores: totalFaturado||0,      // soma dos subtotais dos sabores (sem abater cancelamentos/descontos)
+    totalCancelamentos: totalCancelamentos||0,   // informativo
+    cancelamentos: (cancelamentos||[]).slice(),  // lista detalhada
+    totalDescontos: totalDescontos||0,           // desconto do dia (RES. OPERACIONAL)
+    faturamentoBruto: faturamentoBruto||0,       // faturamento bruto (antes do desconto)
     totalGastoInsumos: totalGastoGeral||0,
     totalCustoSabores: totalCustoSabores||0,
     qtdCopos: Object.values(totaisPorTamanho||{}).reduce((a,b)=>a+(b||0),0),
@@ -4412,10 +4677,13 @@ async function confirmarImportacao(){
   };
 
   if(finExistente){
-    // SOMA aos totais existentes
+    // SOMA aos totais existentes (passa totalFaturadoReal pra ser o usado)
     _somarFinanceiro(finExistente, {
       saboresList, insumosList, totaisPorTamanho,
-      totalFaturado, totalCustoSabores, totalGastoGeral,
+      totalFaturado: totalFaturadoReal,        // ⭐ usa o REAL
+      totalCustoSabores, totalGastoGeral,
+      totalCancelamentos,
+      totalDescontos,
       formasPagamento,
     });
     // Anexa info do PDV
@@ -4443,7 +4711,12 @@ async function confirmarImportacao(){
         valorEmbalagem: ing.valorEmbalagem||0, qtdPorUnidade: ing.qtdPorUnidade||0,
         temFracao: !!ing.temFracao, custoPorUnit: ing.custoPorUnit||0,
       })),
-      totalFaturado: totalFaturado||0,
+      totalFaturado: totalFaturadoReal||0,             // ⭐ valor REAL
+      totalFaturadoSabores: totalFaturado||0,           // soma sabores (sem abater cancelamentos/descontos)
+      totalCancelamentos: totalCancelamentos||0,
+      cancelamentos: (cancelamentos||[]).slice(),
+      totalDescontos: totalDescontos||0,
+      faturamentoBruto: faturamentoBruto||0,
       totalCustoSabores: totalCustoSabores||0,
       totalGastoInsumos: totalGastoGeral||0,
       formasPagamento: {...(formasPagamento||{})},
@@ -4486,7 +4759,7 @@ async function confirmarImportacao(){
 
 // Soma os dados de uma nova importação a um registro financeiro existente
 function _somarFinanceiro(reg, novo){
-  const {saboresList, insumosList, totaisPorTamanho, totalFaturado, totalCustoSabores, totalGastoGeral, formasPagamento} = novo;
+  const {saboresList, insumosList, totaisPorTamanho, totalFaturado, totalCustoSabores, totalGastoGeral, totalCancelamentos, totalDescontos, formasPagamento} = novo;
 
   // porTamanho — soma chave por chave
   if(!reg.porTamanho) reg.porTamanho = {};
@@ -4544,6 +4817,8 @@ function _somarFinanceiro(reg, novo){
   reg.totalFaturado = (reg.totalFaturado||0) + (totalFaturado||0);
   reg.totalCustoSabores = (reg.totalCustoSabores||0) + (totalCustoSabores||0);
   reg.totalGastoInsumos = (reg.totalGastoInsumos||0) + (totalGastoGeral||0);
+  reg.totalCancelamentos = (reg.totalCancelamentos||0) + (totalCancelamentos||0);
+  reg.totalDescontos = (reg.totalDescontos||0) + (totalDescontos||0);
 }
 
 // Remove um PDV do registro consolidado (subtraindo os totais que ele aportou)
@@ -4557,6 +4832,8 @@ function _removerPdvDoConsolidado(reg, pdv, abertura){
   reg.totalFaturado = Math.max(0, (reg.totalFaturado||0) - (pdvRem.totalFaturado||0));
   reg.totalCustoSabores = Math.max(0, (reg.totalCustoSabores||0) - (pdvRem.totalCustoSabores||0));
   reg.totalGastoInsumos = Math.max(0, (reg.totalGastoInsumos||0) - (pdvRem.totalGastoInsumos||0));
+  reg.totalCancelamentos = Math.max(0, (reg.totalCancelamentos||0) - (pdvRem.totalCancelamentos||0));
+  reg.totalDescontos = Math.max(0, (reg.totalDescontos||0) - (pdvRem.totalDescontos||0));
 
   // Subtrai porTamanho/formasPagamento se o breakdown está disponível (importações pós-v3.8.45)
   if(pdvRem.porTamanho){
