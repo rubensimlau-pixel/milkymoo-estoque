@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.114</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.116</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -4337,6 +4337,19 @@ function processarRelatorio(){
     }
   }
 
+  // Captura DIFERENCA e Explic: (justificativa) — aparecem após o TOTAL.
+  // Ex: "DIFERENCA   -1,00\nExplic: ERRO DE CONTAGEM"
+  let diferencaContagem = 0;
+  let explicacaoDiferenca = '';
+  const difMatch = txt.match(/^\s*DIFERENCA\s+(-?\d[\d.]*,\d{2})/mi);
+  if(difMatch){
+    diferencaContagem = parseFloat(difMatch[1].replace(/\./g,'').replace(',','.')) || 0;
+  }
+  const explicMatch = txt.match(/^\s*Explic\s*:\s*(.+?)\s*$/mi);
+  if(explicMatch){
+    explicacaoDiferenca = explicMatch[1].trim();
+  }
+
   // ── Parser de cancelamentos (CANCELAMENTO VENDA BALCAO / DEPOIS ENVIAR PRODUCAO) ──
   // Lista informativa pra mostrar no preview. Não desconta dos insumos (já abatidos no TOTAL).
   const cancelamentos = [];
@@ -4509,15 +4522,15 @@ function processarRelatorio(){
   // Total dos cancelamentos (informativo)
   const totalCancelamentos = (cancelamentos||[]).reduce((s,c)=>s+c.valor,0);
   // ⭐ FATURAMENTO REAL: hierarquia de fontes (mais confiável → menos)
-  //   1) RES. OPERACIONAL (Faturamento Bruto - Desconto): vem pronto e é o que entrou no caixa
-  //   2) TOTAL da contagem de numerários (manual)
-  //   3) Cálculo manual: soma sabores - cancelamentos - descontos
-  // Sempre escolhe o > 0 mais alto na lista.
+  //   1) TOTAL da CONTAGEM DE NUMERÁRIOS (manual) — dinheiro que efetivamente entrou no caixa.
+  //      Se houver divergência com o sistema, vem justificada em "Explic:" (ex: ERRO DE CONTAGEM).
+  //   2) RES. OPERACIONAL (Faturamento Bruto - Desconto): fallback se contagem manual ausente.
+  //   3) Cálculo: soma sabores - cancelamentos - descontos.
   let totalFaturadoReal;
-  if(resOperacional > 0){
-    totalFaturadoReal = resOperacional;
-  } else if(totalManualContagem > 0){
+  if(totalManualContagem > 0){
     totalFaturadoReal = totalManualContagem;
+  } else if(resOperacional > 0){
+    totalFaturadoReal = resOperacional;
   } else {
     totalFaturadoReal = Math.max(0, totalFaturado - totalCancelamentos - totalDescontos);
   }
@@ -4696,20 +4709,10 @@ function processarRelatorio(){
     }
   }
 
-  // ── Card de faturamento real (RES. OPERACIONAL / TOTAL contagem) + cancelamentos + descontos ──
+  // ── Card de faturamento real (TOTAL contagem manual) + cancelamentos + descontos + diferença ──
   let cardFaturamento = '';
   const temDadosFat = resOperacional > 0 || totalManualContagem > 0 || totalCancelamentos > 0 || totalDescontos > 0;
   if(temDadosFat){
-    // Validação: soma sabores - cancelamentos - descontos deve bater com totalFaturadoReal
-    const calculado = totalFaturado - totalCancelamentos - totalDescontos;
-    const divergencia = calculado - totalFaturadoReal;
-    const temDivergencia = totalFaturadoReal > 0 && Math.abs(divergencia) > 0.01;
-    let avisoDivergencia = '';
-    if(temDivergencia){
-      avisoDivergencia = `<div style="font-size:.7rem;color:#92400e;margin-top:6px;padding:6px 8px;background:#fef3c7;border-radius:6px">
-        ⚠️ Divergência: soma dos sabores (R$ ${fmtBRL(totalFaturado)}) - cancelamentos (R$ ${fmtBRL(totalCancelamentos)}) - descontos (R$ ${fmtBRL(totalDescontos)}) = R$ ${fmtBRL(calculado)} <strong>≠</strong> faturamento real (R$ ${fmtBRL(totalFaturadoReal)}). Diferença de R$ ${fmtBRL(Math.abs(divergencia))}.
-      </div>`;
-    }
     let listaCancel = '';
     if(cancelamentos && cancelamentos.length > 0){
       listaCancel = `<div style="margin-top:8px;font-size:.72rem;color:#7c2d12">
@@ -4719,9 +4722,21 @@ function processarRelatorio(){
     }
     // Fonte usada
     let fonteLabel = '';
-    if(resOperacional > 0) fonteLabel = '<span style="font-size:.65rem;color:#4b5563;font-weight:400">(RES. OPERACIONAL)</span>';
-    else if(totalManualContagem > 0) fonteLabel = '<span style="font-size:.65rem;color:#4b5563;font-weight:400">(TOTAL contagem)</span>';
+    if(totalManualContagem > 0) fonteLabel = '<span style="font-size:.65rem;color:#4b5563;font-weight:400">(TOTAL contagem manual)</span>';
+    else if(resOperacional > 0) fonteLabel = '<span style="font-size:.65rem;color:#4b5563;font-weight:400">(RES. OPERACIONAL)</span>';
     else fonteLabel = '<span style="font-size:.65rem;color:#92400e;font-weight:400">(calculado)</span>';
+
+    // Bloco da diferença sistema↔contagem (DIFERENCA + Explic)
+    let blocoDiferenca = '';
+    if(Math.abs(diferencaContagem) > 0.005){
+      const sinal = diferencaContagem > 0 ? '+' : '-';
+      const corDif = diferencaContagem > 0 ? '#15803d' : '#b91c1c';
+      blocoDiferenca = `<div style="margin-top:8px;padding:7px 9px;background:#fff7ed;border-left:3px solid #fb923c;border-radius:6px;font-size:.72rem;color:#78350f">
+        <strong>⚠️ Diferença contagem:</strong>
+        <span style="color:${corDif};font-weight:700">${sinal} R$ ${fmtBRL(Math.abs(diferencaContagem))}</span>
+        ${explicacaoDiferenca ? `<div style="margin-top:3px;font-size:.7rem">Justificativa: <em>"${explicacaoDiferenca}"</em></div>` : ''}
+      </div>`;
+    }
 
     cardFaturamento = `<div style="background:#eff6ff;border:1.5px solid #93c5fd;border-radius:10px;padding:10px 12px;margin-bottom:12px">
       <div style="font-size:.78rem;font-weight:800;color:#1e3a8a;margin-bottom:8px">💰 Faturamento real do dia</div>
@@ -4734,12 +4749,15 @@ function processarRelatorio(){
       ${totalCancelamentos > 0 ? `<div style="display:flex;justify-content:space-between;font-size:.74rem;color:#7c2d12;margin-bottom:3px">
         <span>❌ Cancelamentos:</span><span>- R$ ${fmtBRL(totalCancelamentos)}</span>
       </div>` : ''}
+      ${resOperacional > 0 && totalManualContagem > 0 && Math.abs(resOperacional - totalManualContagem) > 0.005 ? `<div style="display:flex;justify-content:space-between;font-size:.72rem;color:#6b7280;margin-bottom:3px">
+        <span>(RES. OPERACIONAL — sistema):</span><span>R$ ${fmtBRL(resOperacional)}</span>
+      </div>` : ''}
       <div style="display:flex;justify-content:space-between;font-size:.86rem;color:#1e3a8a;font-weight:800;border-top:2px solid #93c5fd;padding-top:6px;margin-top:6px">
         <span>TOTAL recebido ${fonteLabel}:</span>
         <strong>R$ ${fmtBRL(totalFaturadoReal)}</strong>
       </div>
       ${listaCancel}
-      ${avisoDivergencia}
+      ${blocoDiferenca}
     </div>`;
   }
 
@@ -4769,6 +4787,7 @@ function processarRelatorio(){
     saboresList, totalFaturado, totalCustoSabores,
     totalFaturadoReal, totalManualContagem, totalCancelamentos, cancelamentos,
     totalDescontos, faturamentoBruto, resOperacional,
+    diferencaContagem, explicacaoDiferenca,
     totaisPorTamanho, totalGastoGeral,
     formasPagamento,
     lojaImp,
@@ -4783,6 +4802,7 @@ async function confirmarImportacao(){
     saboresList, totalFaturado, totalCustoSabores,
     totalFaturadoReal, totalManualContagem, totalCancelamentos, cancelamentos,
     totalDescontos, faturamentoBruto, resOperacional,
+    diferencaContagem, explicacaoDiferenca,
     totaisPorTamanho, totalGastoGeral,
     formasPagamento,
     pdvNum, aberturaNum,
@@ -4896,6 +4916,9 @@ async function confirmarImportacao(){
     cancelamentos: (cancelamentos||[]).slice(),  // lista detalhada
     totalDescontos: totalDescontos||0,           // desconto do dia (RES. OPERACIONAL)
     faturamentoBruto: faturamentoBruto||0,       // faturamento bruto (antes do desconto)
+    resOperacional: resOperacional||0,           // RES. OPERACIONAL (Bruto - Descontos), valor do sistema
+    diferencaContagem: diferencaContagem||0,     // DIFERENCA contagem (manual - sistema, pode ser negativa)
+    explicacaoDiferenca: explicacaoDiferenca||'',// justificativa da diferença (Explic: ...)
     totalGastoInsumos: totalGastoGeral||0,
     totalCustoSabores: totalCustoSabores||0,
     qtdCopos: Object.values(totaisPorTamanho||{}).reduce((a,b)=>a+(b||0),0),
@@ -4952,6 +4975,9 @@ async function confirmarImportacao(){
       cancelamentos: (cancelamentos||[]).slice(),
       totalDescontos: totalDescontos||0,
       faturamentoBruto: faturamentoBruto||0,
+      resOperacional: resOperacional||0,
+      diferencaContagem: diferencaContagem||0,
+      explicacaoDiferenca: explicacaoDiferenca||'',
       totalCustoSabores: totalCustoSabores||0,
       totalGastoInsumos: totalGastoGeral||0,
       formasPagamento: {...(formasPagamento||{})},
@@ -11332,23 +11358,56 @@ function _renderFinDetalhe(r){
   let html = `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);">`;
 
   // ── Aviso de inconsistência: subtotal dos sabores vs totalFaturado do registro ──
+  // É NORMAL ter diferença quando há descontos concedidos ou cancelamentos:
+  //   sumSabores = totalFaturado + descontos + cancelamentos
+  // Só consideramos "inconsistência real" se sobra diferença não-explicada após considerar isso.
   const sumSabores = (r.sabores||[]).reduce((s,x)=>s+(Number(x.subtotal)||0), 0);
   const tFat = Number(r.totalFaturado)||0;
+  const desc = Number(r.totalDescontos)||0;
+  const canc = Number(r.totalCancelamentos)||0;
+  // Diferença explicada = o que descontos + cancelamentos justificam
+  const difTotal = sumSabores - tFat;
+  const difExplicada = desc + canc;
+  const difResidual = difTotal - difExplicada;
+
   // Tolerância: 1 centavo
-  if(sumSabores > 0 && Math.abs(sumSabores - tFat) > 0.01){
-    const dif = sumSabores - tFat;
-    html += `<div style="margin-bottom:14px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;">
-      <div style="font-size:.78rem;font-weight:800;color:#991b1b;margin-bottom:4px">⚠️ Inconsistência detectada</div>
-      <div style="font-size:.72rem;color:#7f1d1d;line-height:1.5">
-        Total faturado registrado: <strong>R$ ${_fmtBRL(tFat)}</strong><br>
-        Soma dos sabores listados: <strong>R$ ${_fmtBRL(sumSabores)}</strong><br>
-        Diferença: <strong>R$ ${_fmtBRL(Math.abs(dif))}</strong> ${dif>0?'(sabores acumulados de re-importações)':'(faltam sabores)'}
-      </div>
-      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
-        <button onclick="repararFinanceiro('${r.id}','fat')" style="background:#16a34a;color:white;border:none;border-radius:8px;padding:6px 10px;font-size:.7rem;font-weight:700;cursor:pointer">📐 Recalcular totalFaturado pelos sabores</button>
-        <button onclick="repararFinanceiro('${r.id}','sabores')" style="background:#1e40af;color:white;border:none;border-radius:8px;padding:6px 10px;font-size:.7rem;font-weight:700;cursor:pointer">🧹 Limpar sabores e reimportar PDVs</button>
-      </div>
-    </div>`;
+  if(sumSabores > 0 && Math.abs(difTotal) > 0.01){
+    // Caso 1: diferença totalmente explicada por descontos/cancelamentos → mostra info, não erro
+    if(Math.abs(difResidual) <= 0.01 && difExplicada > 0){
+      const partes = [];
+      if(desc > 0) partes.push(`descontos R$ ${_fmtBRL(desc)}`);
+      if(canc > 0) partes.push(`cancelamentos R$ ${_fmtBRL(canc)}`);
+      html += `<div style="margin-bottom:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;">
+        <div style="font-size:.78rem;font-weight:800;color:#166534;margin-bottom:4px">✅ Diferença explicada</div>
+        <div style="font-size:.72rem;color:#14532d;line-height:1.5">
+          Total faturado: <strong>R$ ${_fmtBRL(tFat)}</strong><br>
+          Soma dos sabores: <strong>R$ ${_fmtBRL(sumSabores)}</strong><br>
+          Diferença de <strong>R$ ${_fmtBRL(Math.abs(difTotal))}</strong> coberta por: ${partes.join(' + ')}
+        </div>
+      </div>`;
+    } else {
+      // Caso 2: sobra diferença não-explicada → aviso real
+      const causasPossiveis = [];
+      if(difResidual > 0.01) causasPossiveis.push('sabores acumulados de re-importações');
+      if(difResidual < -0.01) causasPossiveis.push('faltam sabores');
+      const causaStr = causasPossiveis.length ? `(${causasPossiveis.join(' ou ')})` : '';
+      // Texto da diferença residual (a parte que não foi explicada)
+      const detalheExplicacao = difExplicada > 0
+        ? `<br><span style="font-size:.7rem;color:#7f1d1d;opacity:.85">Já considerados: descontos R$ ${_fmtBRL(desc)}${canc>0?` + cancelamentos R$ ${_fmtBRL(canc)}`:''} = R$ ${_fmtBRL(difExplicada)}. Sobra residual: R$ ${_fmtBRL(Math.abs(difResidual))}.</span>`
+        : '';
+      html += `<div style="margin-bottom:14px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;">
+        <div style="font-size:.78rem;font-weight:800;color:#991b1b;margin-bottom:4px">⚠️ Inconsistência detectada</div>
+        <div style="font-size:.72rem;color:#7f1d1d;line-height:1.5">
+          Total faturado registrado: <strong>R$ ${_fmtBRL(tFat)}</strong><br>
+          Soma dos sabores listados: <strong>R$ ${_fmtBRL(sumSabores)}</strong><br>
+          Diferença: <strong>R$ ${_fmtBRL(Math.abs(difTotal))}</strong> ${causaStr}${detalheExplicacao}
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <button onclick="repararFinanceiro('${r.id}','fat')" style="background:#16a34a;color:white;border:none;border-radius:8px;padding:6px 10px;font-size:.7rem;font-weight:700;cursor:pointer">📐 Recalcular totalFaturado pelos sabores</button>
+          <button onclick="repararFinanceiro('${r.id}','sabores')" style="background:#1e40af;color:white;border:none;border-radius:8px;padding:6px 10px;font-size:.7rem;font-weight:700;cursor:pointer">🧹 Limpar sabores e reimportar PDVs</button>
+        </div>
+      </div>`;
+    }
   }
 
   // Lista de PDVs que compõem este registro consolidado
