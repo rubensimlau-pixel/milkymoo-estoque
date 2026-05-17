@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.117</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.118</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -2671,17 +2671,30 @@ function renderProjetado(){
       html+=`<div class="info-box" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534;"><strong>📊 Estoque Projetado</strong>Inventário de <strong>${fmtDate(dataBase)}</strong> com consumo descontado até hoje.</div>`;
     }
     cats().forEach(cat=>{
-      const its=itensDaCat(cat).filter(i=>proj[i.id]!==null);if(!its.length)return;
+      // Mostra TODOS os items da categoria (mesmo sem invent/consumo/entrada/perda).
+      // Items sem info ficam com qtd "—" e badge cinza "sem info".
+      const its = itensDaCat(cat);
+      if(!its.length) return;
       html+=`<div class="card" data-cat="${cat}"><div class="card-title"><span>${CAT_ICONS[cat]}</span>${CAT_LABELS[cat]}</div>
         <div class="row-hdr"><div class="rh-name">Item</div><div class="rh-col">Qtd.</div><div class="rh-col">Status</div></div>`;
       its.forEach(item=>{
-        const q=proj[item.id]; const min=db.minimos[item.id]||0;
-        const badge = q<=0
-          ? `<span class="badge b-zero">Zerou</span>`
-          : min>0&&q<min
-            ? `<span class="badge b-low">Baixo</span>`
-            : `<span class="badge b-ok">OK</span>`;
-        const color = q<=0?'var(--red)':min>0&&q<min?'var(--orange)':'var(--teal-dark)';
+        const q = proj[item.id];
+        const semInfo = (q === null || q === undefined);
+        const min = db.minimos[item.id]||0;
+        let badge, color, qtdLabel;
+        if(semInfo){
+          badge = `<span class="badge" style="background:#f3f4f6;color:#6b7280">sem info</span>`;
+          color = '#9ca3af';
+          qtdLabel = '—';
+        } else {
+          badge = q<=0
+            ? `<span class="badge b-zero">Zerou</span>`
+            : min>0&&q<min
+              ? `<span class="badge b-low">Baixo</span>`
+              : `<span class="badge b-ok">OK</span>`;
+          color = q<=0?'var(--red)':min>0&&q<min?'var(--orange)':'var(--teal-dark)';
+          qtdLabel = fmtQ(q);
+        }
         // Verifica se há movimentações desde o último inventário pra mostrar drill-down
         const mov = _movimentacoesItem(item.id, loja, hoje());
         const temMov = mov && mov.temMovimentacoes;
@@ -2691,7 +2704,7 @@ function renderProjetado(){
         const seta = temMov ? `<span id="seta-${detalheId}" style="display:inline-block;transition:transform .2s;margin-right:4px;font-size:.7rem;color:#9ca3af">▶</span>` : '';
         html+=`<div class="proj-row" id="${linhaId}" data-nome="${item.nome.toLowerCase()}" ${clickAttr}>
           <div class="proj-name">${seta}${item.nome}</div>
-          <div class="proj-col" style="color:${color};font-weight:800">${fmtQ(q)}<br><span style="font-size:.62rem;color:var(--gray);font-weight:400">${item.unidade}</span></div>
+          <div class="proj-col" style="color:${color};font-weight:800">${qtdLabel}<br><span style="font-size:.62rem;color:var(--gray);font-weight:400">${item.unidade}</span></div>
           <div class="proj-col">${badge}</div>
         </div>`;
         if(temMov){
