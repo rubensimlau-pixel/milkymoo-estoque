@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.120</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.121</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -6267,7 +6267,12 @@ function renderSecaoTamanho(tam){
   }
   const optsItems = db.items
     .slice().sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'))
-    .map(i=>`<option value="${i.id}">${i.nome}</option>`).join('');
+    .map(i=>{
+      // Marca selected se for o itemId atual do ingrediente em renderização (sabor.itemId)
+      // Usamos uma sentinela porque optsItems é montado uma vez e reutilizado;
+      // o marker `__SEL_<id>__` será substituído por `selected` no loop dos ingredientes.
+      return `<option value="${i.id}" __SEL_${i.id}__>${i.nome}</option>`;
+    }).join('');
 
   let html = `
     <div style="margin-bottom:16px;border:2px solid ${cor}22;border-radius:14px;overflow:hidden">
@@ -6309,11 +6314,21 @@ function renderSecaoTamanho(tam){
       }
     }
 
+    // Substitui o marker do item selecionado por "selected" e zera os outros
+    let optsItemsRender = optsItems;
+    if(ing.itemId){
+      // Marca o atual com selected
+      const markAtual = `__SEL_${ing.itemId}__`;
+      optsItemsRender = optsItemsRender.replace(markAtual, 'selected');
+    }
+    // Remove TODOS os outros marcadores (vazios)
+    optsItemsRender = optsItemsRender.replace(/__SEL_[^"]+__/g, '');
+
     html += `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:7px;padding:8px;background:var(--gray-light);border-radius:10px">
         <select onchange="atualizarIng('${tam}',${idx},'itemId',this.value)"
           style="flex:1;min-width:0;border:2px solid var(--border);border-radius:8px;padding:5px 6px;font-family:'Nunito',sans-serif;font-size:.78rem">
-          <option value="">— Item —</option>${optsItems}
+          <option value="" ${!ing.itemId?'selected':''}>— Item —</option>${optsItemsRender}
         </select>
         <input type="number" min="0" step="0.01" value="${ing.qty||''}"
           onchange="atualizarIng('${tam}',${idx},'qty',parseFloat(this.value)||0)"
