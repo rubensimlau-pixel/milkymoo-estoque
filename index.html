@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.119</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.120</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -6502,13 +6502,16 @@ function _recalcularRelatoriosComReceitas(saboresAfetados){
     if(!Array.isArray(fin.pdvs)) return;
     fin.pdvs.forEach(pdv => {
       pdvsTotal++;
+      const temSabores = Array.isArray(pdv.sabores) && pdv.sabores.length > 0;
       // Se passou lista de sabores afetados, só recalcula se PDV usa algum deles
       let precisaRecalcular = !saboresAfetados;
-      if(saboresAfetados && Array.isArray(pdv.sabores)){
+      if(saboresAfetados && temSabores){
         precisaRecalcular = pdv.sabores.some(s => saboresAfetados.includes((s.nome||'').toUpperCase()));
       }
-      if(!precisaRecalcular){
-        // Mesmo sem alteração desse PDV, soma seus insumos no consolidado novo
+      // ⛔ PDV sem sabores (legado pré-v3.8.45): NUNCA recalcula.
+      // Senão zera os insumos sem ter de onde reconstruir.
+      if(!temSabores || !precisaRecalcular){
+        // Mantém pdv.insumos como está; ainda acumula no consolidado novo
         (pdv.insumos||[]).forEach(ing => {
           if(!ing.itemId) return;
           const k = `${fin.data}|${fin.loja}|${ing.itemId}`;
