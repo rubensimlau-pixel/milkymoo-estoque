@@ -216,7 +216,7 @@
     <input class="field-input" id="lp" type="password" placeholder="••••••" autocomplete="current-password">
     <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar →</button>
     <button onclick="abrirResetSenha()" style="background:none;border:none;color:#ffb6ca;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:10px;text-decoration:underline;font-family:Nunito,sans-serif">Esqueci minha senha</button>
-    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.123</div>
+    <div style="margin-top:10px;font-size:.65rem;color:#ccc;text-align:center;letter-spacing:.5px">v3.8.124</div>
 
     <!-- Modal reset de senha -->
     <div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px">
@@ -1097,7 +1097,7 @@
           <div style="font-size:2rem;line-height:1;margin-bottom:6px">📁</div>
           <div style="font-family:'Baloo 2',cursive;font-weight:800;color:#c2410c;font-size:.92rem">Arraste o CSV aqui</div>
           <div style="font-size:.72rem;color:#92400e;margin-top:2px">ou clique pra escolher · ou cole o conteúdo abaixo</div>
-          <input type="file" id="importar-99food-file" accept=".csv,.txt,text/csv,text/plain" style="display:none" onchange="_lerArquivo99Food(this.files[0])">
+          <input type="file" id="importar-99food-file" accept=".csv,.txt,.xlsx,.xls,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none" onchange="_lerArquivo99Food(this.files[0])">
         </div>
         <textarea id="importar-99food-input" placeholder="Cole o CSV completo (com cabeçalho Data;Nome do estabelecimento;...)" style="width:100%;min-height:200px;padding:10px;font-family:monospace;font-size:.75rem;border:1.5px solid #fdba74;border-radius:10px;resize:vertical;box-sizing:border-box"></textarea>
         <div style="display:flex;gap:8px;margin-top:10px">
@@ -10291,6 +10291,19 @@ function abrirImportar99Food(){
 }
 
 // Lê arquivo selecionado/arrastado e coloca o texto na textarea
+// Carrega SheetJS (XLSX) sob demanda. Resolve true se já estava carregado.
+// Não polui o load inicial — só baixa quando o usuário tenta importar um Excel.
+function _carregarSheetJS(){
+  return new Promise((resolve, reject) => {
+    if(typeof XLSX !== 'undefined') return resolve(true);
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s.onload = () => resolve(true);
+    s.onerror = () => reject(new Error('Falha ao carregar biblioteca de Excel. Verifique sua conexão.'));
+    document.head.appendChild(s);
+  });
+}
+
 function _lerArquivo99Food(file){
   if(!file) return;
   const nomeArq = file.name || '';
@@ -10298,6 +10311,40 @@ function _lerArquivo99Food(file){
     showToast('⚠️ Arquivo muito grande (máx 5MB)');
     return;
   }
+  // Detecta XLSX/XLS pelo nome (Excel binário não dá pra ler como texto)
+  const ehExcel = /\.(xlsx|xls)$/i.test(nomeArq);
+  if(ehExcel){
+    showToast(`📁 Lendo Excel "${nomeArq}"...`);
+    _carregarSheetJS().then(() => {
+      const reader = new FileReader();
+      reader.onload = function(e){
+        try {
+          const data = new Uint8Array(e.target.result);
+          const wb = XLSX.read(data, { type: 'array' });
+          // Pega a primeira planilha
+          const sheetName = wb.SheetNames[0];
+          if(!sheetName){ showToast('⚠️ Excel sem planilhas'); return; }
+          const ws = wb.Sheets[sheetName];
+          // Converte pra CSV com ponto e vírgula (parser do 99Food usa ; como separador).
+          // raw:false força saída de células formatadas (datas como string, não número serial).
+          const csv = XLSX.utils.sheet_to_csv(ws, { FS: ';', raw: false });
+          document.getElementById('importar-99food-input').value = csv;
+          showToast(`📁 ${nomeArq} carregado (${wb.SheetNames.length} aba${wb.SheetNames.length>1?'s':''})`);
+          setTimeout(()=>analisar99FoodCSV(), 100);
+        } catch(err){
+          console.error('Erro Excel:', err);
+          showToast('❌ Erro ao ler Excel: '+(err.message||err));
+        }
+      };
+      reader.onerror = () => showToast('❌ Erro ao ler o arquivo');
+      reader.readAsArrayBuffer(file);
+    }).catch(err => {
+      console.error(err);
+      showToast('❌ '+err.message);
+    });
+    return;
+  }
+  // Fluxo padrão: CSV/TXT como texto
   const reader = new FileReader();
   reader.onload = function(e){
     let conteudo = e.target.result || '';
